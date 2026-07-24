@@ -222,6 +222,7 @@ export function searchTransactions(f = {}) {
   const min = f.amountMin !== '' && f.amountMin != null ? parseFloat(f.amountMin) : null;
   const max = f.amountMax !== '' && f.amountMax != null ? parseFloat(f.amountMax) : null;
   return sortedTransactions().filter((t) => {
+    if (f.type && t.type !== f.type) return false;
     if (f.categoryId && t.categoryId !== f.categoryId) return false;
     if (f.dateFrom && t.date < f.dateFrom) return false;
     if (f.dateTo && t.date > f.dateTo) return false;

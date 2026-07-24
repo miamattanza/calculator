@@ -7,14 +7,18 @@ import { el, clear, sheet, field, rowCols } from '../dom.js';
 import { money, signedMoney, formatDate } from '../format.js';
 import { openTransactionForm } from './transactions.js';
 
-export function openSearch() {
+export function openSearch(initial = {}) {
   const base = store.baseCurrency();
-  const f = { query: '', categoryId: '', dateFrom: '', dateTo: '', amountMin: '', amountMax: '' };
+  const f = {
+    query: '', categoryId: '', dateFrom: '', dateTo: '', amountMin: '', amountMax: '',
+    type: initial.type || '',
+  };
 
   const queryInput = el('input.select', { type: 'search', placeholder: t('search_hint') });
+  const cats = initial.type ? store.categoriesByType(initial.type) : store.getState().categories;
   const catSelect = el('select.select', {}, [
     el('option', { value: '' }, t('all_categories')),
-    ...store.getState().categories.map((c) => el('option', { value: c.id }, `${c.icon} ${c.name}`)),
+    ...cats.map((c) => el('option', { value: c.id }, `${c.icon} ${c.name}`)),
   ]);
   const dateFrom = el('input.select', { type: 'date' });
   const dateTo = el('input.select', { type: 'date' });
@@ -37,6 +41,7 @@ export function openSearch() {
     type: 'button', text: t('reset_filters'),
     onClick: () => {
       Object.keys(f).forEach((k) => { f[k] = ''; });
+      f.type = initial.type || '';
       queryInput.value = ''; catSelect.value = ''; dateFrom.value = '';
       dateTo.value = ''; amtMin.value = ''; amtMax.value = '';
       run();
@@ -83,6 +88,6 @@ export function openSearch() {
   }
 
   run();
-  const modal = sheet(t('search'), body);
+  const modal = sheet(initial.title || t('search'), body, { full: true });
   setTimeout(() => queryInput.focus(), 300);
 }

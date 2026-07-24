@@ -100,6 +100,8 @@ const DICT = {
     split_history: 'Раздельная история',
     split_history_hint: 'Включено: в окне «Расходы» — только расходы, в окне «Доходы» — только доходы. Выключено: история доходов и расходов показывается вместе.',
 
+    history: 'История',
+    expand_history: 'Развернуть историю',
     search: 'Поиск',
     search_hint: 'По заметке или категории',
     all_categories: 'Все категории',
@@ -223,6 +225,8 @@ const DICT = {
     split_history: 'Split history by type',
     split_history_hint: 'On: the Expenses window shows only expenses and the Income window only income. Off: income and expenses are shown together.',
 
+    history: 'History',
+    expand_history: 'Expand history',
     search: 'Search',
     search_hint: 'By note or category',
     all_categories: 'All categories',

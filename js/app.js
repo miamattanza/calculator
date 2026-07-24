@@ -76,6 +76,13 @@ async function main() {
   // Перерисовка при изменении данных (только активный раздел).
   store.subscribe(() => renderSection());
 
+  // При смене размера/ориентации пересчитываем, сколько строк помещается.
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { if (activeSection === 'home') renderSection(); }, 150);
+  });
+
   rerenderAll();
 
   // Service Worker для офлайн-работы и установки на домашний экран.

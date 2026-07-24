@@ -38,9 +38,9 @@ export function el(tag, attrs = {}, children = []) {
 export function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); return node; }
 
 // Нижний модальный лист (iOS sheet). content — DOM-узел.
-export function sheet(title, content, { onClose } = {}) {
+export function sheet(title, content, { onClose, full } = {}) {
   const backdrop = el('.sheet-backdrop', { role: 'dialog', 'aria-modal': 'true' });
-  const panel = el('.sheet', {}, [
+  const panel = el('.sheet' + (full ? '.sheet-full' : ''), {}, [
     el('.sheet-grabber'),
     el('.sheet-header', {}, [
       el('button.sheet-cancel', { type: 'button', text: t('cancel'), onClick: close }),

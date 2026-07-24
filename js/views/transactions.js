@@ -237,19 +237,14 @@ export function renderHome(root) {
   // окна, свайп вверх — открыть клавиатуру ввода.
   onSwipe(card, { onHoriz: () => toggleMode(root), onUp: () => openQuickAdd(homeMode) });
 
-  // Строка поиска — открывает экран поиска с фильтрами.
-  const searchPill = el('button.search-pill', { type: 'button', onClick: () => openSearch() }, [
-    el('span.search-ico', { text: '🔍' }),
-    el('span', { text: t('search') }),
-  ]);
-
-  root.append(card, dots, el('.period-bar', {}, [periodSeg]), searchPill);
+  root.append(card, dots, el('.period-bar', {}, [periodSeg]));
 
   // Список операций. Если «Раздельная история» включена — только тип текущего
   // окна; если выключена — и доходы, и расходы вместе.
   const split = store.getState().settings.splitHistory !== false;
   const list = store.sortedTransactions().filter((x) =>
     x.date >= from && x.date <= to && (!split || x.type === homeMode));
+
   if (!list.length) {
     root.appendChild(el('.empty', {}, [
       el('.empty-emoji', { text: isExpense ? '💸' : '💰' }),
@@ -259,20 +254,55 @@ export function renderHome(root) {
     return;
   }
 
-  const groups = new Map();
+  const listWrap = el('.trx-list');
+  root.appendChild(listWrap);
+
+  // Показываем столько строк, сколько помещается на экране без прокрутки.
+  // Замеряем доступную высоту и добавляем строки, пока они влезают; если что-то
+  // не поместилось — показываем кнопку «Развернуть историю».
+  const cs = getComputedStyle(root);
+  const padBottom = parseFloat(cs.paddingBottom) || 0;
+  const availBottom = root.getBoundingClientRect().bottom - padBottom - 8;
+  const RESERVE = 46; // место под кнопку разворачивания
+
+  let overflow = false;
+  let lastDate = null;
+  let group = null;
   for (const trx of list) {
-    if (!groups.has(trx.date)) groups.set(trx.date, []);
-    groups.get(trx.date).push(trx);
+    if (trx.date !== lastDate) {
+      const header = el('.trx-day', { text: dayLabel(trx.date) });
+      listWrap.appendChild(header);
+      if (header.getBoundingClientRect().bottom > availBottom - RESERVE) {
+        listWrap.removeChild(header); overflow = true; break;
+      }
+      lastDate = trx.date;
+      group = el('.trx-group');
+      listWrap.appendChild(group);
+    }
+    const row = renderRow(trx, base);
+    group.appendChild(row);
+    if (row.getBoundingClientRect().bottom > availBottom - RESERVE) {
+      group.removeChild(row);
+      if (!group.childElementCount) {
+        const hdr = group.previousElementSibling;
+        listWrap.removeChild(group);
+        if (hdr && hdr.classList.contains('trx-day')) listWrap.removeChild(hdr);
+      }
+      overflow = true; break;
+    }
   }
 
-  const listWrap = el('.trx-list');
-  for (const [date, items] of groups) {
-    listWrap.appendChild(el('.trx-day', { text: dayLabel(date) }));
-    const group = el('.trx-group');
-    for (const trx of items) group.appendChild(renderRow(trx, base));
-    listWrap.appendChild(group);
+  // Кнопка появляется (и вместе с ней доступ к поиску), только если история
+  // не поместилась целиком на экране.
+  if (overflow) {
+    const scope = split ? homeMode : null;
+    root.appendChild(el('button.expand-history', {
+      type: 'button', onClick: () => openSearch({ type: scope, title: t('history') }),
+    }, [
+      el('span', { text: t('expand_history') }),
+      el('span.expand-count', { text: String(list.length) }),
+    ]));
   }
-  root.appendChild(listWrap);
 }
 
 function renderRow(trx, base) {

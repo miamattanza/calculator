@@ -332,6 +332,8 @@ select.select { appearance: none; -webkit-appearance: none; }
   padding-bottom: var(--safe-bottom);
 }
 .sheet-backdrop.open .sheet { transform: translateY(0); }
+.sheet.sheet-full { height: 94vh; height: 94dvh; max-height: 94vh; }
+.sheet.sheet-full .sheet-body { flex: 1; }
 .sheet-grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--sep-strong); margin: 8px auto 0; }
 .sheet-header { display: flex; align-items: center; padding: 8px 16px; }
 .sheet-title { flex: 1; text-align: center; font-size: 17px; font-weight: 600; }
@@ -429,6 +431,18 @@ select.select { appearance: none; -webkit-appearance: none; }
 }
 .search-pill:active { background: var(--fill-2); }
 .search-ico { font-size: 15px; }
+
+/* ---- Кнопка «Развернуть историю» ---- */
+.expand-history {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 10px auto 0; padding: 9px 18px; border-radius: 20px;
+  background: var(--fill); color: var(--accent); font-size: 14px; font-weight: 600;
+}
+.expand-history:active { background: var(--fill-2); }
+.expand-history .expand-count {
+  background: var(--fill-2); color: var(--text-3); font-size: 12px; font-weight: 600;
+  padding: 1px 8px; border-radius: 10px; min-width: 20px; text-align: center;
+}
 
 /* ---- Экран поиска ---- */
 .row-2 { display: flex; gap: 12px; }
