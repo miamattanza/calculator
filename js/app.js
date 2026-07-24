@@ -25,9 +25,15 @@ const content = document.getElementById('content');
 const menuBtn = document.getElementById('menu-btn');
 const fab = document.getElementById('fab');
 
+const modeLabel = document.getElementById('mode-label');
+
 function renderSection() {
   clear(content);
   content.scrollTop = 0;
+  if (activeSection !== 'home') {
+    content.classList.remove('fit-mode');
+    if (modeLabel) { modeLabel.textContent = ''; modeLabel.className = ''; }
+  }
   const section = SECTIONS.find((x) => x.id === activeSection);
   section.render(content);
   fab.style.display = activeSection === 'settings' ? 'none' : '';
@@ -76,14 +82,23 @@ async function main() {
   // Перерисовка при изменении данных (только активный раздел).
   store.subscribe(() => renderSection());
 
-  // При смене размера/ориентации пересчитываем, сколько строк помещается.
+  // При смене размера/ориентации/видимой области пересчитываем, сколько строк
+  // истории помещается на экране.
   let resizeTimer = null;
-  window.addEventListener('resize', () => {
+  const onViewportChange = () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => { if (activeSection === 'home') renderSection(); }, 150);
-  });
+    resizeTimer = setTimeout(() => { if (activeSection === 'home') renderSection(); }, 120);
+  };
+  window.addEventListener('resize', onViewportChange);
+  window.addEventListener('orientationchange', onViewportChange);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', onViewportChange);
+  }
 
   rerenderAll();
+  // Повторный расчёт после первой раскладки — геометрия экрана к этому моменту
+  // окончательная (важно для корректного числа строк на реальных устройствах).
+  requestAnimationFrame(() => { if (activeSection === 'home') renderSection(); });
 
   // Service Worker для офлайн-работы и установки на домашний экран.
   if ('serviceWorker' in navigator) {

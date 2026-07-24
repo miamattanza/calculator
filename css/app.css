@@ -83,6 +83,14 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 }
 #menu-btn:active { background: var(--fill-2); }
 #menu-btn span { display: block; width: 18px; height: 2px; border-radius: 2px; background: var(--text); }
+#header #mode-label { margin-left: 12px; font-size: 21px; font-weight: 700; letter-spacing: -0.3px; }
+#header #mode-label.expense { color: var(--accent); }
+#header #mode-label.income { color: var(--green); }
+
+/* Контейнер страницы окна — тащится пальцем при свайпе. */
+.pager { min-height: 60vh; will-change: transform; }
+#content.fit-mode { overflow: hidden; }
+#content.fit-mode .pager { min-height: 0; }
 
 #content {
   flex: 1;
@@ -446,6 +454,25 @@ select.select { appearance: none; -webkit-appearance: none; }
 }
 
 /* ---- Экран поиска ---- */
+.search-row { display: flex; gap: 10px; align-items: stretch; }
+.hist-search {
+  flex: 1; min-width: 0; background: var(--fill); border: none; border-radius: 12px;
+  padding: 12px 14px; font-size: 17px; -webkit-appearance: none; appearance: none;
+}
+.filter-btn {
+  flex: 0 0 48px; width: 48px; border-radius: 12px; background: var(--fill);
+  display: flex; align-items: center; justify-content: center; color: var(--text-2);
+  position: relative;
+}
+.filter-btn:active { background: var(--fill-2); }
+.filter-btn.active { background: var(--accent); color: #fff; }
+.filter-btn.has-filters::after {
+  content: ''; position: absolute; top: 7px; right: 7px;
+  width: 8px; height: 8px; border-radius: 50%; background: var(--red);
+  box-shadow: 0 0 0 2px var(--bg-elev);
+}
+.filter-panel { display: none; flex-direction: column; gap: 16px; margin-top: 14px; }
+.filter-panel.open { display: flex; }
 .row-2 { display: flex; gap: 12px; }
 .row-2 > .field { flex: 1; min-width: 0; }
 .search-summary { font-size: 14px; color: var(--text-3); text-align: center; padding: 4px 0; }

@@ -141,10 +141,67 @@ let currentPeriod = 'month';
 let homeMode = 'expense'; // 'expense' | 'income'
 let showAllHistory = false; // «Показать всю историю» в режиме с лимитом строк
 
-function toggleMode(root) {
+function toggleMode(root, incomingFrom = null) {
   homeMode = homeMode === 'expense' ? 'income' : 'expense';
   showAllHistory = false;
   renderHome(root);
+  // Анимация «въезда» новой страницы со стороны свайпа (эффект как в Instagram).
+  if (incomingFrom != null) {
+    const pager = root.querySelector('.pager');
+    if (pager) {
+      pager.style.transition = 'none';
+      pager.style.transform = `translateX(${incomingFrom}px)`;
+      pager.style.opacity = '0';
+      requestAnimationFrame(() => {
+        pager.style.transition = 'transform .26s ease, opacity .26s ease';
+        pager.style.transform = 'translateX(0)';
+        pager.style.opacity = '1';
+      });
+    }
+  }
+}
+
+// Перетаскивание страницы пальцем по всему экрану + плавный переход между
+// окнами «Расходы»/«Доходы». Вешается на .pager (пересоздаётся каждый рендер).
+function attachPagerSwipe(pager, root) {
+  let sx = 0, sy = 0, dir = null, dragging = false, w = window.innerWidth;
+  const start = (x, y) => { sx = x; sy = y; dir = null; dragging = true; w = window.innerWidth || pager.offsetWidth; pager.style.transition = 'none'; };
+  const move = (x, y, e) => {
+    if (!dragging) return;
+    const dx = x - sx, dy = y - sy;
+    if (dir === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) dir = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+    if (dir === 'h') {
+      if (e && e.cancelable) e.preventDefault();
+      pager.style.transform = `translateX(${dx}px)`;
+      pager.style.opacity = String(1 - Math.min(Math.abs(dx) / w, 1) * 0.35);
+    }
+  };
+  const end = (x, y) => {
+    if (!dragging) return;
+    dragging = false;
+    const dx = x - sx;
+    if (dir !== 'h') { pager.style.transform = ''; pager.style.opacity = ''; return; }
+    pager.style.transition = 'transform .24s ease, opacity .24s ease';
+    if (Math.abs(dx) > w * 0.25) {
+      const outX = dx < 0 ? -w : w;
+      pager.style.transform = `translateX(${outX}px)`;
+      pager.style.opacity = '0';
+      setTimeout(() => toggleMode(root, dx < 0 ? w : -w), 190);
+    } else {
+      pager.style.transform = 'translateX(0)';
+      pager.style.opacity = '1';
+    }
+  };
+  pager.addEventListener('touchstart', (e) => { const p = e.changedTouches[0]; start(p.clientX, p.clientY); }, { passive: true });
+  pager.addEventListener('touchmove', (e) => { const p = e.changedTouches[0]; move(p.clientX, p.clientY, e); }, { passive: false });
+  pager.addEventListener('touchend', (e) => { const p = e.changedTouches[0]; end(p.clientX, p.clientY); }, { passive: true });
+  pager.addEventListener('mousedown', (e) => {
+    start(e.clientX, e.clientY);
+    const mm = (ev) => move(ev.clientX, ev.clientY, ev);
+    const mu = (ev) => { end(ev.clientX, ev.clientY); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
+    window.addEventListener('mousemove', mm);
+    window.addEventListener('mouseup', mu);
+  });
 }
 
 // Быстрый ввод: клавиатура → выбор категории → сохранение.
@@ -199,6 +256,13 @@ export function renderHome(root) {
   const balance = store.currentBalance();
   const isExpense = homeMode === 'expense';
 
+  // Название окна выносим в шапку рядом с гамбургером, цветом сектора.
+  const modeLabel = document.getElementById('mode-label');
+  if (modeLabel) {
+    modeLabel.textContent = isExpense ? t('expense') : t('income');
+    modeLabel.className = isExpense ? 'expense' : 'income';
+  }
+
   const mainValue = isExpense ? totals.expense : totals.income;
   const otherLabel = isExpense ? t('income') : t('expense');
   const otherValue = isExpense ? totals.income : totals.expense;
@@ -206,7 +270,6 @@ export function renderHome(root) {
 
   // Карточка активного окна (синяя для расходов, зелёная для доходов).
   const card = el('.balance-card', { class: isExpense ? 'expense-mode' : 'income-mode' }, [
-    el('.balance-label', { text: isExpense ? t('expense') : t('income') }),
     el('.balance-value', { text: money(mainValue, base) }),
     el('.balance-split', {}, [
       el('.split-item', {}, [
@@ -221,7 +284,6 @@ export function renderHome(root) {
     el('.pad-hint', { text: '↑ ' + t('add_transaction') }),
   ]);
 
-  // Индикатор окна (две точки: расходы / доходы).
   const dots = el('.win-dots', {}, [
     el('.win-dot', { class: isExpense ? 'active' : '' }),
     el('.win-dot', { class: !isExpense ? 'active' : '' }),
@@ -234,35 +296,34 @@ export function renderHome(root) {
     { value: 'all', label: t('period_all') },
   ], currentPeriod, (v) => { currentPeriod = v; showAllHistory = false; renderHome(root); });
 
-  // Жесты вешаем на карточку — она пересоздаётся при каждом рендере,
-  // поэтому обработчики не накапливаются. Горизонтальный свайп — смена
-  // окна, свайп вверх — открыть клавиатуру ввода.
-  onSwipe(card, { onHoriz: () => toggleMode(root), onUp: () => openQuickAdd(homeMode) });
+  // Свайп вверх по карточке — клавиатура ввода. Горизонтальный свайп по всей
+  // странице обрабатывает attachPagerSwipe.
+  onSwipe(card, { onUp: () => openQuickAdd(homeMode) });
 
-  // Список операций. Если «Раздельная история» включена — только тип текущего
-  // окна; если выключена — и доходы, и расходы вместе.
   const settings = store.getState().settings;
   const split = settings.splitHistory !== false;
   const scope = split ? homeMode : null;
   const list = store.sortedTransactions().filter((x) =>
     x.date >= from && x.date <= to && (!split || x.type === homeMode));
-
   const fit = settings.fitHistory !== false;
 
-  // В режиме с лимитом строк (fitHistory выключен) сверху показываем строку
-  // поиска — как на стартовой странице истории в версии 1.3.
+  // Вся страница окна — в контейнере .pager, который тащится пальцем по экрану.
+  const pager = el('.pager');
+  pager.append(card, dots, el('.period-bar', {}, [periodSeg]));
+
+  // Строка поиска показывается только в режиме с лимитом (fitHistory выключен).
   if (!fit) {
-    const searchPill = el('button.search-pill', { type: 'button', onClick: () => openSearch({ type: scope, title: t('history') }) }, [
-      el('span.search-ico', { text: '🔍' }),
-      el('span', { text: t('search') }),
-    ]);
-    root.append(card, dots, el('.period-bar', {}, [periodSeg]), searchPill);
-  } else {
-    root.append(card, dots, el('.period-bar', {}, [periodSeg]));
+    pager.appendChild(el('button.search-pill', {
+      type: 'button', onClick: () => openSearch({ type: scope, title: t('history') }),
+    }, [el('span.search-ico', { text: '🔍' }), el('span', { text: t('search') })]));
   }
 
+  root.classList.toggle('fit-mode', !!(fit && list.length));
+  root.appendChild(pager);
+  attachPagerSwipe(pager, root);
+
   if (!list.length) {
-    root.appendChild(el('.empty', {}, [
+    pager.appendChild(el('.empty', {}, [
       el('.empty-emoji', { text: isExpense ? '💸' : '💰' }),
       el('.empty-title', { text: t('no_transactions') }),
       el('.empty-hint', { text: t('no_transactions_hint') }),
@@ -271,7 +332,7 @@ export function renderHome(root) {
   }
 
   const listWrap = el('.trx-list');
-  root.appendChild(listWrap);
+  pager.appendChild(listWrap);
 
   if (!fit) {
     // Режим v1.3: список с прокруткой, ограниченный настраиваемым числом строк,
@@ -280,7 +341,7 @@ export function renderHome(root) {
     const limit = showAllHistory ? list.length : maxRows;
     renderGroupedRows(listWrap, list.slice(0, limit), base);
     if (!showAllHistory && list.length > maxRows) {
-      root.appendChild(el('button.expand-history', {
+      pager.appendChild(el('button.expand-history', {
         type: 'button', onClick: () => { showAllHistory = true; renderHome(root); },
       }, [
         el('span', { text: t('show_all_history') }),
@@ -290,13 +351,14 @@ export function renderHome(root) {
     return;
   }
 
-  // Режим v1.4: показываем столько строк, сколько помещается на экране без
-  // прокрутки. Замеряем доступную высоту и добавляем строки, пока они влезают;
-  // если что-то не поместилось — показываем кнопку «Развернуть историю».
-  const cs = getComputedStyle(root);
-  const padBottom = parseFloat(cs.paddingBottom) || 0;
-  const availBottom = root.getBoundingClientRect().bottom - padBottom - 8;
-  const RESERVE = 46; // место под кнопку разворачивания
+  // Режим подгонки под экран: считываем реальное положение кнопки «+» и
+  // добавляем строки, пока они помещаются над ней. Это устойчиво к разным
+  // размерам экрана и системным панелям — используем фактическую геометрию.
+  const fabEl = document.getElementById('fab');
+  const fabTop = fabEl ? fabEl.getBoundingClientRect().top : 0;
+  const vpBottom = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  const bottomAnchor = fabTop > 120 ? fabTop : vpBottom - 78;
+  const limitY = bottomAnchor - 54; // зазор + место под кнопку «Развернуть историю»
 
   let overflow = false;
   let lastDate = null;
@@ -305,16 +367,14 @@ export function renderHome(root) {
     if (trx.date !== lastDate) {
       const header = el('.trx-day', { text: dayLabel(trx.date) });
       listWrap.appendChild(header);
-      if (header.getBoundingClientRect().bottom > availBottom - RESERVE) {
-        listWrap.removeChild(header); overflow = true; break;
-      }
+      if (header.getBoundingClientRect().bottom > limitY) { listWrap.removeChild(header); overflow = true; break; }
       lastDate = trx.date;
       group = el('.trx-group');
       listWrap.appendChild(group);
     }
     const row = renderRow(trx, base);
     group.appendChild(row);
-    if (row.getBoundingClientRect().bottom > availBottom - RESERVE) {
+    if (row.getBoundingClientRect().bottom > limitY) {
       group.removeChild(row);
       if (!group.childElementCount) {
         const hdr = group.previousElementSibling;
@@ -325,10 +385,8 @@ export function renderHome(root) {
     }
   }
 
-  // Кнопка появляется (и вместе с ней доступ к поиску), только если история
-  // не поместилась целиком на экране.
   if (overflow) {
-    root.appendChild(el('button.expand-history', {
+    pager.appendChild(el('button.expand-history', {
       type: 'button', onClick: () => openSearch({ type: scope, title: t('history') }),
     }, [
       el('span', { text: t('expand_history') }),
