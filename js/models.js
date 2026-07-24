@@ -1,0 +1,72 @@
+// models.js — фабрики сущностей и данные по умолчанию.
+
+export function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+// Категории по умолчанию (создаются при первом запуске).
+// icon — эмодзи (нативно рендерится на iOS), color — акцент.
+export const DEFAULT_CATEGORIES = [
+  // Расходы
+  { name: 'Продукты',    type: 'expense', icon: '🛒', color: '#34C759' },
+  { name: 'Кафе',        type: 'expense', icon: '☕️', color: '#FF9500' },
+  { name: 'Транспорт',   type: 'expense', icon: '🚕', color: '#5AC8FA' },
+  { name: 'Жильё',       type: 'expense', icon: '🏠', color: '#AF52DE' },
+  { name: 'Здоровье',    type: 'expense', icon: '💊', color: '#FF2D55' },
+  { name: 'Развлечения', type: 'expense', icon: '🎬', color: '#FF375F' },
+  { name: 'Покупки',     type: 'expense', icon: '🛍', color: '#BF5AF2' },
+  { name: 'Связь',       type: 'expense', icon: '📱', color: '#64D2FF' },
+  { name: 'Прочее',      type: 'expense', icon: '🔖', color: '#8E8E93' },
+  // Доходы
+  { name: 'Зарплата',    type: 'income',  icon: '💼', color: '#34C759' },
+  { name: 'Подработка',  type: 'income',  icon: '🧾', color: '#30D158' },
+  { name: 'Подарок',     type: 'income',  icon: '🎁', color: '#FF9F0A' },
+  { name: 'Инвестиции',  type: 'income',  icon: '📈', color: '#0A84FF' },
+  { name: 'Прочее',      type: 'income',  icon: '💰', color: '#8E8E93' },
+];
+
+export function makeCategory({ name, type, icon, color, order }) {
+  return { id: uid(), name, type, icon: icon || '🔖', color: color || '#8E8E93', order: order || 0 };
+}
+
+export function makeTransaction({ type, amount, currency, rate, categoryId, date, note }) {
+  return {
+    id: uid(),
+    type,                       // 'income' | 'expense'
+    amount: Number(amount),     // в валюте операции
+    currency: currency || 'RUB',
+    rate: Number(rate) || 1,    // курс к базовой валюте
+    categoryId: categoryId || null,
+    date,                       // YYYY-MM-DD
+    note: note || '',
+    createdAt: Date.now(),
+  };
+}
+
+export function makePlanned({ type, amount, currency, rate, categoryId, note, recurrence, startDate, endDate }) {
+  return {
+    id: uid(),
+    type,
+    amount: Number(amount),
+    currency: currency || 'RUB',
+    rate: Number(rate) || 1,
+    categoryId: categoryId || null,
+    note: note || '',
+    recurrence: recurrence || 'monthly', // once|daily|weekly|monthly|yearly
+    startDate,                           // YYYY-MM-DD
+    endDate: endDate || null,
+    active: true,
+  };
+}
+
+export function makeBudget({ categoryId, limit, currency }) {
+  return { id: uid(), categoryId, limit: Number(limit), currency: currency || 'RUB', period: 'month' };
+}
+
+// Настройки по умолчанию.
+export const DEFAULT_SETTINGS = {
+  baseCurrency: 'RUB',
+  language: 'ru',
+  theme: 'system',    // system | light | dark
+  seeded: false,      // созданы ли дефолтные категории
+};

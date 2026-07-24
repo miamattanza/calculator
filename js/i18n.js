@@ -1,0 +1,238 @@
+// i18n.js — словари переводов. Добавление нового языка = новый объект ниже.
+// Использование: t('key') или t('key', {name: 'X'}) для подстановок.
+
+const DICT = {
+  ru: {
+    app_name: 'Финансы',
+    tab_home: 'Обзор',
+    tab_analytics: 'Аналитика',
+    tab_forecast: 'Прогноз',
+    tab_budgets: 'Бюджеты',
+    tab_settings: 'Ещё',
+
+    balance: 'Баланс',
+    income: 'Доходы',
+    expense: 'Расходы',
+    period_month: 'Месяц',
+    period_week: 'Неделя',
+    period_day: 'День',
+    period_year: 'Год',
+    period_all: 'Всё время',
+
+    add_transaction: 'Новая операция',
+    edit_transaction: 'Изменить операцию',
+    type: 'Тип',
+    amount: 'Сумма',
+    category: 'Категория',
+    date: 'Дата',
+    note: 'Заметка',
+    note_ph: 'Комментарий (необязательно)',
+    currency: 'Валюта',
+    rate_to_base: 'Курс к {base}',
+    save: 'Сохранить',
+    cancel: 'Отмена',
+    delete: 'Удалить',
+    confirm_delete: 'Удалить эту операцию?',
+
+    no_transactions: 'Пока нет операций',
+    no_transactions_hint: 'Нажмите + чтобы добавить первую',
+    today: 'Сегодня',
+    yesterday: 'Вчера',
+
+    analytics_title: 'Аналитика',
+    by_category: 'По категориям',
+    trend: 'Динамика',
+    no_data: 'Нет данных за период',
+    net: 'Итог',
+
+    forecast_title: 'Прогноз остатка',
+    forecast_to_date: 'Прогноз на дату',
+    target_date: 'Целевая дата',
+    projected_balance: 'Прогнозируемый остаток',
+    current_balance: 'Текущий баланс',
+    planned_in: 'Плановые доходы',
+    planned_out: 'Плановые расходы',
+    avg_estimate: 'Оценка по средним тратам',
+    avg_estimate_hint: 'Если продолжать тратить как в среднем за 30 дней',
+    planned_payments: 'Плановые платежи',
+    add_planned: 'Добавить плановый платёж',
+    recurrence: 'Повтор',
+    rec_once: 'Разово',
+    rec_daily: 'Ежедневно',
+    rec_weekly: 'Еженедельно',
+    rec_monthly: 'Ежемесячно',
+    rec_yearly: 'Ежегодно',
+    start_date: 'Дата начала',
+    end_date: 'Дата окончания',
+    end_date_ph: 'Без ограничения',
+    no_planned: 'Нет плановых платежей',
+
+    budgets_title: 'Бюджеты и лимиты',
+    add_budget: 'Добавить лимит',
+    limit: 'Лимит в месяц',
+    spent: 'Потрачено',
+    remaining: 'Осталось',
+    over_budget: 'Превышен на {amount}',
+    no_budgets: 'Лимиты не заданы',
+    budget_exists: 'Для этой категории лимит уже есть',
+
+    settings_title: 'Настройки',
+    language: 'Язык',
+    base_currency: 'Основная валюта',
+    theme: 'Оформление',
+    theme_system: 'Как в системе',
+    theme_light: 'Светлое',
+    theme_dark: 'Тёмное',
+    categories_manage: 'Категории',
+    data: 'Данные',
+    export_json: 'Экспорт (JSON)',
+    export_csv: 'Экспорт операций (CSV)',
+    import_json: 'Импорт (JSON)',
+    import_done: 'Данные импортированы',
+    import_error: 'Ошибка импорта файла',
+    reset_all: 'Удалить все данные',
+    reset_confirm: 'Удалить ВСЕ данные без возможности восстановления?',
+    about: 'О приложении',
+    about_text: 'Учёт доходов и расходов. Работает офлайн, данные хранятся на устройстве.',
+
+    manage_categories: 'Категории',
+    add_category: 'Добавить категорию',
+    category_name: 'Название',
+    icon: 'Иконка',
+    color: 'Цвет',
+    category_in_use: 'Категория используется в операциях',
+
+    required: 'Заполните поле',
+    invalid_amount: 'Введите сумму больше нуля',
+
+    install_hint: 'Чтобы установить: Поделиться → «На экран „Домой“»',
+    installed: 'Приложение готово к работе офлайн',
+  },
+
+  en: {
+    app_name: 'Finance',
+    tab_home: 'Overview',
+    tab_analytics: 'Analytics',
+    tab_forecast: 'Forecast',
+    tab_budgets: 'Budgets',
+    tab_settings: 'More',
+
+    balance: 'Balance',
+    income: 'Income',
+    expense: 'Expenses',
+    period_month: 'Month',
+    period_week: 'Week',
+    period_day: 'Day',
+    period_year: 'Year',
+    period_all: 'All time',
+
+    add_transaction: 'New transaction',
+    edit_transaction: 'Edit transaction',
+    type: 'Type',
+    amount: 'Amount',
+    category: 'Category',
+    date: 'Date',
+    note: 'Note',
+    note_ph: 'Comment (optional)',
+    currency: 'Currency',
+    rate_to_base: 'Rate to {base}',
+    save: 'Save',
+    cancel: 'Cancel',
+    delete: 'Delete',
+    confirm_delete: 'Delete this transaction?',
+
+    no_transactions: 'No transactions yet',
+    no_transactions_hint: 'Tap + to add the first one',
+    today: 'Today',
+    yesterday: 'Yesterday',
+
+    analytics_title: 'Analytics',
+    by_category: 'By category',
+    trend: 'Trend',
+    no_data: 'No data for the period',
+    net: 'Net',
+
+    forecast_title: 'Balance forecast',
+    forecast_to_date: 'Forecast to date',
+    target_date: 'Target date',
+    projected_balance: 'Projected balance',
+    current_balance: 'Current balance',
+    planned_in: 'Planned income',
+    planned_out: 'Planned expenses',
+    avg_estimate: 'Average-based estimate',
+    avg_estimate_hint: 'If spending continues at the 30-day average',
+    planned_payments: 'Planned payments',
+    add_planned: 'Add planned payment',
+    recurrence: 'Repeat',
+    rec_once: 'Once',
+    rec_daily: 'Daily',
+    rec_weekly: 'Weekly',
+    rec_monthly: 'Monthly',
+    rec_yearly: 'Yearly',
+    start_date: 'Start date',
+    end_date: 'End date',
+    end_date_ph: 'No limit',
+    no_planned: 'No planned payments',
+
+    budgets_title: 'Budgets & limits',
+    add_budget: 'Add limit',
+    limit: 'Monthly limit',
+    spent: 'Spent',
+    remaining: 'Remaining',
+    over_budget: 'Over by {amount}',
+    no_budgets: 'No limits set',
+    budget_exists: 'A limit for this category already exists',
+
+    settings_title: 'Settings',
+    language: 'Language',
+    base_currency: 'Base currency',
+    theme: 'Appearance',
+    theme_system: 'System',
+    theme_light: 'Light',
+    theme_dark: 'Dark',
+    categories_manage: 'Categories',
+    data: 'Data',
+    export_json: 'Export (JSON)',
+    export_csv: 'Export transactions (CSV)',
+    import_json: 'Import (JSON)',
+    import_done: 'Data imported',
+    import_error: 'File import error',
+    reset_all: 'Delete all data',
+    reset_confirm: 'Delete ALL data permanently?',
+    about: 'About',
+    about_text: 'Income & expense tracker. Works offline, data stays on device.',
+
+    manage_categories: 'Categories',
+    add_category: 'Add category',
+    category_name: 'Name',
+    icon: 'Icon',
+    color: 'Color',
+    category_in_use: 'Category is used in transactions',
+
+    required: 'This field is required',
+    invalid_amount: 'Enter an amount greater than zero',
+
+    install_hint: 'To install: Share → “Add to Home Screen”',
+    installed: 'App is ready to work offline',
+  },
+};
+
+let _lang = 'ru';
+
+export function setLang(lang) {
+  if (DICT[lang]) _lang = lang;
+}
+
+export function getLang() {
+  return _lang;
+}
+
+export function availableLangs() {
+  return Object.keys(DICT);
+}
+
+export function t(key, vars) {
+  const str = (DICT[_lang] && DICT[_lang][key]) || (DICT.ru[key]) || key;
+  if (!vars) return str;
+  return str.replace(/\{(\w+)\}/g, (_, k) => (vars[k] != null ? vars[k] : `{${k}}`));
+}
