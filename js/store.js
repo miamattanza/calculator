@@ -213,6 +213,30 @@ export function monthlyTrend(n = 6) {
   return buckets;
 }
 
+// ---- Поиск по истории ----------------------------------------------------
+
+// Фильтрация операций: текст (заметка/категория), категория, диапазон дат,
+// диапазон сумм (в базовой валюте). Пустые поля не ограничивают выборку.
+export function searchTransactions(f = {}) {
+  const q = (f.query || '').trim().toLowerCase();
+  const min = f.amountMin !== '' && f.amountMin != null ? parseFloat(f.amountMin) : null;
+  const max = f.amountMax !== '' && f.amountMax != null ? parseFloat(f.amountMax) : null;
+  return sortedTransactions().filter((t) => {
+    if (f.categoryId && t.categoryId !== f.categoryId) return false;
+    if (f.dateFrom && t.date < f.dateFrom) return false;
+    if (f.dateTo && t.date > f.dateTo) return false;
+    const amt = baseAmount(t);
+    if (min != null && !Number.isNaN(min) && amt < min) return false;
+    if (max != null && !Number.isNaN(max) && amt > max) return false;
+    if (q) {
+      const cat = categoryById(t.categoryId);
+      const hay = ((t.note || '') + ' ' + (cat ? cat.name : '')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
 // ---- Плановые платежи ----------------------------------------------------
 
 export async function savePlanned(data) {

@@ -3,8 +3,9 @@
 
 import * as store from '../store.js';
 import { t, availableLangs } from '../i18n.js';
-import { el, clear, sheet, field, toast, confirmDialog } from '../dom.js';
+import { el, clear, sheet, field, toast, confirmDialog, toggle } from '../dom.js';
 import { CURRENCIES } from '../format.js';
+import { APP_VERSION } from '../models.js';
 
 const LANG_NAMES = { ru: 'Русский', en: 'English' };
 
@@ -44,6 +45,16 @@ export function renderSettings(root, rerenderApp) {
     settingRow(t('theme'), themeSelect),
   ]));
 
+  // Отображение: раздельная / общая история операций.
+  const splitToggle = toggle(s.splitHistory !== false, async (checked) => {
+    await store.setSetting('splitHistory', checked);
+  });
+  root.appendChild(el('.group-caption', { text: t('display') }));
+  root.appendChild(el('.settings-group', {}, [
+    settingRow(t('split_history'), splitToggle),
+    el('.setting-hint', { text: t('split_history_hint') }),
+  ]));
+
   // Категории
   root.appendChild(el('.settings-group', {}, [
     navRow('🏷', t('categories_manage'), () => openCategoriesManager()),
@@ -66,6 +77,7 @@ export function renderSettings(root, rerenderApp) {
   // О приложении
   root.appendChild(el('.group-caption', { text: t('about') }));
   root.appendChild(el('.settings-group', {}, [
+    settingRow(t('version'), el('span.version-badge', { text: APP_VERSION })),
     el('.about-row', {}, [el('p', { text: t('about_text') })]),
   ]));
   root.appendChild(el('.install-note', { text: t('install_hint') }));

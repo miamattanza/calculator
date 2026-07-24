@@ -103,6 +103,19 @@ export function field(labelText, inputNode) {
   return { row, input: inputNode };
 }
 
+// iOS-переключатель (switch). Возвращает готовый элемент.
+export function toggle(checked, onChange) {
+  const input = el('input.switch-input', { type: 'checkbox' });
+  input.checked = !!checked;
+  input.addEventListener('change', () => onChange(input.checked));
+  return el('label.switch', {}, [input, el('span.switch-track', {}, [el('span.switch-thumb')])]);
+}
+
+// Строка из двух полей в ряд.
+export function rowCols(a, b) {
+  return el('.row-2', {}, [a, b]);
+}
+
 export function segmented(options, value, onChange) {
   const wrap = el('.segmented');
   options.forEach((opt) => {

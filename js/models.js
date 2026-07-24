@@ -1,5 +1,7 @@
 // models.js — фабрики сущностей и данные по умолчанию.
 
+export const APP_VERSION = '1.2';
+
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
@@ -67,6 +69,7 @@ export function makeBudget({ categoryId, limit, currency }) {
 export const DEFAULT_SETTINGS = {
   baseCurrency: 'RUB',
   language: 'ru',
-  theme: 'system',    // system | light | dark
-  seeded: false,      // созданы ли дефолтные категории
+  theme: 'system',      // system | light | dark
+  splitHistory: true,   // раздельная история по типу в окнах Расходы/Доходы
+  seeded: false,        // созданы ли дефолтные категории
 };

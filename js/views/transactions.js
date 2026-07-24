@@ -6,6 +6,7 @@ import { t } from '../i18n.js';
 import { el, clear, sheet, field, segmented, toast, confirmDialog } from '../dom.js';
 import { money, signedMoney, formatDate, dateISO, CURRENCIES } from '../format.js';
 import { openAmountPad } from '../keypad.js';
+import { openSearch } from './search.js';
 
 // ---- Форма операции (переиспользуемая) ----
 
@@ -236,10 +237,19 @@ export function renderHome(root) {
   // окна, свайп вверх — открыть клавиатуру ввода.
   onSwipe(card, { onHoriz: () => toggleMode(root), onUp: () => openQuickAdd(homeMode) });
 
-  root.append(card, dots, el('.period-bar', {}, [periodSeg]));
+  // Строка поиска — открывает экран поиска с фильтрами.
+  const searchPill = el('button.search-pill', { type: 'button', onClick: () => openSearch() }, [
+    el('span.search-ico', { text: '🔍' }),
+    el('span', { text: t('search') }),
+  ]);
 
-  // Список операций текущего окна (только доходы или только расходы).
-  const list = store.sortedTransactions().filter((x) => x.date >= from && x.date <= to && x.type === homeMode);
+  root.append(card, dots, el('.period-bar', {}, [periodSeg]), searchPill);
+
+  // Список операций. Если «Раздельная история» включена — только тип текущего
+  // окна; если выключена — и доходы, и расходы вместе.
+  const split = store.getState().settings.splitHistory !== false;
+  const list = store.sortedTransactions().filter((x) =>
+    x.date >= from && x.date <= to && (!split || x.type === homeMode));
   if (!list.length) {
     root.appendChild(el('.empty', {}, [
       el('.empty-emoji', { text: isExpense ? '💸' : '💰' }),
