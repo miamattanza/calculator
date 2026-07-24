@@ -1,5 +1,6 @@
-// app.js — точка входа: инициализация store, роутинг между экранами,
-// нижний таб-бар в стиле iOS, плавающая кнопка «+», регистрация Service Worker.
+// app.js — точка входа: инициализация store, переключение разделов,
+// всплывающее меню (гамбургер ☰) вверху, плавающая кнопка «+»,
+// регистрация Service Worker.
 
 import * as store from './store.js';
 import { t } from './i18n.js';
@@ -10,63 +11,70 @@ import { renderForecast } from './views/forecast.js';
 import { renderBudgets } from './views/budgets.js';
 import { renderSettings, applyTheme } from './views/settings.js';
 
-const TABS = [
-  { id: 'home',      icon: '◎', render: (r) => renderHome(r) },
-  { id: 'analytics', icon: '📊', render: (r) => renderAnalytics(r) },
-  { id: 'forecast',  icon: '📈', render: (r) => renderForecast(r) },
-  { id: 'budgets',   icon: '🎯', render: (r) => renderBudgets(r) },
-  { id: 'settings',  icon: '⚙️', render: (r) => renderSettings(r, rerenderAll) },
+// Разделы приложения. Обзор — главный экран, остальные открываются из меню.
+const SECTIONS = [
+  { id: 'home',      icon: '🏠', labelKey: 'tab_home',      render: (r) => renderHome(r) },
+  { id: 'analytics', icon: '📊', labelKey: 'tab_analytics', render: (r) => renderAnalytics(r) },
+  { id: 'forecast',  icon: '📈', labelKey: 'tab_forecast',  render: (r) => renderForecast(r) },
+  { id: 'budgets',   icon: '🎯', labelKey: 'tab_budgets',   render: (r) => renderBudgets(r) },
+  { id: 'settings',  icon: '⚙️', labelKey: 'settings_title', render: (r) => renderSettings(r, rerenderAll) },
 ];
 
-const TAB_LABEL = {
-  home: 'tab_home', analytics: 'tab_analytics', forecast: 'tab_forecast',
-  budgets: 'tab_budgets', settings: 'tab_settings',
-};
-
-let activeTab = 'home';
+let activeSection = 'home';
 const content = document.getElementById('content');
-const tabbar = document.getElementById('tabbar');
+const menuBtn = document.getElementById('menu-btn');
 const fab = document.getElementById('fab');
 
-function renderTab() {
+function renderSection() {
   clear(content);
   content.scrollTop = 0;
-  const tab = TABS.find((x) => x.id === activeTab);
-  tab.render(content);
-  fab.style.display = activeTab === 'settings' ? 'none' : '';
+  const section = SECTIONS.find((x) => x.id === activeSection);
+  section.render(content);
+  fab.style.display = activeSection === 'settings' ? 'none' : '';
 }
 
-function renderTabbar() {
-  clear(tabbar);
-  for (const tab of TABS) {
-    const btn = el('button.tab', {
+// Всплывающее меню со всеми пятью разделами.
+function openMenu() {
+  const backdrop = el('.menu-backdrop', { role: 'dialog', 'aria-modal': 'true' });
+  const panel = el('.menu-panel');
+  for (const s of SECTIONS) {
+    panel.appendChild(el('button.menu-item', {
       type: 'button',
-      class: tab.id === activeTab ? 'active' : '',
-      onClick: () => { activeTab = tab.id; renderTabbar(); renderTab(); },
+      class: s.id === activeSection ? 'active' : '',
+      onClick: () => { activeSection = s.id; renderSection(); close(); },
     }, [
-      el('.tab-icon', { text: tab.icon }),
-      el('.tab-label', { text: t(TAB_LABEL[tab.id]) }),
-    ]);
-    tabbar.appendChild(btn);
+      el('.menu-item-icon', { text: s.icon }),
+      el('.menu-item-label', { text: t(s.labelKey) }),
+      s.id === activeSection ? el('.menu-item-check', { text: '✓' }) : null,
+    ]));
+  }
+  backdrop.appendChild(panel);
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+  document.body.appendChild(backdrop);
+  document.body.classList.add('modal-open');
+  requestAnimationFrame(() => backdrop.classList.add('open'));
+
+  function close() {
+    backdrop.classList.remove('open');
+    document.body.classList.remove('modal-open');
+    setTimeout(() => backdrop.remove(), 220);
   }
 }
 
 function rerenderAll() {
   document.title = t('app_name');
-  const titleEl = document.querySelector('#header .app-title');
-  if (titleEl) titleEl.textContent = t('app_name');
-  renderTabbar();
-  renderTab();
+  renderSection();
 }
 
 async function main() {
   await store.init();
   applyTheme(store.getState().settings.theme);
 
+  menuBtn.addEventListener('click', openMenu);
   fab.addEventListener('click', () => openQuickAdd());
 
-  // Перерисовка при изменении данных (только активная вкладка).
-  store.subscribe(() => renderTab());
+  // Перерисовка при изменении данных (только активный раздел).
+  store.subscribe(() => renderSection());
 
   rerenderAll();
 

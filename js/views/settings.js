@@ -77,10 +77,12 @@ export function renderSettings(root, rerenderApp) {
   // О приложении
   root.appendChild(el('.group-caption', { text: t('about') }));
   root.appendChild(el('.settings-group', {}, [
-    settingRow(t('version'), el('span.version-badge', { text: APP_VERSION })),
     el('.about-row', {}, [el('p', { text: t('about_text') })]),
   ]));
   root.appendChild(el('.install-note', { text: t('install_hint') }));
+
+  // Версия — внизу экрана настроек.
+  root.appendChild(el('.version-footer', { text: `${t('app_name')} · ${t('version')} ${APP_VERSION}` }));
 }
 
 function settingRow(label, control) {
