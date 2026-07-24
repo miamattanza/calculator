@@ -421,6 +421,7 @@ select.select { appearance: none; -webkit-appearance: none; }
 .switch-input:checked + .switch-track { background: var(--green); }
 .switch-input:checked + .switch-track .switch-thumb { transform: translateX(20px); }
 .setting-hint { font-size: 13px; color: var(--text-3); padding: 2px 16px 12px; line-height: 1.4; }
+.num-input { width: 92px; max-width: 92px; text-align: right; -moz-appearance: textfield; }
 .version-badge { color: var(--text-3); font-variant-numeric: tabular-nums; }
 
 /* ---- Строка поиска на «Обзоре» ---- */

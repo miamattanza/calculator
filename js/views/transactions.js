@@ -139,9 +139,11 @@ export function openTransactionForm(existing) {
 
 let currentPeriod = 'month';
 let homeMode = 'expense'; // 'expense' | 'income'
+let showAllHistory = false; // «Показать всю историю» в режиме с лимитом строк
 
 function toggleMode(root) {
   homeMode = homeMode === 'expense' ? 'income' : 'expense';
+  showAllHistory = false;
   renderHome(root);
 }
 
@@ -230,20 +232,34 @@ export function renderHome(root) {
     { value: 'month', label: t('period_month') },
     { value: 'year', label: t('period_year') },
     { value: 'all', label: t('period_all') },
-  ], currentPeriod, (v) => { currentPeriod = v; renderHome(root); });
+  ], currentPeriod, (v) => { currentPeriod = v; showAllHistory = false; renderHome(root); });
 
   // Жесты вешаем на карточку — она пересоздаётся при каждом рендере,
   // поэтому обработчики не накапливаются. Горизонтальный свайп — смена
   // окна, свайп вверх — открыть клавиатуру ввода.
   onSwipe(card, { onHoriz: () => toggleMode(root), onUp: () => openQuickAdd(homeMode) });
 
-  root.append(card, dots, el('.period-bar', {}, [periodSeg]));
-
   // Список операций. Если «Раздельная история» включена — только тип текущего
   // окна; если выключена — и доходы, и расходы вместе.
-  const split = store.getState().settings.splitHistory !== false;
+  const settings = store.getState().settings;
+  const split = settings.splitHistory !== false;
+  const scope = split ? homeMode : null;
   const list = store.sortedTransactions().filter((x) =>
     x.date >= from && x.date <= to && (!split || x.type === homeMode));
+
+  const fit = settings.fitHistory !== false;
+
+  // В режиме с лимитом строк (fitHistory выключен) сверху показываем строку
+  // поиска — как на стартовой странице истории в версии 1.3.
+  if (!fit) {
+    const searchPill = el('button.search-pill', { type: 'button', onClick: () => openSearch({ type: scope, title: t('history') }) }, [
+      el('span.search-ico', { text: '🔍' }),
+      el('span', { text: t('search') }),
+    ]);
+    root.append(card, dots, el('.period-bar', {}, [periodSeg]), searchPill);
+  } else {
+    root.append(card, dots, el('.period-bar', {}, [periodSeg]));
+  }
 
   if (!list.length) {
     root.appendChild(el('.empty', {}, [
@@ -257,9 +273,26 @@ export function renderHome(root) {
   const listWrap = el('.trx-list');
   root.appendChild(listWrap);
 
-  // Показываем столько строк, сколько помещается на экране без прокрутки.
-  // Замеряем доступную высоту и добавляем строки, пока они влезают; если что-то
-  // не поместилось — показываем кнопку «Развернуть историю».
+  if (!fit) {
+    // Режим v1.3: список с прокруткой, ограниченный настраиваемым числом строк,
+    // и кнопка «Показать всю историю».
+    const maxRows = Math.max(1, parseInt(settings.maxRows, 10) || 10);
+    const limit = showAllHistory ? list.length : maxRows;
+    renderGroupedRows(listWrap, list.slice(0, limit), base);
+    if (!showAllHistory && list.length > maxRows) {
+      root.appendChild(el('button.expand-history', {
+        type: 'button', onClick: () => { showAllHistory = true; renderHome(root); },
+      }, [
+        el('span', { text: t('show_all_history') }),
+        el('span.expand-count', { text: String(list.length) }),
+      ]));
+    }
+    return;
+  }
+
+  // Режим v1.4: показываем столько строк, сколько помещается на экране без
+  // прокрутки. Замеряем доступную высоту и добавляем строки, пока они влезают;
+  // если что-то не поместилось — показываем кнопку «Развернуть историю».
   const cs = getComputedStyle(root);
   const padBottom = parseFloat(cs.paddingBottom) || 0;
   const availBottom = root.getBoundingClientRect().bottom - padBottom - 8;
@@ -295,13 +328,26 @@ export function renderHome(root) {
   // Кнопка появляется (и вместе с ней доступ к поиску), только если история
   // не поместилась целиком на экране.
   if (overflow) {
-    const scope = split ? homeMode : null;
     root.appendChild(el('button.expand-history', {
       type: 'button', onClick: () => openSearch({ type: scope, title: t('history') }),
     }, [
       el('span', { text: t('expand_history') }),
       el('span.expand-count', { text: String(list.length) }),
     ]));
+  }
+}
+
+// Группировка операций по дням: заголовок дня + карточка-группа со строками.
+function renderGroupedRows(container, items, base) {
+  let lastDate = null, group = null;
+  for (const trx of items) {
+    if (trx.date !== lastDate) {
+      container.appendChild(el('.trx-day', { text: dayLabel(trx.date) }));
+      lastDate = trx.date;
+      group = el('.trx-group');
+      container.appendChild(group);
+    }
+    group.appendChild(renderRow(trx, base));
   }
 }
 

@@ -45,15 +45,37 @@ export function renderSettings(root, rerenderApp) {
     settingRow(t('theme'), themeSelect),
   ]));
 
-  // Отображение: раздельная / общая история операций.
+  // Отображение: раздельная / общая история; подгонка истории под экран.
   const splitToggle = toggle(s.splitHistory !== false, async (checked) => {
     await store.setSetting('splitHistory', checked);
   });
-  root.appendChild(el('.group-caption', { text: t('display') }));
-  root.appendChild(el('.settings-group', {}, [
+  const fitToggle = toggle(s.fitHistory !== false, async (checked) => {
+    await store.setSetting('fitHistory', checked);
+  });
+
+  const displayGroup = el('.settings-group', {}, [
     settingRow(t('split_history'), splitToggle),
     el('.setting-hint', { text: t('split_history_hint') }),
-  ]));
+    settingRow(t('fit_history'), fitToggle),
+    el('.setting-hint', { text: t('fit_history_hint') }),
+  ]);
+
+  // Поле «Максимум строк» — только когда подгонка под экран выключена.
+  if (s.fitHistory === false) {
+    const maxInput = el('input.row-control.num-input', {
+      type: 'number', inputmode: 'numeric', min: '1', value: s.maxRows || 10,
+    });
+    maxInput.addEventListener('change', async () => {
+      let v = parseInt(maxInput.value, 10);
+      if (!v || v < 1) v = 10;
+      maxInput.value = v;
+      await store.setSetting('maxRows', v);
+    });
+    displayGroup.appendChild(settingRow(t('max_rows'), maxInput));
+  }
+
+  root.appendChild(el('.group-caption', { text: t('display') }));
+  root.appendChild(displayGroup);
 
   // Категории
   root.appendChild(el('.settings-group', {}, [
