@@ -4,7 +4,7 @@
 import * as store from './store.js';
 import { t } from './i18n.js';
 import { el, clear } from './dom.js';
-import { renderHome, openTransactionForm } from './views/transactions.js';
+import { renderHome, openQuickAdd } from './views/transactions.js';
 import { renderAnalytics } from './views/analytics.js';
 import { renderForecast } from './views/forecast.js';
 import { renderBudgets } from './views/budgets.js';
@@ -63,7 +63,7 @@ async function main() {
   await store.init();
   applyTheme(store.getState().settings.theme);
 
-  fab.addEventListener('click', () => openTransactionForm(null));
+  fab.addEventListener('click', () => openQuickAdd());
 
   // Перерисовка при изменении данных (только активная вкладка).
   store.subscribe(() => renderTab());

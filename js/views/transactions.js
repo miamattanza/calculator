@@ -5,6 +5,7 @@ import * as store from '../store.js';
 import { t } from '../i18n.js';
 import { el, clear, sheet, field, segmented, toast, confirmDialog } from '../dom.js';
 import { money, signedMoney, formatDate, dateISO, CURRENCIES } from '../format.js';
+import { openAmountPad } from '../keypad.js';
 
 // ---- Форма операции (переиспользуемая) ----
 
@@ -131,30 +132,96 @@ export function openTransactionForm(existing) {
 }
 
 // ---- Экран «Обзор» ----
+// Два окна со свайпом: «Расходы» (синее) и «Доходы» (зелёное).
+// В окне «Расходы» главное число — расходы, ниже доходы и общий баланс;
+// в окне «Доходы» — наоборот. Тип быстрой операции берётся из активного окна.
 
 let currentPeriod = 'month';
+let homeMode = 'expense'; // 'expense' | 'income'
+
+function toggleMode(root) {
+  homeMode = homeMode === 'expense' ? 'income' : 'expense';
+  renderHome(root);
+}
+
+// Быстрый ввод: клавиатура → выбор категории → сохранение.
+export function openQuickAdd(type = homeMode) {
+  openAmountPad({
+    type,
+    onConfirm: (amount) => openCategoryPicker(type, async (categoryId) => {
+      await store.saveTransaction({
+        type, amount, currency: store.baseCurrency(), rate: 1,
+        categoryId, date: dateISO(), note: '',
+      });
+      toast(type === 'income' ? t('income') : t('expense'));
+    }),
+  });
+}
+
+function openCategoryPicker(type, onPick) {
+  const body = el('.form');
+  const grid = el('.cat-grid');
+  for (const c of store.categoriesByType(type)) {
+    grid.appendChild(el('button.cat-chip', {
+      type: 'button', style: { '--chip': c.color },
+      onClick: async () => { modal.close(); await onPick(c.id); },
+    }, [el('.cat-emoji', { text: c.icon }), el('.cat-name', { text: c.name })]));
+  }
+  body.appendChild(grid);
+  const modal = sheet(t('category'), body);
+}
+
+// Распознавание свайпов: горизонтальный — смена окна, вверх — клавиатура.
+function onSwipe(node, { onHoriz, onUp }) {
+  let sx = 0, sy = 0, tracking = false;
+  const begin = (x, y) => { sx = x; sy = y; tracking = true; };
+  const finish = (x, y) => {
+    if (!tracking) return;
+    tracking = false;
+    const dx = x - sx, dy = y - sy;
+    if (onHoriz && Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy)) onHoriz(dx);
+    else if (onUp && dy < -45 && Math.abs(dy) > Math.abs(dx)) onUp();
+  };
+  node.addEventListener('touchstart', (e) => { const p = e.changedTouches[0]; begin(p.clientX, p.clientY); }, { passive: true });
+  node.addEventListener('touchend', (e) => { const p = e.changedTouches[0]; finish(p.clientX, p.clientY); }, { passive: true });
+  node.addEventListener('mousedown', (e) => begin(e.clientX, e.clientY));
+  node.addEventListener('mouseup', (e) => finish(e.clientX, e.clientY));
+}
 
 export function renderHome(root) {
   clear(root);
   const base = store.baseCurrency();
   const [from, to] = store.periodRange(currentPeriod);
   const totals = store.totals(from, to);
-
-  // Карточка баланса
   const balance = store.currentBalance();
-  const card = el('.balance-card', {}, [
-    el('.balance-label', { text: t('balance') }),
-    el('.balance-value', { text: money(balance, base) }),
+  const isExpense = homeMode === 'expense';
+
+  const mainValue = isExpense ? totals.expense : totals.income;
+  const otherLabel = isExpense ? t('income') : t('expense');
+  const otherValue = isExpense ? totals.income : totals.expense;
+  const otherSign = isExpense ? '+' : '−';
+
+  // Карточка активного окна (синяя для расходов, зелёная для доходов).
+  const card = el('.balance-card', { class: isExpense ? 'expense-mode' : 'income-mode' }, [
+    el('.balance-label', { text: isExpense ? t('expense') : t('income') }),
+    el('.balance-value', { text: money(mainValue, base) }),
     el('.balance-split', {}, [
-      el('.split-item.income', {}, [
-        el('.split-label', { text: t('income') }),
-        el('.split-value', { text: '+' + money(totals.income, base) }),
+      el('.split-item', {}, [
+        el('.split-label', { text: otherLabel }),
+        el('.split-value', { text: otherSign + money(otherValue, base) }),
       ]),
-      el('.split-item.expense', {}, [
-        el('.split-label', { text: t('expense') }),
-        el('.split-value', { text: '−' + money(totals.expense, base) }),
+      el('.split-item', {}, [
+        el('.split-label', { text: t('balance') }),
+        el('.split-value', { text: money(balance, base) }),
       ]),
     ]),
+    el('.pad-hint', { text: '↑ ' + t('add_transaction') }),
+  ]);
+
+  // Индикатор окна (две точки: расходы / доходы).
+  const dots = el('.win-dots', {}, [
+    el('.win-dot', { class: isExpense ? 'active' : '' }),
+    el('.win-dot', { class: !isExpense ? 'active' : '' }),
   ]);
 
   const periodSeg = segmented([
@@ -164,13 +231,18 @@ export function renderHome(root) {
     { value: 'all', label: t('period_all') },
   ], currentPeriod, (v) => { currentPeriod = v; renderHome(root); });
 
-  root.append(card, el('.period-bar', {}, [periodSeg]));
+  // Жесты вешаем на карточку — она пересоздаётся при каждом рендере,
+  // поэтому обработчики не накапливаются. Горизонтальный свайп — смена
+  // окна, свайп вверх — открыть клавиатуру ввода.
+  onSwipe(card, { onHoriz: () => toggleMode(root), onUp: () => openQuickAdd(homeMode) });
 
-  // Список операций, сгруппированный по дате
-  const list = store.sortedTransactions().filter((x) => x.date >= from && x.date <= to);
+  root.append(card, dots, el('.period-bar', {}, [periodSeg]));
+
+  // Список операций текущего окна (только доходы или только расходы).
+  const list = store.sortedTransactions().filter((x) => x.date >= from && x.date <= to && x.type === homeMode);
   if (!list.length) {
     root.appendChild(el('.empty', {}, [
-      el('.empty-emoji', { text: '📊' }),
+      el('.empty-emoji', { text: isExpense ? '💸' : '💰' }),
       el('.empty-title', { text: t('no_transactions') }),
       el('.empty-hint', { text: t('no_transactions_hint') }),
     ]));

@@ -355,4 +355,48 @@ select.select { appearance: none; -webkit-appearance: none; }
 .alert-btn { flex: 1; padding: 13px; font-size: 17px; color: var(--accent); }
 .alert-btn.danger { color: var(--red); font-weight: 600; border-left: 0.5px solid var(--sep); }
 
+/* ---- Два окна «Обзора»: расходы (синее) / доходы (зелёное) ---- */
+.balance-card { animation: cardIn .22s ease; }
+@keyframes cardIn { from { opacity: 0.35; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+.balance-card.income-mode {
+  background: linear-gradient(135deg, #30D158 0%, #34C759 55%, #248A3D 100%);
+  box-shadow: 0 10px 30px rgba(52,199,89,0.35);
+}
+.pad-hint { margin-top: 14px; font-size: 12px; opacity: 0.75; text-align: center; font-weight: 500; }
+.win-dots { display: flex; justify-content: center; gap: 7px; margin: 12px 0 14px; }
+.win-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sep-strong); transition: all .2s; }
+.win-dot.active { background: var(--accent); width: 20px; border-radius: 4px; }
+.balance-card.income-mode ~ .win-dots .win-dot.active { background: var(--green); }
+
+/* ---- Цифровая клавиатура ввода суммы ---- */
+.pad-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 150;
+  display: flex; align-items: flex-end; opacity: 0; transition: opacity .25s;
+}
+.pad-backdrop.open { opacity: 1; }
+.pad {
+  width: 100%; background: var(--bg-elev); border-radius: 18px 18px 0 0;
+  padding: 8px 16px calc(18px + var(--safe-bottom));
+  transform: translateY(100%); transition: transform .28s cubic-bezier(.32,.72,0,1);
+}
+.pad-backdrop.open .pad { transform: translateY(0); }
+.pad .sheet-grabber { margin: 4px auto 6px; }
+.pad-type { text-align: center; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-3); }
+.pad-type.income { color: var(--green); }
+.pad-type.expense { color: var(--red); }
+.pad-amount {
+  text-align: center; font-size: 46px; font-weight: 700; letter-spacing: -1px;
+  padding: 10px 0 18px; font-variant-numeric: tabular-nums; min-height: 66px;
+}
+.pad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.pad-key {
+  height: 62px; border-radius: 14px; background: var(--fill);
+  font-size: 26px; font-weight: 500; display: flex; align-items: center; justify-content: center;
+  transition: background .1s, transform .08s;
+}
+.pad-key:active { background: var(--fill-2); transform: scale(0.96); }
+.pad-key.del { font-size: 24px; background: transparent; }
+.pad-key.ok { background: var(--green); color: #fff; font-size: 28px; }
+.pad-key.ok.disabled { opacity: 0.4; pointer-events: none; }
+
 body.modal-open { overflow: hidden; }
