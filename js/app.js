@@ -9,7 +9,7 @@ import { renderHome } from './views/transactions.js';
 import { renderAnalytics } from './views/analytics.js';
 import { renderForecast } from './views/forecast.js';
 import { renderBudgets } from './views/budgets.js';
-import { renderSettings, applyTheme } from './views/settings.js';
+import { renderSettings, applyTheme, applyBackground } from './views/settings.js';
 
 // Разделы приложения. Обзор — главный экран, остальные открываются из меню.
 const SECTIONS = [
@@ -111,6 +111,7 @@ function openLanguageOnboarding(onDone) {
 async function main() {
   await store.init();
   applyTheme(store.getState().settings.theme);
+  applyBackground();
 
   menuBtn.addEventListener('click', openMenu);
   if (analyticsBtn) analyticsBtn.addEventListener('click', () => { activeSection = 'analytics'; renderSection(); });

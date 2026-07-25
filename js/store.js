@@ -451,9 +451,10 @@ export function transactionsToCSV() {
   return rows.map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
 }
 
-export async function resetAll() {
-  for (const s of ['transactions', 'categories', 'planned', 'budgets', 'settings']) {
-    await db.clear(s);
-  }
-  await init();
+export async function resetAll({ keepCategories = false } = {}) {
+  const stores = keepCategories
+    ? ['transactions', 'planned', 'budgets']
+    : ['transactions', 'categories', 'planned', 'budgets'];
+  for (const s of stores) await db.clear(s);
+  await init(); // настройки (язык/тема/фон) сохраняются; категории пере-создаются, если удалены
 }

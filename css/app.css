@@ -23,39 +23,44 @@
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
+/* Тёплая тёмная тема: не чёрная, а тёмно-коричнево-оливковая, мягкая,
+   с охровыми нотками и невысоким контрастом. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #000000;
-    --bg-elev: #1C1C1E;
-    --card: #1C1C1E;
-    --text: #FFFFFF;
-    --text-2: #EBEBF5;
-    --text-3: #8E8E93;
-    --sep: rgba(84,84,88,0.36);
-    --sep-strong: rgba(84,84,88,0.6);
+    --bg: #241C15;
+    --bg-elev: #322820;
+    --card: #322820;
+    --text: #F1E8DB;
+    --text-2: #DECFBC;
+    --text-3: #AA9A85;
+    --sep: rgba(140,118,92,0.30);
+    --sep-strong: rgba(170,146,116,0.52);
     --accent: #0A84FF;
-    --fill: rgba(120,120,128,0.24);
-    --fill-2: rgba(120,120,128,0.36);
-    --shadow: 0 1px 3px rgba(0,0,0,0.4);
+    --fill: rgba(180,156,126,0.14);
+    --fill-2: rgba(180,156,126,0.24);
+    --shadow: 0 1px 3px rgba(0,0,0,0.45);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #000000;
-  --bg-elev: #1C1C1E;
-  --card: #1C1C1E;
-  --text: #FFFFFF;
-  --text-2: #EBEBF5;
-  --text-3: #8E8E93;
-  --sep: rgba(84,84,88,0.36);
-  --sep-strong: rgba(84,84,88,0.6);
-  --fill: rgba(120,120,128,0.24);
-  --fill-2: rgba(120,120,128,0.36);
-  --shadow: 0 1px 3px rgba(0,0,0,0.4);
+  --bg: #241C15;
+  --bg-elev: #322820;
+  --card: #322820;
+  --text: #F1E8DB;
+  --text-2: #DECFBC;
+  --text-3: #AA9A85;
+  --sep: rgba(140,118,92,0.30);
+  --sep-strong: rgba(170,146,116,0.52);
+  --fill: rgba(180,156,126,0.14);
+  --fill-2: rgba(180,156,126,0.24);
+  --shadow: 0 1px 3px rgba(0,0,0,0.45);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+/* touch-action: manipulation убирает двойной тап-зум iOS (мешал при быстром
+   наборе цифр). text-size-adjust не даёт Safari масштабировать текст. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: manipulation; }
 html, body { height: 100%; }
 
 body {
@@ -64,18 +69,32 @@ body {
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
+  touch-action: manipulation;
 }
+button, .key, .cat-chip, .tab, #menu-btn, #analytics-btn { touch-action: manipulation; }
 
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
 input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 
 /* ---- Каркас приложения ---- */
-#app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+#app {
+  display: flex; flex-direction: column; height: 100vh; height: 100dvh;
+  position: relative; background-color: var(--bg);
+  background-repeat: repeat; background-position: center;
+}
+/* Тонкий «затемнитель» поверх своего фонового изображения — чтобы данные
+   оставались читабельными (фон ненавязчивый). */
+[data-bg="custom"] #app { background-image: var(--bg-custom); background-size: cover; background-attachment: fixed; }
+[data-bg="custom"] #app::after {
+  content: ''; position: absolute; inset: 0; background: var(--bg);
+  opacity: 0.82; pointer-events: none; z-index: 0;
+}
+#header, #content { position: relative; z-index: 1; }
 
 #header {
   display: flex; align-items: center;
   padding: calc(var(--safe-top) + 10px) 16px 6px;
-  background: var(--bg);
+  background: transparent;
 }
 #menu-btn {
   width: 42px; height: 42px; border-radius: 12px; background: var(--fill);
@@ -565,5 +584,43 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 [dir="rtl"] .menu-panel { left: auto; right: 12px; transform-origin: top right; }
 [dir="rtl"] .nav-chevron { transform: scaleX(-1); }
 [dir="rtl"] .amount-input { text-align: left; }
+
+/* ---- Фоновые паттерны (ненавязчивые, работают в обеих темах) ---- */
+[data-bg="dots"] #app,   .bg-swatch[data-bg="dots"]   { background-image: radial-gradient(rgba(128,128,128,.12) 1.5px, transparent 1.6px); background-size: 16px 16px; }
+[data-bg="grid"] #app,   .bg-swatch[data-bg="grid"]   { background-image: linear-gradient(rgba(128,128,128,.10) 1px, transparent 1px), linear-gradient(90deg, rgba(128,128,128,.10) 1px, transparent 1px); background-size: 20px 20px; }
+[data-bg="diag"] #app,   .bg-swatch[data-bg="diag"]   { background-image: repeating-linear-gradient(45deg, rgba(128,128,128,.08) 0 2px, transparent 2px 12px); }
+[data-bg="cross"] #app,  .bg-swatch[data-bg="cross"]  { background-image: repeating-linear-gradient(0deg, rgba(128,128,128,.08) 0 1px, transparent 1px 16px), repeating-linear-gradient(90deg, rgba(128,128,128,.08) 0 1px, transparent 1px 16px); }
+[data-bg="checker"] #app,.bg-swatch[data-bg="checker"]{ background-image: linear-gradient(45deg, rgba(128,128,128,.07) 25%, transparent 25% 75%, rgba(128,128,128,.07) 75%); background-size: 18px 18px; }
+[data-bg="zigzag"] #app, .bg-swatch[data-bg="zigzag"] { background-image: repeating-linear-gradient(135deg, rgba(128,128,128,.08) 0 2px, transparent 2px 11px); }
+[data-bg="waves"] #app,  .bg-swatch[data-bg="waves"]  { background-image: radial-gradient(circle at 10px -5px, transparent 11px, rgba(128,128,128,.07) 12px 13px, transparent 14px); background-size: 22px 22px; }
+
+/* ---- Выбор фона в настройках ---- */
+.bg-picker-wrap { padding: 6px; }
+.bg-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 8px; }
+.bg-swatch {
+  width: 100%; aspect-ratio: 1; border-radius: 12px; background-color: var(--fill);
+  position: relative; display: flex; align-items: center; justify-content: center;
+  background-repeat: repeat; overflow: hidden;
+}
+.bg-swatch.active { box-shadow: inset 0 0 0 2px var(--accent); }
+.bg-none-x { color: var(--text-3); font-size: 18px; }
+.bg-custom { background-size: cover; background-position: center; }
+.bg-plus { font-size: 24px; color: var(--text-3); font-weight: 300; }
+
+/* ---- Редактор категории: превью иконки + загрузка ---- */
+.icon-field { display: flex; flex-direction: column; gap: 12px; }
+.icon-preview { align-self: center; width: 56px; height: 56px; border-radius: 14px; font-size: 28px; }
+.icon-rules { font-size: 12px; color: var(--text-3); text-align: center; margin-top: -6px; }
+.btn-upload { background: var(--fill); border-radius: 10px; padding: 11px; font-size: 15px; font-weight: 500; color: var(--accent); }
+.cat-img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
+
+/* ---- Категории на «Обзоре»: карусель + пустые ячейки ---- */
+.cat-viewport { overflow: hidden; }
+.cat-track { display: flex; }
+.cat-track > .cat-page { flex: 0 0 100%; }
+.cat-chip.cat-add { align-items: center; justify-content: center; background: transparent; box-shadow: inset 0 0 0 1.5px var(--sep-strong); }
+.cat-add-plus { font-size: 26px; color: var(--text-3); font-weight: 300; }
+
+.reset-msg { font-size: 15px; color: var(--text-2); line-height: 1.4; }
 
 body.modal-open { overflow: hidden; }

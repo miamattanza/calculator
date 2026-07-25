@@ -3,9 +3,10 @@
 
 import * as store from '../store.js';
 import { t } from '../i18n.js';
-import { el, clear, sheet, field, segmented, toast, confirmDialog } from '../dom.js';
+import { el, clear, sheet, field, segmented, toast, confirmDialog, catIcon } from '../dom.js';
 import { money, signedMoney, formatDate, dateISO, CURRENCIES } from '../format.js';
 import { openSearch } from './search.js';
+import { openCategoryEditor } from './settings.js';
 
 // ---- Форма операции (переиспользуемая) ----
 
@@ -258,12 +259,6 @@ export function renderHome(root) {
   keypad.appendChild(el('button.key.key-zero', { type: 'button', text: '0', onClick: () => pressDigit('0') }));
   keypad.appendChild(el('button.key.key-del', { type: 'button', text: '⌫', 'aria-label': t('delete'), onClick: del }));
 
-  // --- Категории (8 на страницу, свайп по страницам; недавние — вперёд) ---
-  const cats = store.categoriesByRecency(homeMode);
-  const pages = Math.max(1, Math.ceil(cats.length / CATS_PER_PAGE));
-  if (catPage >= pages) catPage = 0;
-  const catTrack = el('.cat-track');
-  const catDots = el('.cat-dots');
   const commit = async (categoryId) => {
     const v = entryDigits ? parseInt(entryDigits, 10) : 0;
     if (v <= 0) { amountEl.classList.add('shake'); setTimeout(() => amountEl.classList.remove('shake'), 400); return; }
@@ -271,47 +266,120 @@ export function renderHome(root) {
     await store.saveTransaction({ type: homeMode, amount: v, currency: base, rate: 1, categoryId, date: dateISO(), note: '' });
     // saveTransaction → подписка → renderHome (табло сбрасывается, история обновляется)
   };
-  const renderCatPage = () => {
-    clear(catTrack);
-    const startI = catPage * CATS_PER_PAGE;
+
+  // --- Категории: всегда 2 ряда по 4 (8 на страницу). Пустые ячейки — «+»,
+  // открывают добавление новой категории. Страницы листаются свайпом-каруселью
+  // (плавно, без пробелов). Недавние категории — вперёд. >16 → доп. страницы. ---
+  const cats = store.categoriesByRecency(homeMode);
+  // +1 — чтобы всегда была хотя бы одна пустая ячейка «+» для добавления.
+  const pages = Math.max(1, Math.ceil((cats.length + 1) / CATS_PER_PAGE));
+  if (catPage >= pages) catPage = 0;
+  const openAdd = () => openCategoryEditor(null, () => {}, homeMode);
+
+  const catViewport = el('.cat-viewport');
+  const catTrack = el('.cat-track');
+  for (let p = 0; p < pages; p++) {
     const grid = el('.cat-page');
-    for (const c of cats.slice(startI, startI + CATS_PER_PAGE)) {
-      grid.appendChild(el('button.cat-chip', {
-        type: 'button', style: { '--chip': c.color }, onClick: () => commit(c.id),
-      }, [el('.cat-emoji', { text: c.icon }), el('.cat-name', { text: store.categoryName(c) })]));
+    for (let i = 0; i < CATS_PER_PAGE; i++) {
+      const c = cats[p * CATS_PER_PAGE + i];
+      if (c) {
+        grid.appendChild(el('button.cat-chip', {
+          type: 'button', style: { '--chip': c.color }, onClick: () => commit(c.id),
+        }, [catIcon(c), el('.cat-name', { text: store.categoryName(c) })]));
+      } else {
+        grid.appendChild(el('button.cat-chip.cat-add', { type: 'button', 'aria-label': t('add_category'), onClick: openAdd }, [el('.cat-add-plus', { text: '+' })]));
+      }
     }
     catTrack.appendChild(grid);
-    clear(catDots);
-    if (pages > 1) for (let i = 0; i < pages; i++) catDots.appendChild(el('.cat-dot', { class: i === catPage ? 'active' : '' }));
+  }
+  catViewport.appendChild(catTrack);
+  const catDots = el('.cat-dots');
+  const renderDots = () => { clear(catDots); if (pages > 1) for (let i = 0; i < pages; i++) catDots.appendChild(el('.cat-dot', { class: i === catPage ? 'active' : '' })); };
+  const applyTrack = (animate) => {
+    const w = catViewport.offsetWidth;
+    catTrack.style.transition = animate ? 'transform .26s cubic-bezier(.32,.72,0,1)' : 'none';
+    catTrack.style.transform = `translateX(${-catPage * w}px)`;
+    renderDots();
   };
-  renderCatPage();
-  const catPager = el('.cat-pager', {}, [catTrack, catDots]);
-  attachCatSwipe(catPager,
-    () => { if (catPage > 0) { catPage--; renderCatPage(); } },
-    () => { if (catPage < pages - 1) { catPage++; renderCatPage(); } });
+  const catPager = el('.cat-pager', {}, [catViewport, catDots]);
+  renderDots();
+  requestAnimationFrame(() => applyTrack(false));
+
+  // Карусель категорий (перетаскивание пальцем внутри зоны).
+  let csx = 0, csy = 0, cdir = null, cdrag = false;
+  const cStart = (x, y) => { csx = x; csy = y; cdir = null; cdrag = true; catTrack.style.transition = 'none'; };
+  const cMove = (x, y, e) => {
+    if (!cdrag) return;
+    const dx = x - csx, dy = y - csy;
+    if (cdir === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) cdir = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+    if (cdir === 'h') {
+      if (e && e.cancelable) e.preventDefault();
+      const w = catViewport.offsetWidth;
+      let pos = -catPage * w + dx;
+      const min = -(pages - 1) * w;
+      if (pos > 0) pos *= 0.3; else if (pos < min) pos = min + (pos - min) * 0.3;
+      catTrack.style.transform = `translateX(${pos}px)`;
+    }
+  };
+  const cEnd = (x) => {
+    if (!cdrag) return; cdrag = false;
+    if (cdir !== 'h') return;
+    const w = catViewport.offsetWidth, dx = x - csx;
+    if (dx < -w * 0.2 && catPage < pages - 1) catPage++;
+    else if (dx > w * 0.2 && catPage > 0) catPage--;
+    applyTrack(true);
+  };
+  catPager.addEventListener('touchstart', (e) => { const p = e.changedTouches[0]; cStart(p.clientX, p.clientY); }, { passive: true });
+  catPager.addEventListener('touchmove', (e) => { const p = e.changedTouches[0]; cMove(p.clientX, p.clientY, e); }, { passive: false });
+  catPager.addEventListener('touchend', (e) => { const p = e.changedTouches[0]; cEnd(p.clientX); }, { passive: true });
+  catPager.addEventListener('mousedown', (e) => {
+    cStart(e.clientX, e.clientY);
+    const mm = (ev) => cMove(ev.clientX, ev.clientY, ev);
+    const mu = (ev) => { cEnd(ev.clientX); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
+    window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);
+  });
 
   pager.append(el('.entry-block', {}, [amountEl, keypad]), catPager);
 
-  // --- Мини-история (последние записи текущего окна) ---
+  // --- Мини-история. Число строк управляется настройкой «Подгонять историю
+  // под экран»: ВКЛ — сколько помещается до низа экрана; ВЫКЛ — до «Максимум
+  // строк» (список прокручивается). ---
   const list = store.sortedTransactions().filter((x) => !split || x.type === homeMode);
-  const histWrap = el('.mini-hist', {}, [
-    el('.mini-hist-head', {}, [
-      el('span', { text: t('history') }),
-      list.length > 3 ? el('button.mini-more', { type: 'button', text: t('expand_history'), onClick: () => openSearch({ type: scope, title: t('history') }) }) : null,
-    ]),
-  ]);
-  if (!list.length) {
-    histWrap.appendChild(el('.mini-empty', { text: t('no_transactions') }));
-  } else {
-    const group = el('.trx-group');
-    for (const trx of list.slice(0, 3)) group.appendChild(renderRow(trx, base));
-    histWrap.appendChild(group);
-  }
+  const fit = settings.fitHistory !== false;
+  const maxRows = Math.max(1, parseInt(settings.maxRows, 10) || 10);
+  const histWrap = el('.mini-hist');
+  const head = el('.mini-hist-head', {}, [el('span', { text: t('history') })]);
+  histWrap.appendChild(head);
   pager.appendChild(histWrap);
 
   root.appendChild(pager);
   attachPagerSwipe(pager, root);
   renderAmount();
+
+  if (!list.length) {
+    histWrap.appendChild(el('.mini-empty', { text: t('no_transactions') }));
+    return;
+  }
+
+  const group = el('.trx-group');
+  histWrap.appendChild(group);
+  let shown = 0;
+  if (fit) {
+    const vpBottom = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    const limitY = vpBottom - 10;
+    for (const trx of list) {
+      const row = renderRow(trx, base);
+      group.appendChild(row);
+      if (row.getBoundingClientRect().bottom > limitY) { group.removeChild(row); break; }
+      shown++;
+    }
+    if (shown === 0) { group.appendChild(renderRow(list[0], base)); shown = 1; }
+  } else {
+    for (const trx of list.slice(0, maxRows)) { group.appendChild(renderRow(trx, base)); shown++; }
+  }
+  if (list.length > shown) {
+    head.appendChild(el('button.mini-more', { type: 'button', text: t('expand_history'), onClick: () => openSearch({ type: scope, title: t('history') }) }));
+  }
 }
 
 // Группировка операций по дням: заголовок дня + карточка-группа со строками.
@@ -334,7 +402,7 @@ function renderRow(trx, base) {
   const amountBase = store.baseAmount(trx) * sign;
   const showOrig = trx.currency !== base;
   return el('.trx-row', { onClick: () => openTransactionForm(trx) }, [
-    el('.trx-icon', { style: { '--chip': cat ? cat.color : '#8E8E93' }, text: cat ? cat.icon : '🔖' }),
+    catIcon(cat, 'trx-icon'),
     el('.trx-main', {}, [
       el('.trx-title', { text: cat ? store.categoryName(cat) : '—' }),
       trx.note ? el('.trx-note', { text: trx.note }) : null,

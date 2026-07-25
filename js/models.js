@@ -1,6 +1,6 @@
 // models.js — фабрики сущностей и данные по умолчанию.
 
-export const APP_VERSION = '1.8';
+export const APP_VERSION = '1.9';
 
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -29,9 +29,10 @@ export const DEFAULT_CATEGORIES = [
   { key: 'other_income',  name: 'Прочее',      type: 'income',  icon: '💰', color: '#8E8E93' },
 ];
 
-export function makeCategory({ name, type, icon, color, order, key }) {
+export function makeCategory({ name, type, icon, color, order, key, image }) {
   const c = { id: uid(), name, type, icon: icon || '🔖', color: color || '#8E8E93', order: order || 0 };
   if (key) c.key = key;
+  if (image) c.image = image;
   return c;
 }
 
@@ -78,5 +79,7 @@ export const DEFAULT_SETTINGS = {
   fitHistory: true,     // подгонять число строк истории под размер экрана (v1.4)
   maxRows: 10,          // лимит строк истории, когда fitHistory выключен
   langChosen: false,    // выбран ли язык при первом запуске
+  background: 'none',   // фоновый паттерн ('none' | id | 'custom')
+  bgCustom: null,       // свой фон (dataURL)
   seeded: false,        // созданы ли дефолтные категории
 };

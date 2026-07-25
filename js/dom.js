@@ -37,6 +37,14 @@ export function el(tag, attrs = {}, children = []) {
 
 export function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); return node; }
 
+// Иконка категории: загруженное изображение (если есть) либо эмодзи.
+export function catIcon(cat, cls) {
+  const box = el('.' + (cls || 'cat-emoji'), { style: { '--chip': cat ? cat.color : '#8E8E93' } });
+  if (cat && cat.image) box.appendChild(el('img.cat-img', { src: cat.image, alt: '' }));
+  else box.textContent = cat ? cat.icon : '🔖';
+  return box;
+}
+
 // Нижний модальный лист (iOS sheet). content — DOM-узел.
 export function sheet(title, content, { onClose, full } = {}) {
   const backdrop = el('.sheet-backdrop', { role: 'dialog', 'aria-modal': 'true' });
@@ -59,6 +67,27 @@ export function sheet(title, content, { onClose, full } = {}) {
     backdrop.classList.remove('open');
     document.body.classList.remove('modal-open');
     setTimeout(() => { backdrop.remove(); if (onClose) onClose(); }, 250);
+  }
+
+  // Свайп вниз за «грабер»/шапку — закрыть лист (как в нативных iOS-листах).
+  let sy = 0, dragging = false;
+  const onStart = (y) => { sy = y; dragging = true; panel.style.transition = 'none'; };
+  const onMove = (y) => { if (!dragging) return; const dy = Math.max(0, y - sy); panel.style.transform = `translateY(${dy}px)`; };
+  const onEnd = (y) => {
+    if (!dragging) return; dragging = false; panel.style.transition = '';
+    if (Math.max(0, y - sy) > 110) close(); else panel.style.transform = '';
+  };
+  for (const z of [panel.querySelector('.sheet-grabber'), panel.querySelector('.sheet-header')]) {
+    if (!z) continue;
+    z.addEventListener('touchstart', (e) => onStart(e.changedTouches[0].clientY), { passive: true });
+    z.addEventListener('touchmove', (e) => onMove(e.changedTouches[0].clientY), { passive: true });
+    z.addEventListener('touchend', (e) => onEnd(e.changedTouches[0].clientY), { passive: true });
+    z.addEventListener('mousedown', (e) => {
+      onStart(e.clientY);
+      const mm = (ev) => onMove(ev.clientY);
+      const mu = (ev) => { onEnd(ev.clientY); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
+      window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);
+    });
   }
   return { close, panel };
 }
