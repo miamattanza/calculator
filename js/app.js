@@ -5,7 +5,7 @@
 import * as store from './store.js';
 import { t, dir, availableLangs, LANG_NAMES } from './i18n.js';
 import { el, clear } from './dom.js';
-import { renderHome, openQuickAdd } from './views/transactions.js';
+import { renderHome } from './views/transactions.js';
 import { renderAnalytics } from './views/analytics.js';
 import { renderForecast } from './views/forecast.js';
 import { renderBudgets } from './views/budgets.js';
@@ -23,20 +23,23 @@ const SECTIONS = [
 let activeSection = 'home';
 const content = document.getElementById('content');
 const menuBtn = document.getElementById('menu-btn');
-const fab = document.getElementById('fab');
-
 const modeLabel = document.getElementById('mode-label');
+const headBalance = document.getElementById('head-balance');
+const analyticsBtn = document.getElementById('analytics-btn');
 
 function renderSection() {
   clear(content);
   content.scrollTop = 0;
-  if (activeSection !== 'home') {
+  const onHome = activeSection === 'home';
+  // Шапка с балансом/меткой окна и иконка Аналитики — только на «Обзоре».
+  if (!onHome) {
     content.classList.remove('fit-mode');
     if (modeLabel) { modeLabel.textContent = ''; modeLabel.className = ''; }
+    if (headBalance) headBalance.textContent = '';
   }
+  if (analyticsBtn) analyticsBtn.style.display = onHome ? '' : 'none';
   const section = SECTIONS.find((x) => x.id === activeSection);
   section.render(content);
-  fab.style.display = activeSection === 'settings' ? 'none' : '';
 }
 
 // Всплывающее меню со всеми пятью разделами.
@@ -110,7 +113,7 @@ async function main() {
   applyTheme(store.getState().settings.theme);
 
   menuBtn.addEventListener('click', openMenu);
-  fab.addEventListener('click', () => openQuickAdd());
+  if (analyticsBtn) analyticsBtn.addEventListener('click', () => { activeSection = 'analytics'; renderSection(); });
 
   // Перерисовка при изменении данных (только активный раздел).
   store.subscribe(() => renderSection());

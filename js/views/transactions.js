@@ -5,7 +5,6 @@ import * as store from '../store.js';
 import { t } from '../i18n.js';
 import { el, clear, sheet, field, segmented, toast, confirmDialog } from '../dom.js';
 import { money, signedMoney, formatDate, dateISO, CURRENCIES } from '../format.js';
-import { openAmountPad } from '../keypad.js';
 import { openSearch } from './search.js';
 
 // ---- Форма операции (переиспользуемая) ----
@@ -137,13 +136,14 @@ export function openTransactionForm(existing) {
 // В окне «Расходы» главное число — расходы, ниже доходы и общий баланс;
 // в окне «Доходы» — наоборот. Тип быстрой операции берётся из активного окна.
 
-let currentPeriod = 'month';
 let homeMode = 'expense'; // 'expense' | 'income'
-let showAllHistory = false; // «Показать всю историю» в режиме с лимитом строк
+let entryDigits = '';     // набираемая сумма (целое, в основной валюте)
+let catPage = 0;          // текущая страница категорий
+const CATS_PER_PAGE = 8;
 
 function toggleMode(root, incomingFrom = null) {
   homeMode = homeMode === 'expense' ? 'income' : 'expense';
-  showAllHistory = false;
+  catPage = 0;
   renderHome(root);
   // Анимация «въезда» новой страницы со стороны свайпа (эффект как в Instagram).
   if (incomingFrom != null) {
@@ -162,12 +162,14 @@ function toggleMode(root, incomingFrom = null) {
 }
 
 // Перетаскивание страницы пальцем по всему экрану + плавный переход между
-// окнами «Расходы»/«Доходы». Вешается на .pager (пересоздаётся каждый рендер).
+// окнами «Расходы»/«Доходы». Свайпы, начатые в зоне категорий (.cat-pager),
+// пропускаются — там своя постраничная листалка.
 function attachPagerSwipe(pager, root) {
-  let sx = 0, sy = 0, dir = null, dragging = false, w = window.innerWidth;
+  let sx = 0, sy = 0, dir = null, dragging = false, skip = false, w = window.innerWidth;
+  const inCat = (target) => !!(target && target.closest && target.closest('.cat-pager'));
   const start = (x, y) => { sx = x; sy = y; dir = null; dragging = true; w = window.innerWidth || pager.offsetWidth; pager.style.transition = 'none'; };
   const move = (x, y, e) => {
-    if (!dragging) return;
+    if (!dragging || skip) return;
     const dx = x - sx, dy = y - sy;
     if (dir === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) dir = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
     if (dir === 'h') {
@@ -179,6 +181,7 @@ function attachPagerSwipe(pager, root) {
   const end = (x, y) => {
     if (!dragging) return;
     dragging = false;
+    if (skip) return;
     const dx = x - sx;
     if (dir !== 'h') { pager.style.transform = ''; pager.style.opacity = ''; return; }
     pager.style.transition = 'transform .24s ease, opacity .24s ease';
@@ -192,10 +195,11 @@ function attachPagerSwipe(pager, root) {
       pager.style.opacity = '1';
     }
   };
-  pager.addEventListener('touchstart', (e) => { const p = e.changedTouches[0]; start(p.clientX, p.clientY); }, { passive: true });
+  pager.addEventListener('touchstart', (e) => { skip = inCat(e.target); const p = e.changedTouches[0]; start(p.clientX, p.clientY); }, { passive: true });
   pager.addEventListener('touchmove', (e) => { const p = e.changedTouches[0]; move(p.clientX, p.clientY, e); }, { passive: false });
   pager.addEventListener('touchend', (e) => { const p = e.changedTouches[0]; end(p.clientX, p.clientY); }, { passive: true });
   pager.addEventListener('mousedown', (e) => {
+    skip = inCat(e.target);
     start(e.clientX, e.clientY);
     const mm = (ev) => move(ev.clientX, ev.clientY, ev);
     const mu = (ev) => { end(ev.clientX, ev.clientY); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
@@ -204,43 +208,15 @@ function attachPagerSwipe(pager, root) {
   });
 }
 
-// Быстрый ввод: клавиатура → выбор категории → сохранение.
-export function openQuickAdd(type = homeMode) {
-  openAmountPad({
-    type,
-    onConfirm: (amount) => openCategoryPicker(type, async (categoryId) => {
-      await store.saveTransaction({
-        type, amount, currency: store.baseCurrency(), rate: 1,
-        categoryId, date: dateISO(), note: '',
-      });
-      toast(type === 'income' ? t('income') : t('expense'));
-    }),
-  });
-}
-
-function openCategoryPicker(type, onPick) {
-  const body = el('.form');
-  const grid = el('.cat-grid');
-  for (const c of store.categoriesByType(type)) {
-    grid.appendChild(el('button.cat-chip', {
-      type: 'button', style: { '--chip': c.color },
-      onClick: async () => { modal.close(); await onPick(c.id); },
-    }, [el('.cat-emoji', { text: c.icon }), el('.cat-name', { text: store.categoryName(c) })]));
-  }
-  body.appendChild(grid);
-  const modal = sheet(t('category'), body);
-}
-
-// Распознавание свайпов: горизонтальный — смена окна, вверх — клавиатура.
-function onSwipe(node, { onHoriz, onUp }) {
+// Свайп внутри зоны категорий — листание страниц категорий.
+function attachCatSwipe(node, onPrev, onNext) {
   let sx = 0, sy = 0, tracking = false;
   const begin = (x, y) => { sx = x; sy = y; tracking = true; };
   const finish = (x, y) => {
     if (!tracking) return;
     tracking = false;
     const dx = x - sx, dy = y - sy;
-    if (onHoriz && Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy)) onHoriz(dx);
-    else if (onUp && dy < -45 && Math.abs(dy) > Math.abs(dx)) onUp();
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) { if (dx < 0) onNext(); else onPrev(); }
   };
   node.addEventListener('touchstart', (e) => { const p = e.changedTouches[0]; begin(p.clientX, p.clientY); }, { passive: true });
   node.addEventListener('touchend', (e) => { const p = e.changedTouches[0]; finish(p.clientX, p.clientY); }, { passive: true });
@@ -250,149 +226,92 @@ function onSwipe(node, { onHoriz, onUp }) {
 
 export function renderHome(root) {
   clear(root);
+  root.classList.remove('fit-mode');
   const base = store.baseCurrency();
-  const [from, to] = store.periodRange(currentPeriod);
-  const totals = store.totals(from, to);
-  const balance = store.currentBalance();
-  const isExpense = homeMode === 'expense';
-
-  // Название окна выносим в шапку рядом с гамбургером, цветом сектора.
-  const modeLabel = document.getElementById('mode-label');
-  if (modeLabel) {
-    modeLabel.textContent = isExpense ? t('expense') : t('income');
-    modeLabel.className = isExpense ? 'expense' : 'income';
-  }
-
-  const mainValue = isExpense ? totals.expense : totals.income;
-  const otherLabel = isExpense ? t('income') : t('expense');
-  const otherValue = isExpense ? totals.income : totals.expense;
-  const otherSign = isExpense ? '+' : '−';
-
-  // Карточка активного окна (синяя для расходов, зелёная для доходов).
-  const card = el('.balance-card', { class: isExpense ? 'expense-mode' : 'income-mode' }, [
-    el('.balance-value', { text: money(mainValue, base) }),
-    el('.balance-split', {}, [
-      el('.split-item', {}, [
-        el('.split-label', { text: otherLabel }),
-        el('.split-value', { text: otherSign + money(otherValue, base) }),
-      ]),
-      el('.split-item', {}, [
-        el('.split-label', { text: t('balance') }),
-        el('.split-value', { text: money(balance, base) }),
-      ]),
-    ]),
-    el('.pad-hint', { text: '↑ ' + t('add_transaction') }),
-  ]);
-
-  const dots = el('.win-dots', {}, [
-    el('.win-dot', { class: isExpense ? 'active' : '' }),
-    el('.win-dot', { class: !isExpense ? 'active' : '' }),
-  ]);
-
-  const periodSeg = segmented([
-    { value: 'week', label: t('period_week') },
-    { value: 'month', label: t('period_month') },
-    { value: 'year', label: t('period_year') },
-    { value: 'all', label: t('period_all') },
-  ], currentPeriod, (v) => { currentPeriod = v; showAllHistory = false; renderHome(root); });
-
-  // Свайп вверх по карточке — клавиатура ввода. Горизонтальный свайп по всей
-  // странице обрабатывает attachPagerSwipe.
-  onSwipe(card, { onUp: () => openQuickAdd(homeMode) });
-
   const settings = store.getState().settings;
+  const isExpense = homeMode === 'expense';
   const split = settings.splitHistory !== false;
   const scope = split ? homeMode : null;
-  const list = store.sortedTransactions().filter((x) =>
-    x.date >= from && x.date <= to && (!split || x.type === homeMode));
-  const fit = settings.fitHistory !== false;
 
-  // Вся страница окна — в контейнере .pager, который тащится пальцем по экрану.
-  const pager = el('.pager');
-  pager.append(card, dots, el('.period-bar', {}, [periodSeg]));
+  // Шапка: метка окна (цветом сектора) + компактный баланс.
+  const modeLabel = document.getElementById('mode-label');
+  if (modeLabel) { modeLabel.textContent = isExpense ? t('expense') : t('income'); modeLabel.className = isExpense ? 'expense' : 'income'; }
+  const headBalance = document.getElementById('head-balance');
+  if (headBalance) headBalance.textContent = money(store.currentBalance(), base);
 
-  // Строка поиска показывается только в режиме с лимитом (fitHistory выключен).
-  if (!fit) {
-    pager.appendChild(el('button.search-pill', {
-      type: 'button', onClick: () => openSearch({ type: scope, title: t('history') }),
-    }, [el('span.search-ico', { text: '🔍' }), el('span', { text: t('search') })]));
+  const pager = el('.pager.home-pager', { class: isExpense ? 'expense-mode' : 'income-mode' });
+
+  // --- Табло суммы ---
+  const amountEl = el('.entry-amount');
+  const renderAmount = () => {
+    const v = entryDigits ? parseInt(entryDigits, 10) : 0;
+    amountEl.textContent = money(v, base);
+    amountEl.classList.toggle('zero', v <= 0);
+  };
+
+  // --- Клавиатура (без подтверждения — запись по тапу на категорию) ---
+  const keypad = el('.entry-keypad');
+  const pressDigit = (d) => { if (entryDigits.length < 12) { entryDigits = (entryDigits === '0' ? '' : entryDigits) + d; renderAmount(); } };
+  const del = () => { entryDigits = entryDigits.slice(0, -1); renderAmount(); };
+  ['1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach((n) =>
+    keypad.appendChild(el('button.key', { type: 'button', text: n, onClick: () => pressDigit(n) })));
+  keypad.appendChild(el('button.key.key-zero', { type: 'button', text: '0', onClick: () => pressDigit('0') }));
+  keypad.appendChild(el('button.key.key-del', { type: 'button', text: '⌫', 'aria-label': t('delete'), onClick: del }));
+
+  // --- Категории (8 на страницу, свайп по страницам; недавние — вперёд) ---
+  const cats = store.categoriesByRecency(homeMode);
+  const pages = Math.max(1, Math.ceil(cats.length / CATS_PER_PAGE));
+  if (catPage >= pages) catPage = 0;
+  const catTrack = el('.cat-track');
+  const catDots = el('.cat-dots');
+  const commit = async (categoryId) => {
+    const v = entryDigits ? parseInt(entryDigits, 10) : 0;
+    if (v <= 0) { amountEl.classList.add('shake'); setTimeout(() => amountEl.classList.remove('shake'), 400); return; }
+    entryDigits = '';
+    await store.saveTransaction({ type: homeMode, amount: v, currency: base, rate: 1, categoryId, date: dateISO(), note: '' });
+    // saveTransaction → подписка → renderHome (табло сбрасывается, история обновляется)
+  };
+  const renderCatPage = () => {
+    clear(catTrack);
+    const startI = catPage * CATS_PER_PAGE;
+    const grid = el('.cat-page');
+    for (const c of cats.slice(startI, startI + CATS_PER_PAGE)) {
+      grid.appendChild(el('button.cat-chip', {
+        type: 'button', style: { '--chip': c.color }, onClick: () => commit(c.id),
+      }, [el('.cat-emoji', { text: c.icon }), el('.cat-name', { text: store.categoryName(c) })]));
+    }
+    catTrack.appendChild(grid);
+    clear(catDots);
+    if (pages > 1) for (let i = 0; i < pages; i++) catDots.appendChild(el('.cat-dot', { class: i === catPage ? 'active' : '' }));
+  };
+  renderCatPage();
+  const catPager = el('.cat-pager', {}, [catTrack, catDots]);
+  attachCatSwipe(catPager,
+    () => { if (catPage > 0) { catPage--; renderCatPage(); } },
+    () => { if (catPage < pages - 1) { catPage++; renderCatPage(); } });
+
+  pager.append(el('.entry-block', {}, [amountEl, keypad]), catPager);
+
+  // --- Мини-история (последние записи текущего окна) ---
+  const list = store.sortedTransactions().filter((x) => !split || x.type === homeMode);
+  const histWrap = el('.mini-hist', {}, [
+    el('.mini-hist-head', {}, [
+      el('span', { text: t('history') }),
+      list.length > 3 ? el('button.mini-more', { type: 'button', text: t('expand_history'), onClick: () => openSearch({ type: scope, title: t('history') }) }) : null,
+    ]),
+  ]);
+  if (!list.length) {
+    histWrap.appendChild(el('.mini-empty', { text: t('no_transactions') }));
+  } else {
+    const group = el('.trx-group');
+    for (const trx of list.slice(0, 3)) group.appendChild(renderRow(trx, base));
+    histWrap.appendChild(group);
   }
+  pager.appendChild(histWrap);
 
-  root.classList.toggle('fit-mode', !!(fit && list.length));
   root.appendChild(pager);
   attachPagerSwipe(pager, root);
-
-  if (!list.length) {
-    pager.appendChild(el('.empty', {}, [
-      el('.empty-emoji', { text: isExpense ? '💸' : '💰' }),
-      el('.empty-title', { text: t('no_transactions') }),
-      el('.empty-hint', { text: t('no_transactions_hint') }),
-    ]));
-    return;
-  }
-
-  const listWrap = el('.trx-list');
-  pager.appendChild(listWrap);
-
-  if (!fit) {
-    // Режим v1.3: список с прокруткой, ограниченный настраиваемым числом строк,
-    // и кнопка «Показать всю историю».
-    const maxRows = Math.max(1, parseInt(settings.maxRows, 10) || 10);
-    const limit = showAllHistory ? list.length : maxRows;
-    renderGroupedRows(listWrap, list.slice(0, limit), base);
-    if (!showAllHistory && list.length > maxRows) {
-      pager.appendChild(el('button.expand-history', {
-        type: 'button', onClick: () => { showAllHistory = true; renderHome(root); },
-      }, [
-        el('span', { text: t('show_all_history') }),
-        el('span.expand-count', { text: String(list.length) }),
-      ]));
-    }
-    return;
-  }
-
-  // Режим подгонки под экран: считываем реальное положение кнопки «+» и
-  // добавляем строки, пока они помещаются над ней. Это устойчиво к разным
-  // размерам экрана и системным панелям — используем фактическую геометрию.
-  const fabEl = document.getElementById('fab');
-  const fabTop = fabEl ? fabEl.getBoundingClientRect().top : 0;
-  const vpBottom = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-  const bottomAnchor = fabTop > 120 ? fabTop : vpBottom - 78;
-  const limitY = bottomAnchor - 54; // зазор + место под кнопку «Развернуть историю»
-
-  let overflow = false;
-  let lastDate = null;
-  let group = null;
-  for (const trx of list) {
-    if (trx.date !== lastDate) {
-      const header = el('.trx-day', { text: dayLabel(trx.date) });
-      listWrap.appendChild(header);
-      if (header.getBoundingClientRect().bottom > limitY) { listWrap.removeChild(header); overflow = true; break; }
-      lastDate = trx.date;
-      group = el('.trx-group');
-      listWrap.appendChild(group);
-    }
-    const row = renderRow(trx, base);
-    group.appendChild(row);
-    if (row.getBoundingClientRect().bottom > limitY) {
-      group.removeChild(row);
-      if (!group.childElementCount) {
-        const hdr = group.previousElementSibling;
-        listWrap.removeChild(group);
-        if (hdr && hdr.classList.contains('trx-day')) listWrap.removeChild(hdr);
-      }
-      overflow = true; break;
-    }
-  }
-
-  if (overflow) {
-    pager.appendChild(el('button.expand-history', {
-      type: 'button', onClick: () => openSearch({ type: scope, title: t('history') }),
-    }, [
-      el('span', { text: t('expand_history') }),
-      el('span.expand-count', { text: String(list.length) }),
-    ]));
-  }
+  renderAmount();
 }
 
 // Группировка операций по дням: заголовок дня + карточка-группа со строками.

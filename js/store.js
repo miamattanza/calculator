@@ -92,6 +92,26 @@ export function categoryById(id) {
   return state.categories.find((c) => c.id === id) || null;
 }
 
+// Категории типа, отсортированные по недавнему использованию (часто/недавно
+// используемые — вперёд), затем по порядку. Для быстрого ввода на «Обзоре».
+export function categoriesByRecency(type) {
+  const cats = categoriesByType(type);
+  const lastUsed = new Map();
+  for (const tr of state.transactions) {
+    if (tr.type !== type) continue;
+    const key = tr.date + '|' + String(tr.createdAt).padStart(16, '0');
+    const cur = lastUsed.get(tr.categoryId);
+    if (!cur || key > cur) lastUsed.set(tr.categoryId, key);
+  }
+  return [...cats].sort((a, b) => {
+    const la = lastUsed.get(a.id), lb = lastUsed.get(b.id);
+    if (la && lb) return la < lb ? 1 : -1;
+    if (la) return -1;
+    if (lb) return 1;
+    return (a.order || 0) - (b.order || 0);
+  });
+}
+
 // Локализованное имя категории: если задан key и есть перевод — берём его;
 // иначе — пользовательское имя как есть.
 export function categoryName(cat) {

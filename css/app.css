@@ -87,10 +87,46 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 #header #mode-label.expense { color: var(--accent); }
 #header #mode-label.income { color: var(--green); }
 
+#head-spacer { flex: 1; }
+#head-balance { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; margin-inline-end: 8px; }
+#analytics-btn { width: 38px; height: 38px; border-radius: 10px; background: var(--fill); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+#analytics-btn:active { background: var(--fill-2); }
+
 /* Контейнер страницы окна — тащится пальцем при свайпе. */
 .pager { min-height: 60vh; will-change: transform; }
 #content.fit-mode { overflow: hidden; }
 #content.fit-mode .pager { min-height: 0; }
+
+/* ---- Новый «Обзор»: ввод в 2 касания ---- */
+.entry-amount {
+  text-align: center; font-size: 42px; font-weight: 700; letter-spacing: -1px;
+  padding: 6px 0 14px; font-variant-numeric: tabular-nums;
+}
+.entry-amount.zero { color: var(--text-3); }
+.entry-amount.shake { animation: shakeX .4s; }
+@keyframes shakeX { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
+.entry-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.entry-keypad .key {
+  height: 52px; border-radius: 12px; background: var(--fill);
+  font-size: 25px; font-weight: 500; display: flex; align-items: center; justify-content: center;
+  transition: background .1s, transform .08s;
+}
+.entry-keypad .key:active { background: var(--fill-2); transform: scale(0.96); }
+.entry-keypad .key-zero { grid-column: span 2; }
+.entry-keypad .key-del { background: transparent; font-size: 22px; }
+
+.cat-pager { margin-top: 14px; }
+.cat-page { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.cat-dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px; min-height: 8px; }
+.cat-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sep-strong); transition: all .2s; }
+.cat-dot.active { background: var(--accent); width: 16px; border-radius: 3px; }
+.home-pager.income-mode .cat-dot.active { background: var(--green); }
+
+.mini-hist { margin-top: 18px; }
+.mini-hist-head { display: flex; align-items: center; justify-content: space-between; margin: 0 4px 8px; }
+.mini-hist-head span { font-size: 15px; font-weight: 600; color: var(--text-2); }
+.mini-more { color: var(--accent); font-size: 14px; font-weight: 600; }
+.mini-empty { text-align: center; color: var(--text-3); padding: 16px; font-size: 15px; }
 
 #content {
   flex: 1;

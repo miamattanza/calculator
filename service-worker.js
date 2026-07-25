@@ -1,7 +1,7 @@
 // service-worker.js — офлайн-кэш «оболочки приложения».
 // При обновлении кода увеличивайте CACHE_VERSION, чтобы обновить кэш.
 
-const CACHE_VERSION = 'fintracker-v9';
+const CACHE_VERSION = 'fintracker-v10';
 const APP_SHELL = [
   './',
   './index.html',
