@@ -1,6 +1,6 @@
 // models.js — фабрики сущностей и данные по умолчанию.
 
-export const APP_VERSION = '1.9';
+export const APP_VERSION = '1.10';
 
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -81,5 +81,6 @@ export const DEFAULT_SETTINGS = {
   langChosen: false,    // выбран ли язык при первом запуске
   background: 'none',   // фоновый паттерн ('none' | id | 'custom')
   bgCustom: null,       // свой фон (dataURL)
+  themeColor: '#241C15',// базовый цвет ручной темы
   seeded: false,        // созданы ли дефолтные категории
 };

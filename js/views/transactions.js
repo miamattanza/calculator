@@ -238,7 +238,14 @@ export function renderHome(root) {
   const modeLabel = document.getElementById('mode-label');
   if (modeLabel) { modeLabel.textContent = isExpense ? t('expense') : t('income'); modeLabel.className = isExpense ? 'expense' : 'income'; }
   const headBalance = document.getElementById('head-balance');
-  if (headBalance) headBalance.textContent = money(store.currentBalance(), base);
+  if (headBalance) {
+    headBalance.style.display = '';
+    clear(headBalance);
+    headBalance.append(
+      el('.hb-label', { text: t('balance') }),
+      el('.hb-value', { text: money(store.currentBalance(), base) }),
+    );
+  }
 
   const pager = el('.pager.home-pager', { class: isExpense ? 'expense-mode' : 'income-mode' });
 
@@ -365,15 +372,17 @@ export function renderHome(root) {
   histWrap.appendChild(group);
   let shown = 0;
   if (fit) {
+    // Показываем сколько помещается, но не меньше 5 последних (если замер даёт
+    // мало из-за высокой клавиатуры — не оставляем пустое место).
     const vpBottom = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     const limitY = vpBottom - 10;
+    const minShow = Math.min(5, list.length);
     for (const trx of list) {
       const row = renderRow(trx, base);
       group.appendChild(row);
-      if (row.getBoundingClientRect().bottom > limitY) { group.removeChild(row); break; }
       shown++;
+      if (shown >= minShow && row.getBoundingClientRect().bottom > limitY) { group.removeChild(row); shown--; break; }
     }
-    if (shown === 0) { group.appendChild(renderRow(list[0], base)); shown = 1; }
   } else {
     for (const trx of list.slice(0, maxRows)) { group.appendChild(renderRow(trx, base)); shown++; }
   }

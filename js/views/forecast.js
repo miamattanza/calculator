@@ -46,21 +46,14 @@ export function renderForecast(root) {
   ]);
   root.appendChild(hero);
 
-  // Расшифровка
+  // Расшифровка: текущий баланс + плановые + тренд.
   const breakdown = el('.card', {}, [
     lineRow(t('current_balance'), money(f.balance, base)),
     lineRow(t('planned_in'), '+' + money(f.plannedIn, base), 'income'),
     lineRow(t('planned_out'), '−' + money(f.plannedOut, base), 'expense'),
+    lineRow(t('trend'), (f.trendDelta >= 0 ? '+' : '−') + money(Math.abs(f.trendDelta), base), f.trendDelta >= 0 ? 'income' : 'expense'),
   ]);
   root.appendChild(breakdown);
-
-  // Оценка по средним тратам
-  const avg = el('.card.avg-card', {}, [
-    el('.card-title', { text: t('avg_estimate') }),
-    el('.avg-value', { class: f.avgEstimate < 0 ? 'expense' : '', text: money(f.avgEstimate, base) }),
-    el('.avg-hint', { text: t('avg_estimate_hint') }),
-  ]);
-  root.appendChild(avg);
 
   // Список плановых платежей
   const header = el('.list-header', {}, [

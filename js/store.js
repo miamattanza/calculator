@@ -351,13 +351,32 @@ function nextOnOrAfter(p, fromISO) {
 
 // ---- Прогноз -------------------------------------------------------------
 
-// Прогноз остатка на целевую дату.
-// Метод 1 (основной): текущий баланс + плановые платежи с завтрашнего дня
-//   по целевую дату включительно.
-// Метод 2 (подсказка): экстраполяция по среднему чистому потоку за 30 дней.
+// Средний дневной чистый поток (доходы−расходы). По окну winDays; если в окне
+// нет операций — по всей истории от первой операции до сегодня.
+export function averageDailyNet(winDays = 90) {
+  if (!state.transactions.length) return 0;
+  const today = dateISO();
+  const from = addDays(today, -winDays);
+  let inSum = 0, outSum = 0, has = false;
+  for (const t of state.transactions) {
+    if (t.date >= from && t.date <= today) { has = true; if (t.type === 'income') inSum += baseAmount(t); else outSum += baseAmount(t); }
+  }
+  if (has) return (inSum - outSum) / winDays;
+  const dates = state.transactions.map((t) => t.date).sort();
+  const span = Math.max(1, daysBetween(dates[0], today) + 1);
+  let i = 0, o = 0;
+  for (const t of state.transactions) { if (t.type === 'income') i += baseAmount(t); else o += baseAmount(t); }
+  return (i - o) / span;
+}
+
+// Прогноз остатка на целевую дату:
+//   остаток = текущий баланс
+//           + плановые платежи (доходы−расходы) до целевой даты
+//           + тренд (средний дневной чистый поток × число дней вперёд)
 export function forecast(targetISO) {
   const today = dateISO();
   const balance = currentBalance();
+  const daysAhead = Math.max(0, daysBetween(today, targetISO));
 
   let plannedIn = 0, plannedOut = 0;
   const items = [];
@@ -372,19 +391,13 @@ export function forecast(targetISO) {
     }
   }
 
-  const projected = balance + plannedIn - plannedOut;
-
-  // Оценка по средним тратам за последние 30 дней.
-  const from30 = addDays(today, -30);
-  const t30 = totals(from30, today);
-  const avgDailyNet = (t30.income - t30.expense) / 30;
-  const daysAhead = Math.max(0, daysBetween(today, targetISO));
-  const avgEstimate = balance + avgDailyNet * daysAhead;
+  const trendDaily = averageDailyNet(90);
+  const trendDelta = trendDaily * daysAhead;
+  const projected = balance + plannedIn - plannedOut + trendDelta;
 
   return {
     today, targetISO, daysAhead,
-    balance, plannedIn, plannedOut, projected,
-    avgDailyNet, avgEstimate,
+    balance, plannedIn, plannedOut, trendDaily, trendDelta, projected,
     items: items.sort((a, b) => (a.next < b.next ? -1 : 1)),
   };
 }

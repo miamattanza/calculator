@@ -131,7 +131,7 @@ const DICT = {
     install_hint: 'Чтобы установить: Поделиться → «На экран „Домой“»',
     installed: 'Приложение готово к работе офлайн',
     cat_groceries: 'Продукты', cat_cafe: 'Кафе', cat_transport: 'Транспорт', cat_housing: 'Жильё', cat_health: 'Здоровье', cat_entertainment: 'Развлечения', cat_shopping: 'Покупки', cat_communication: 'Связь', cat_other: 'Прочее', cat_salary: 'Зарплата', cat_sidejob: 'Подработка', cat_gift: 'Подарок', cat_investments: 'Инвестиции', cat_other_income: 'Прочее',
-    upload_icon: 'Загрузить свою иконку', icon_rules: 'PNG, JPG или WEBP, до 3 МБ', keep_categories: 'Сохранить категории', delete_data_q: 'Что удалить?', background: 'Фон', bg_none: 'Без фона', bg_custom: 'Свой рисунок',
+    upload_icon: 'Загрузить свою иконку', icon_rules: 'PNG, JPG или WEBP, до 3 МБ', keep_categories: 'Сохранить категории', delete_data_q: 'Что удалить?', background: 'Фон', bg_none: 'Без фона', bg_custom: 'Свой рисунок', theme_manual: 'Ручное', theme_color: 'Цвет фона', brightness: 'Яркость',
   },
 
   en: {
@@ -263,7 +263,7 @@ const DICT = {
     install_hint: 'To install: Share → “Add to Home Screen”',
     installed: 'App is ready to work offline',
     cat_groceries: 'Groceries', cat_cafe: 'Cafe', cat_transport: 'Transport', cat_housing: 'Housing', cat_health: 'Health', cat_entertainment: 'Entertainment', cat_shopping: 'Shopping', cat_communication: 'Communication', cat_other: 'Other', cat_salary: 'Salary', cat_sidejob: 'Side job', cat_gift: 'Gift', cat_investments: 'Investments', cat_other_income: 'Other',
-    upload_icon: 'Upload your icon', icon_rules: 'PNG, JPG or WEBP, up to 3 MB', keep_categories: 'Keep categories', delete_data_q: 'What to delete?', background: 'Background', bg_none: 'No background', bg_custom: 'Custom image',
+    upload_icon: 'Upload your icon', icon_rules: 'PNG, JPG or WEBP, up to 3 MB', keep_categories: 'Keep categories', delete_data_q: 'What to delete?', background: 'Background', bg_none: 'No background', bg_custom: 'Custom image', theme_manual: 'Manual', theme_color: 'Background color', brightness: 'Brightness',
   },
 
   it: {
@@ -281,7 +281,7 @@ const DICT = {
     required: 'Campo obbligatorio', invalid_amount: 'Inserisci un importo maggiore di zero',
     install_hint: 'Per installare: Condividi → «Aggiungi a Home»', installed: 'App pronta per l’uso offline',
     cat_groceries: 'Alimentari', cat_cafe: 'Caffè', cat_transport: 'Trasporti', cat_housing: 'Casa', cat_health: 'Salute', cat_entertainment: 'Svago', cat_shopping: 'Acquisti', cat_communication: 'Comunicazioni', cat_other: 'Altro', cat_salary: 'Stipendio', cat_sidejob: 'Lavoretto', cat_gift: 'Regalo', cat_investments: 'Investimenti', cat_other_income: 'Altro',
-    upload_icon: 'Carica la tua icona', icon_rules: 'PNG, JPG o WEBP, fino a 3 MB', keep_categories: 'Mantieni le categorie', delete_data_q: 'Cosa eliminare?', background: 'Sfondo', bg_none: 'Nessuno sfondo', bg_custom: 'Immagine personale',
+    upload_icon: 'Carica la tua icona', icon_rules: 'PNG, JPG o WEBP, fino a 3 MB', keep_categories: 'Mantieni le categorie', delete_data_q: 'Cosa eliminare?', background: 'Sfondo', bg_none: 'Nessuno sfondo', bg_custom: 'Immagine personale', theme_manual: 'Manuale', theme_color: 'Colore di sfondo', brightness: 'Luminosità',
   },
 
   id: {
@@ -299,7 +299,7 @@ const DICT = {
     required: 'Wajib diisi', invalid_amount: 'Masukkan jumlah lebih dari nol',
     install_hint: 'Untuk memasang: Bagikan → «Tambah ke Layar Utama»', installed: 'Aplikasi siap dipakai offline',
     cat_groceries: 'Bahan makanan', cat_cafe: 'Kafe', cat_transport: 'Transportasi', cat_housing: 'Rumah', cat_health: 'Kesehatan', cat_entertainment: 'Hiburan', cat_shopping: 'Belanja', cat_communication: 'Komunikasi', cat_other: 'Lainnya', cat_salary: 'Gaji', cat_sidejob: 'Kerja sampingan', cat_gift: 'Hadiah', cat_investments: 'Investasi', cat_other_income: 'Lainnya',
-    upload_icon: 'Unggah ikon sendiri', icon_rules: 'PNG, JPG atau WEBP, maks 3 MB', keep_categories: 'Simpan kategori', delete_data_q: 'Hapus apa?', background: 'Latar', bg_none: 'Tanpa latar', bg_custom: 'Gambar sendiri',
+    upload_icon: 'Unggah ikon sendiri', icon_rules: 'PNG, JPG atau WEBP, maks 3 MB', keep_categories: 'Simpan kategori', delete_data_q: 'Hapus apa?', background: 'Latar', bg_none: 'Tanpa latar', bg_custom: 'Gambar sendiri', theme_manual: 'Manual', theme_color: 'Warna latar', brightness: 'Kecerahan',
   },
 
   es: {
@@ -317,7 +317,7 @@ const DICT = {
     required: 'Campo obligatorio', invalid_amount: 'Introduce un importe mayor que cero',
     install_hint: 'Para instalar: Compartir → «Añadir a inicio»', installed: 'App lista para usar sin conexión',
     cat_groceries: 'Comestibles', cat_cafe: 'Café', cat_transport: 'Transporte', cat_housing: 'Vivienda', cat_health: 'Salud', cat_entertainment: 'Ocio', cat_shopping: 'Compras', cat_communication: 'Comunicación', cat_other: 'Otros', cat_salary: 'Salario', cat_sidejob: 'Trabajo extra', cat_gift: 'Regalo', cat_investments: 'Inversiones', cat_other_income: 'Otros',
-    upload_icon: 'Sube tu icono', icon_rules: 'PNG, JPG o WEBP, hasta 3 MB', keep_categories: 'Mantener categorías', delete_data_q: '¿Qué eliminar?', background: 'Fondo', bg_none: 'Sin fondo', bg_custom: 'Imagen propia',
+    upload_icon: 'Sube tu icono', icon_rules: 'PNG, JPG o WEBP, hasta 3 MB', keep_categories: 'Mantener categorías', delete_data_q: '¿Qué eliminar?', background: 'Fondo', bg_none: 'Sin fondo', bg_custom: 'Imagen propia', theme_manual: 'Manual', theme_color: 'Color de fondo', brightness: 'Brillo',
   },
 
   ar: {
@@ -335,7 +335,7 @@ const DICT = {
     required: 'هذا الحقل مطلوب', invalid_amount: 'أدخل مبلغًا أكبر من صفر',
     install_hint: 'للتثبيت: مشاركة ← «أضف إلى الشاشة الرئيسية»', installed: 'التطبيق جاهز للعمل دون اتصال',
     cat_groceries: 'بقالة', cat_cafe: 'مقهى', cat_transport: 'مواصلات', cat_housing: 'سكن', cat_health: 'صحة', cat_entertainment: 'ترفيه', cat_shopping: 'تسوق', cat_communication: 'اتصالات', cat_other: 'أخرى', cat_salary: 'راتب', cat_sidejob: 'عمل إضافي', cat_gift: 'هدية', cat_investments: 'استثمارات', cat_other_income: 'أخرى',
-    upload_icon: 'حمّل أيقونتك', icon_rules: 'PNG أو JPG أو WEBP، حتى 3 ميغابايت', keep_categories: 'الاحتفاظ بالفئات', delete_data_q: 'ماذا تريد أن تحذف؟', background: 'الخلفية', bg_none: 'بدون خلفية', bg_custom: 'صورة خاصة',
+    upload_icon: 'حمّل أيقونتك', icon_rules: 'PNG أو JPG أو WEBP، حتى 3 ميغابايت', keep_categories: 'الاحتفاظ بالفئات', delete_data_q: 'ماذا تريد أن تحذف؟', background: 'الخلفية', bg_none: 'بدون خلفية', bg_custom: 'صورة خاصة', theme_manual: 'يدوي', theme_color: 'لون الخلفية', brightness: 'السطوع',
   },
 };
 

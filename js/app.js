@@ -35,7 +35,7 @@ function renderSection() {
   if (!onHome) {
     content.classList.remove('fit-mode');
     if (modeLabel) { modeLabel.textContent = ''; modeLabel.className = ''; }
-    if (headBalance) headBalance.textContent = '';
+    if (headBalance) { headBalance.textContent = ''; headBalance.style.display = 'none'; }
   }
   if (analyticsBtn) analyticsBtn.style.display = onHome ? '' : 'none';
   const section = SECTIONS.find((x) => x.id === activeSection);
