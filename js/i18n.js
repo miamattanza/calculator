@@ -261,7 +261,79 @@ const DICT = {
     install_hint: 'To install: Share → “Add to Home Screen”',
     installed: 'App is ready to work offline',
   },
+
+  it: {
+    app_name: 'Finanze', tab_home: 'Panoramica', tab_analytics: 'Analisi', tab_forecast: 'Previsione', tab_budgets: 'Budget', tab_settings: 'Altro',
+    balance: 'Saldo', income: 'Entrate', expense: 'Spese', period_month: 'Mese', period_week: 'Settimana', period_day: 'Giorno', period_year: 'Anno', period_all: 'Tutto',
+    add_transaction: 'Nuova operazione', edit_transaction: 'Modifica operazione', type: 'Tipo', amount: 'Importo', category: 'Categoria', date: 'Data', note: 'Nota', note_ph: 'Commento (facoltativo)', currency: 'Valuta', rate_to_base: 'Cambio verso {base}', save: 'Salva', cancel: 'Annulla', delete: 'Elimina', confirm_delete: 'Eliminare questa operazione?',
+    no_transactions: 'Ancora nessuna operazione', no_transactions_hint: 'Tocca + per aggiungere la prima', today: 'Oggi', yesterday: 'Ieri',
+    analytics_title: 'Analisi', by_category: 'Per categoria', trend: 'Andamento', no_data: 'Nessun dato per il periodo', net: 'Totale',
+    forecast_title: 'Previsione saldo', forecast_to_date: 'Previsione alla data', target_date: 'Data obiettivo', projected_balance: 'Saldo previsto', current_balance: 'Saldo attuale', planned_in: 'Entrate pianificate', planned_out: 'Spese pianificate', avg_estimate: 'Stima sulla media', avg_estimate_hint: 'Se le spese continuano come nella media di 30 giorni', planned_payments: 'Pagamenti pianificati', add_planned: 'Aggiungi pagamento pianificato', recurrence: 'Ripetizione', rec_once: 'Una volta', rec_daily: 'Ogni giorno', rec_weekly: 'Ogni settimana', rec_monthly: 'Ogni mese', rec_yearly: 'Ogni anno', start_date: 'Data inizio', end_date: 'Data fine', end_date_ph: 'Senza limite', no_planned: 'Nessun pagamento pianificato',
+    budgets_title: 'Budget e limiti', add_budget: 'Aggiungi limite', limit: 'Limite mensile', spent: 'Speso', remaining: 'Rimanente', over_budget: 'Superato di {amount}', no_budgets: 'Nessun limite impostato', budget_exists: 'Esiste già un limite per questa categoria',
+    settings_title: 'Impostazioni', language: 'Lingua', base_currency: 'Valuta principale', theme: 'Aspetto', theme_system: 'Come il sistema', theme_light: 'Chiaro', theme_dark: 'Scuro', categories_manage: 'Categorie', data: 'Dati', export_json: 'Esporta (JSON)', export_csv: 'Esporta operazioni (CSV)', import_json: 'Importa (JSON)', import_done: 'Dati importati', import_error: 'Errore di importazione file', reset_all: 'Elimina tutti i dati', reset_confirm: 'Eliminare TUTTI i dati in modo permanente?', about: 'Informazioni', about_text: 'Gestione di entrate e spese. Funziona offline, i dati restano sul dispositivo.', version: 'Versione',
+    display: 'Visualizzazione', split_history: 'Cronologia divisa per tipo', split_history_hint: 'Attivo: la finestra Spese mostra solo le spese e la finestra Entrate solo le entrate. Disattivo: entrate e spese insieme.', fit_history: 'Adatta la cronologia allo schermo', fit_history_hint: 'Attivo: mostra tante righe quante ne stanno nello schermo con il pulsante «Espandi cronologia». Disattivo: elenco scorrevole con ricerca e limite di righe sotto.', max_rows: 'Righe massime',
+    history: 'Cronologia', expand_history: 'Espandi cronologia', show_all_history: 'Mostra tutta la cronologia', search: 'Cerca', search_hint: 'Per nota o categoria', filters: 'Filtro', all_categories: 'Tutte le categorie', date_from: 'Data da', date_to: 'Data a', amount_from: 'Importo da', amount_to: 'Importo a', reset_filters: 'Azzera filtri', found: 'Trovati', nothing_found: 'Nessun risultato',
+    manage_categories: 'Categorie', add_category: 'Aggiungi categoria', category_name: 'Nome', icon: 'Icona', color: 'Colore', category_in_use: 'La categoria è usata nelle operazioni',
+    required: 'Campo obbligatorio', invalid_amount: 'Inserisci un importo maggiore di zero',
+    install_hint: 'Per installare: Condividi → «Aggiungi a Home»', installed: 'App pronta per l’uso offline',
+  },
+
+  id: {
+    app_name: 'Keuangan', tab_home: 'Ringkasan', tab_analytics: 'Analitik', tab_forecast: 'Perkiraan', tab_budgets: 'Anggaran', tab_settings: 'Lainnya',
+    balance: 'Saldo', income: 'Pemasukan', expense: 'Pengeluaran', period_month: 'Bulan', period_week: 'Minggu', period_day: 'Hari', period_year: 'Tahun', period_all: 'Semua',
+    add_transaction: 'Transaksi baru', edit_transaction: 'Ubah transaksi', type: 'Tipe', amount: 'Jumlah', category: 'Kategori', date: 'Tanggal', note: 'Catatan', note_ph: 'Komentar (opsional)', currency: 'Mata uang', rate_to_base: 'Kurs ke {base}', save: 'Simpan', cancel: 'Batal', delete: 'Hapus', confirm_delete: 'Hapus transaksi ini?',
+    no_transactions: 'Belum ada transaksi', no_transactions_hint: 'Ketuk + untuk menambah yang pertama', today: 'Hari ini', yesterday: 'Kemarin',
+    analytics_title: 'Analitik', by_category: 'Menurut kategori', trend: 'Tren', no_data: 'Tidak ada data untuk periode ini', net: 'Total',
+    forecast_title: 'Perkiraan saldo', forecast_to_date: 'Perkiraan sampai tanggal', target_date: 'Tanggal target', projected_balance: 'Perkiraan saldo', current_balance: 'Saldo saat ini', planned_in: 'Pemasukan terencana', planned_out: 'Pengeluaran terencana', avg_estimate: 'Perkiraan rata-rata', avg_estimate_hint: 'Jika pengeluaran berlanjut seperti rata-rata 30 hari', planned_payments: 'Pembayaran terencana', add_planned: 'Tambah pembayaran terencana', recurrence: 'Pengulangan', rec_once: 'Sekali', rec_daily: 'Harian', rec_weekly: 'Mingguan', rec_monthly: 'Bulanan', rec_yearly: 'Tahunan', start_date: 'Tanggal mulai', end_date: 'Tanggal selesai', end_date_ph: 'Tanpa batas', no_planned: 'Tidak ada pembayaran terencana',
+    budgets_title: 'Anggaran & batas', add_budget: 'Tambah batas', limit: 'Batas bulanan', spent: 'Terpakai', remaining: 'Sisa', over_budget: 'Melebihi {amount}', no_budgets: 'Belum ada batas', budget_exists: 'Batas untuk kategori ini sudah ada',
+    settings_title: 'Pengaturan', language: 'Bahasa', base_currency: 'Mata uang utama', theme: 'Tampilan', theme_system: 'Ikuti sistem', theme_light: 'Terang', theme_dark: 'Gelap', categories_manage: 'Kategori', data: 'Data', export_json: 'Ekspor (JSON)', export_csv: 'Ekspor transaksi (CSV)', import_json: 'Impor (JSON)', import_done: 'Data diimpor', import_error: 'Gagal mengimpor berkas', reset_all: 'Hapus semua data', reset_confirm: 'Hapus SEMUA data secara permanen?', about: 'Tentang', about_text: 'Pencatat pemasukan & pengeluaran. Bekerja offline, data tersimpan di perangkat.', version: 'Versi',
+    display: 'Tampilan', split_history: 'Pisahkan riwayat per tipe', split_history_hint: 'Aktif: jendela Pengeluaran hanya pengeluaran dan jendela Pemasukan hanya pemasukan. Nonaktif: ditampilkan bersama.', fit_history: 'Sesuaikan riwayat dengan layar', fit_history_hint: 'Aktif: tampilkan baris sebanyak yang muat di layar dengan tombol «Perluas riwayat». Nonaktif: daftar bergulir dengan pencarian dan batas baris di bawah.', max_rows: 'Baris maksimum',
+    history: 'Riwayat', expand_history: 'Perluas riwayat', show_all_history: 'Tampilkan semua riwayat', search: 'Cari', search_hint: 'Menurut catatan atau kategori', filters: 'Filter', all_categories: 'Semua kategori', date_from: 'Dari tanggal', date_to: 'Sampai tanggal', amount_from: 'Jumlah dari', amount_to: 'Jumlah sampai', reset_filters: 'Atur ulang filter', found: 'Ditemukan', nothing_found: 'Tidak ditemukan',
+    manage_categories: 'Kategori', add_category: 'Tambah kategori', category_name: 'Nama', icon: 'Ikon', color: 'Warna', category_in_use: 'Kategori sedang dipakai di transaksi',
+    required: 'Wajib diisi', invalid_amount: 'Masukkan jumlah lebih dari nol',
+    install_hint: 'Untuk memasang: Bagikan → «Tambah ke Layar Utama»', installed: 'Aplikasi siap dipakai offline',
+  },
+
+  es: {
+    app_name: 'Finanzas', tab_home: 'Resumen', tab_analytics: 'Análisis', tab_forecast: 'Previsión', tab_budgets: 'Presupuestos', tab_settings: 'Más',
+    balance: 'Saldo', income: 'Ingresos', expense: 'Gastos', period_month: 'Mes', period_week: 'Semana', period_day: 'Día', period_year: 'Año', period_all: 'Todo',
+    add_transaction: 'Nueva operación', edit_transaction: 'Editar operación', type: 'Tipo', amount: 'Importe', category: 'Categoría', date: 'Fecha', note: 'Nota', note_ph: 'Comentario (opcional)', currency: 'Moneda', rate_to_base: 'Cambio a {base}', save: 'Guardar', cancel: 'Cancelar', delete: 'Eliminar', confirm_delete: '¿Eliminar esta operación?',
+    no_transactions: 'Aún no hay operaciones', no_transactions_hint: 'Toca + para añadir la primera', today: 'Hoy', yesterday: 'Ayer',
+    analytics_title: 'Análisis', by_category: 'Por categoría', trend: 'Tendencia', no_data: 'Sin datos para el período', net: 'Total',
+    forecast_title: 'Previsión de saldo', forecast_to_date: 'Previsión a la fecha', target_date: 'Fecha objetivo', projected_balance: 'Saldo previsto', current_balance: 'Saldo actual', planned_in: 'Ingresos previstos', planned_out: 'Gastos previstos', avg_estimate: 'Estimación por media', avg_estimate_hint: 'Si el gasto continúa como la media de 30 días', planned_payments: 'Pagos planificados', add_planned: 'Añadir pago planificado', recurrence: 'Repetición', rec_once: 'Una vez', rec_daily: 'Diario', rec_weekly: 'Semanal', rec_monthly: 'Mensual', rec_yearly: 'Anual', start_date: 'Fecha de inicio', end_date: 'Fecha de fin', end_date_ph: 'Sin límite', no_planned: 'Sin pagos planificados',
+    budgets_title: 'Presupuestos y límites', add_budget: 'Añadir límite', limit: 'Límite mensual', spent: 'Gastado', remaining: 'Restante', over_budget: 'Superado en {amount}', no_budgets: 'Sin límites definidos', budget_exists: 'Ya existe un límite para esta categoría',
+    settings_title: 'Ajustes', language: 'Idioma', base_currency: 'Moneda principal', theme: 'Apariencia', theme_system: 'Del sistema', theme_light: 'Claro', theme_dark: 'Oscuro', categories_manage: 'Categorías', data: 'Datos', export_json: 'Exportar (JSON)', export_csv: 'Exportar operaciones (CSV)', import_json: 'Importar (JSON)', import_done: 'Datos importados', import_error: 'Error al importar el archivo', reset_all: 'Eliminar todos los datos', reset_confirm: '¿Eliminar TODOS los datos de forma permanente?', about: 'Acerca de', about_text: 'Control de ingresos y gastos. Funciona sin conexión, los datos quedan en el dispositivo.', version: 'Versión',
+    display: 'Visualización', split_history: 'Historial separado por tipo', split_history_hint: 'Activado: la ventana Gastos muestra solo gastos y la de Ingresos solo ingresos. Desactivado: se muestran juntos.', fit_history: 'Ajustar historial a la pantalla', fit_history_hint: 'Activado: muestra tantas filas como quepan en pantalla con el botón «Ampliar historial». Desactivado: lista con desplazamiento, búsqueda y límite de filas abajo.', max_rows: 'Máximo de filas',
+    history: 'Historial', expand_history: 'Ampliar historial', show_all_history: 'Mostrar todo el historial', search: 'Buscar', search_hint: 'Por nota o categoría', filters: 'Filtro', all_categories: 'Todas las categorías', date_from: 'Fecha desde', date_to: 'Fecha hasta', amount_from: 'Importe desde', amount_to: 'Importe hasta', reset_filters: 'Restablecer filtros', found: 'Encontrados', nothing_found: 'Nada encontrado',
+    manage_categories: 'Categorías', add_category: 'Añadir categoría', category_name: 'Nombre', icon: 'Icono', color: 'Color', category_in_use: 'La categoría se usa en operaciones',
+    required: 'Campo obligatorio', invalid_amount: 'Introduce un importe mayor que cero',
+    install_hint: 'Para instalar: Compartir → «Añadir a inicio»', installed: 'App lista para usar sin conexión',
+  },
+
+  ar: {
+    app_name: 'المالية', tab_home: 'نظرة عامة', tab_analytics: 'التحليلات', tab_forecast: 'التوقعات', tab_budgets: 'الميزانيات', tab_settings: 'المزيد',
+    balance: 'الرصيد', income: 'الدخل', expense: 'المصروفات', period_month: 'شهر', period_week: 'أسبوع', period_day: 'يوم', period_year: 'سنة', period_all: 'كل الوقت',
+    add_transaction: 'عملية جديدة', edit_transaction: 'تعديل العملية', type: 'النوع', amount: 'المبلغ', category: 'الفئة', date: 'التاريخ', note: 'ملاحظة', note_ph: 'تعليق (اختياري)', currency: 'العملة', rate_to_base: 'السعر مقابل {base}', save: 'حفظ', cancel: 'إلغاء', delete: 'حذف', confirm_delete: 'حذف هذه العملية؟',
+    no_transactions: 'لا توجد عمليات بعد', no_transactions_hint: 'اضغط + لإضافة أول عملية', today: 'اليوم', yesterday: 'أمس',
+    analytics_title: 'التحليلات', by_category: 'حسب الفئة', trend: 'الاتجاه', no_data: 'لا بيانات لهذه الفترة', net: 'الإجمالي',
+    forecast_title: 'توقع الرصيد', forecast_to_date: 'التوقع حتى تاريخ', target_date: 'التاريخ المستهدف', projected_balance: 'الرصيد المتوقع', current_balance: 'الرصيد الحالي', planned_in: 'دخل مخطط', planned_out: 'مصروفات مخططة', avg_estimate: 'تقدير حسب المتوسط', avg_estimate_hint: 'إذا استمر الإنفاق كمتوسط 30 يومًا', planned_payments: 'المدفوعات المخططة', add_planned: 'إضافة دفعة مخططة', recurrence: 'التكرار', rec_once: 'مرة واحدة', rec_daily: 'يوميًا', rec_weekly: 'أسبوعيًا', rec_monthly: 'شهريًا', rec_yearly: 'سنويًا', start_date: 'تاريخ البدء', end_date: 'تاريخ الانتهاء', end_date_ph: 'بدون حد', no_planned: 'لا مدفوعات مخططة',
+    budgets_title: 'الميزانيات والحدود', add_budget: 'إضافة حد', limit: 'الحد الشهري', spent: 'المنفق', remaining: 'المتبقي', over_budget: 'تجاوز بمقدار {amount}', no_budgets: 'لا حدود محددة', budget_exists: 'يوجد حد لهذه الفئة بالفعل',
+    settings_title: 'الإعدادات', language: 'اللغة', base_currency: 'العملة الأساسية', theme: 'المظهر', theme_system: 'حسب النظام', theme_light: 'فاتح', theme_dark: 'داكن', categories_manage: 'الفئات', data: 'البيانات', export_json: 'تصدير (JSON)', export_csv: 'تصدير العمليات (CSV)', import_json: 'استيراد (JSON)', import_done: 'تم استيراد البيانات', import_error: 'خطأ في استيراد الملف', reset_all: 'حذف كل البيانات', reset_confirm: 'حذف كل البيانات نهائيًا؟', about: 'حول', about_text: 'تتبع الدخل والمصروفات. يعمل دون اتصال، وتبقى البيانات على الجهاز.', version: 'الإصدار',
+    display: 'العرض', split_history: 'فصل السجل حسب النوع', split_history_hint: 'مُفعّل: نافذة المصروفات تعرض المصروفات فقط ونافذة الدخل الدخل فقط. مُعطّل: يُعرضان معًا.', fit_history: 'ملاءمة السجل للشاشة', fit_history_hint: 'مُفعّل: عرض عدد الصفوف الذي يتسع للشاشة مع زر «توسيع السجل». مُعطّل: قائمة قابلة للتمرير مع بحث وحد للصفوف أدناه.', max_rows: 'أقصى عدد صفوف',
+    history: 'السجل', expand_history: 'توسيع السجل', show_all_history: 'عرض كل السجل', search: 'بحث', search_hint: 'حسب الملاحظة أو الفئة', filters: 'تصفية', all_categories: 'كل الفئات', date_from: 'من تاريخ', date_to: 'إلى تاريخ', amount_from: 'المبلغ من', amount_to: 'المبلغ إلى', reset_filters: 'إعادة ضبط التصفية', found: 'وُجد', nothing_found: 'لا نتائج',
+    manage_categories: 'الفئات', add_category: 'إضافة فئة', category_name: 'الاسم', icon: 'أيقونة', color: 'اللون', category_in_use: 'الفئة مستخدمة في العمليات',
+    required: 'هذا الحقل مطلوب', invalid_amount: 'أدخل مبلغًا أكبر من صفر',
+    install_hint: 'للتثبيت: مشاركة ← «أضف إلى الشاشة الرئيسية»', installed: 'التطبيق جاهز للعمل دون اتصال',
+  },
 };
+
+// Родные названия языков (для выбора языка) и языки с письмом справа-налево.
+export const LANG_NAMES = {
+  ru: 'Русский', en: 'English', it: 'Italiano', id: 'Bahasa Indonesia', es: 'Español', ar: 'العربية',
+};
+const RTL_LANGS = ['ar'];
+export function isRTL(lang = _lang) { return RTL_LANGS.includes(lang); }
+export function dir(lang = _lang) { return isRTL(lang) ? 'rtl' : 'ltr'; }
 
 let _lang = 'ru';
 

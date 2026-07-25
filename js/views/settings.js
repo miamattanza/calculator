@@ -2,12 +2,11 @@
 // экспорт/импорт данных, полный сброс.
 
 import * as store from '../store.js';
-import { t, availableLangs } from '../i18n.js';
+import { t, availableLangs, LANG_NAMES } from '../i18n.js';
 import { el, clear, sheet, field, toast, confirmDialog, toggle } from '../dom.js';
 import { CURRENCIES } from '../format.js';
 import { APP_VERSION } from '../models.js';
 
-const LANG_NAMES = { ru: 'Русский', en: 'English' };
 
 export function renderSettings(root, rerenderApp) {
   clear(root);

@@ -83,7 +83,7 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 }
 #menu-btn:active { background: var(--fill-2); }
 #menu-btn span { display: block; width: 18px; height: 2px; border-radius: 2px; background: var(--text); }
-#header #mode-label { margin-left: 12px; font-size: 21px; font-weight: 700; letter-spacing: -0.3px; }
+#header #mode-label { margin-inline-start: 12px; font-size: 21px; font-weight: 700; letter-spacing: -0.3px; }
 #header #mode-label.expense { color: var(--accent); }
 #header #mode-label.income { color: var(--green); }
 
@@ -505,5 +505,29 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 
 /* ---- Футер версии внизу настроек ---- */
 .version-footer { text-align: center; color: var(--text-3); font-size: 13px; padding: 16px 0 8px; }
+
+/* ---- Экран выбора языка (первый запуск) ---- */
+.onboard-backdrop {
+  position: fixed; inset: 0; background: var(--bg); z-index: 500;
+  display: flex; align-items: center; justify-content: center;
+  padding: calc(var(--safe-top) + 24px) 24px calc(var(--safe-bottom) + 24px);
+}
+.onboard-card { width: 100%; max-width: 360px; text-align: center; }
+.onboard-emoji { font-size: 56px; margin-bottom: 12px; }
+.onboard-title { font-size: 19px; font-weight: 700; margin-bottom: 24px; color: var(--text-2); }
+.onboard-langs { display: flex; flex-direction: column; gap: 10px; }
+.onboard-lang {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px; border-radius: 14px; background: var(--card);
+  box-shadow: var(--shadow); font-size: 18px; font-weight: 600;
+}
+.onboard-lang:active { background: var(--fill); }
+.onboard-lang-code { color: var(--text-3); font-size: 13px; font-weight: 600; }
+
+/* ---- Поддержка письма справа налево (арабский) ---- */
+[dir="rtl"] #fab { right: auto; left: 20px; }
+[dir="rtl"] .menu-panel { left: auto; right: 12px; transform-origin: top right; }
+[dir="rtl"] .nav-chevron { transform: scaleX(-1); }
+[dir="rtl"] .amount-input { text-align: left; }
 
 body.modal-open { overflow: hidden; }

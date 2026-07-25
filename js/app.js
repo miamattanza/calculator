@@ -3,7 +3,7 @@
 // регистрация Service Worker.
 
 import * as store from './store.js';
-import { t } from './i18n.js';
+import { t, dir, availableLangs, LANG_NAMES } from './i18n.js';
 import { el, clear } from './dom.js';
 import { renderHome, openQuickAdd } from './views/transactions.js';
 import { renderAnalytics } from './views/analytics.js';
@@ -67,9 +67,42 @@ function openMenu() {
   }
 }
 
+// Направление письма (для арабского — справа налево) и язык документа.
+function applyDir() {
+  document.documentElement.lang = store.getState().settings.language || 'ru';
+  document.documentElement.dir = dir();
+}
+
 function rerenderAll() {
   document.title = t('app_name');
+  applyDir();
   renderSection();
+}
+
+// Экран выбора языка при первом запуске.
+function openLanguageOnboarding(onDone) {
+  const backdrop = el('.onboard-backdrop', {}, [
+    el('.onboard-card', {}, [
+      el('.onboard-emoji', { text: '🌍' }),
+      el('.onboard-title', { text: 'Выберите язык · Choose language' }),
+      el('.onboard-langs', {}, availableLangs().map((code) =>
+        el('button.onboard-lang', {
+          type: 'button',
+          onClick: async () => {
+            await store.setSetting('language', code);
+            await store.setSetting('langChosen', true);
+            backdrop.remove();
+            document.body.classList.remove('modal-open');
+            onDone();
+          },
+        }, [
+          el('span.onboard-lang-native', { text: LANG_NAMES[code] }),
+          el('span.onboard-lang-code', { text: code.toUpperCase() }),
+        ]))),
+    ]),
+  ]);
+  document.body.appendChild(backdrop);
+  document.body.classList.add('modal-open');
 }
 
 async function main() {
@@ -99,6 +132,11 @@ async function main() {
   // Повторный расчёт после первой раскладки — геометрия экрана к этому моменту
   // окончательная (важно для корректного числа строк на реальных устройствах).
   requestAnimationFrame(() => { if (activeSection === 'home') renderSection(); });
+
+  // Первый запуск — предложить выбрать язык.
+  if (!store.getState().settings.langChosen) {
+    openLanguageOnboarding(() => rerenderAll());
+  }
 
   // Service Worker для офлайн-работы и установки на домашний экран.
   if ('serviceWorker' in navigator) {
