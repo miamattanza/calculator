@@ -4,7 +4,9 @@
 // достаточно заменить реализацию get/getAll/put/remove на облачный слой.
 
 const DB_NAME = 'FinTrackerDB';
-const DB_VERSION = 1;
+// v2 — добавлено хранилище goals (Планирование). Повышение версии запускает
+// onupgradeneeded у существующих установок и создаёт недостающие хранилища.
+const DB_VERSION = 2;
 
 // Список хранилищ (object stores). keyPath = 'id' для всех сущностей,
 // кроме settings, где ключ — это имя настройки.
@@ -65,6 +67,8 @@ function reqToPromise(request) {
 
 export const db = {
   async getAll(storeName) {
+    const database = await openDB();
+    if (!database.objectStoreNames.contains(storeName)) return []; // устойчивость к рассинхрону версий
     const { store } = await tx(storeName, 'readonly');
     return reqToPromise(store.getAll());
   },
