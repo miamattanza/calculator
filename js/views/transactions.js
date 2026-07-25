@@ -142,11 +142,17 @@ let entryDigits = '';     // набираемая сумма (целое, в о�
 let catPage = 0;          // текущая страница категорий
 const CATS_PER_PAGE = 8;
 
-function toggleMode(root, incomingFrom = null) {
-  homeMode = homeMode === 'expense' ? 'income' : 'expense';
+// Переход к конкретному окну (без зацикливания: expense — левое, income —
+// правое; на краю страница просто возвращается на место).
+function setMode(root, mode, incomingFrom = null) {
+  if (mode === homeMode) {
+    const pager = root.querySelector('.pager');
+    if (pager) { pager.style.transition = 'transform .2s ease, opacity .2s ease'; pager.style.transform = 'translateX(0)'; pager.style.opacity = '1'; }
+    return;
+  }
+  homeMode = mode;
   catPage = 0;
   renderHome(root);
-  // Анимация «въезда» новой страницы со стороны свайпа (эффект как в Instagram).
   if (incomingFrom != null) {
     const pager = root.querySelector('.pager');
     if (pager) {
@@ -167,7 +173,8 @@ function toggleMode(root, incomingFrom = null) {
 // пропускаются — там своя постраничная листалка.
 function attachPagerSwipe(pager, root) {
   let sx = 0, sy = 0, dir = null, dragging = false, skip = false, w = window.innerWidth;
-  const inCat = (target) => !!(target && target.closest && target.closest('.cat-pager'));
+  // Свайпы, начатые в зоне категорий или на строке истории, не переключают окно.
+  const inCat = (target) => !!(target && target.closest && target.closest('.cat-pager, .trx-row'));
   const start = (x, y) => { sx = x; sy = y; dir = null; dragging = true; w = window.innerWidth || pager.offsetWidth; pager.style.transition = 'none'; };
   const move = (x, y, e) => {
     if (!dragging || skip) return;
@@ -186,12 +193,14 @@ function attachPagerSwipe(pager, root) {
     const dx = x - sx;
     if (dir !== 'h') { pager.style.transform = ''; pager.style.opacity = ''; return; }
     pager.style.transition = 'transform .24s ease, opacity .24s ease';
-    if (Math.abs(dx) > w * 0.25) {
+    const target = dx < 0 ? 'income' : 'expense'; // влево → доходы, вправо → расходы
+    if (Math.abs(dx) > w * 0.25 && target !== homeMode) {
       const outX = dx < 0 ? -w : w;
       pager.style.transform = `translateX(${outX}px)`;
       pager.style.opacity = '0';
-      setTimeout(() => toggleMode(root, dx < 0 ? w : -w), 190);
+      setTimeout(() => setMode(root, target, dx < 0 ? w : -w), 190);
     } else {
+      // край или недостаточный свайп — возвращаем страницу на место (без зацикливания)
       pager.style.transform = 'translateX(0)';
       pager.style.opacity = '1';
     }
@@ -223,6 +232,46 @@ function attachCatSwipe(node, onPrev, onNext) {
   node.addEventListener('touchend', (e) => { const p = e.changedTouches[0]; finish(p.clientX, p.clientY); }, { passive: true });
   node.addEventListener('mousedown', (e) => begin(e.clientX, e.clientY));
   node.addEventListener('mouseup', (e) => finish(e.clientX, e.clientY));
+}
+
+// Долгое нажатие (500мс) + обычный тап, с отменой при движении пальца.
+function attachLongPress(node, { onTap, onLong }) {
+  let timer = null, longFired = false, sx = 0, sy = 0, moved = false;
+  const begin = (x, y) => { sx = x; sy = y; moved = false; longFired = false; timer = setTimeout(() => { longFired = true; if (onLong) onLong(); }, 500); };
+  const track = (x, y) => { if (Math.abs(x - sx) > 10 || Math.abs(y - sy) > 10) { moved = true; clearTimeout(timer); } };
+  const finish = () => { clearTimeout(timer); };
+  node.addEventListener('touchstart', (e) => { const p = e.changedTouches[0]; begin(p.clientX, p.clientY); }, { passive: true });
+  node.addEventListener('touchmove', (e) => { const p = e.changedTouches[0]; track(p.clientX, p.clientY); }, { passive: true });
+  node.addEventListener('touchend', finish, { passive: true });
+  node.addEventListener('click', (e) => { if (longFired) { e.preventDefault(); e.stopPropagation(); longFired = false; return; } if (!moved && onTap) onTap(); });
+  node.addEventListener('mousedown', (e) => begin(e.clientX, e.clientY));
+  node.addEventListener('mouseup', finish);
+  node.addEventListener('mouseleave', finish);
+}
+
+// Всплывающий выбор валюты для категории — рядом с самой категорией.
+function openCurrencyPopover(cat, anchor) {
+  const base = store.baseCurrency();
+  const cur = cat.currency || base;
+  const backdrop = el('.pop-backdrop');
+  const menu = el('.currency-pop');
+  for (const code of Object.keys(CURRENCIES)) {
+    menu.appendChild(el('button.cur-opt', {
+      type: 'button', class: code === cur ? 'active' : '',
+      onClick: async () => { await store.saveCategory({ id: cat.id, currency: code === base ? null : code }); close(); },
+    }, `${CURRENCIES[code].symbol}  ${code}`));
+  }
+  backdrop.appendChild(menu);
+  document.body.appendChild(backdrop);
+  const r = anchor.getBoundingClientRect();
+  const mw = 150;
+  menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - mw - 8)) + 'px';
+  const below = r.bottom + 6;
+  if (below + 240 > window.innerHeight) menu.style.top = Math.max(8, r.top - 244) + 'px';
+  else menu.style.top = below + 'px';
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+  requestAnimationFrame(() => backdrop.classList.add('open'));
+  function close() { backdrop.classList.remove('open'); setTimeout(() => backdrop.remove(), 180); }
 }
 
 export function renderHome(root) {
@@ -270,7 +319,9 @@ export function renderHome(root) {
     const v = entryDigits ? parseInt(entryDigits, 10) : 0;
     if (v <= 0) { amountEl.classList.add('shake'); setTimeout(() => amountEl.classList.remove('shake'), 400); return; }
     entryDigits = '';
-    await store.saveTransaction({ type: homeMode, amount: v, currency: base, rate: 1, categoryId, date: dateISO(), note: '' });
+    const cat = store.categoryById(categoryId);
+    const cur = (cat && cat.currency) || base; // у категории может быть своя валюта
+    await store.saveTransaction({ type: homeMode, amount: v, currency: cur, rate: 1, categoryId, date: dateISO(), note: '' });
     // saveTransaction → подписка → renderHome (табло сбрасывается, история обновляется)
   };
 
@@ -290,9 +341,13 @@ export function renderHome(root) {
     for (let i = 0; i < CATS_PER_PAGE; i++) {
       const c = cats[p * CATS_PER_PAGE + i];
       if (c) {
-        grid.appendChild(el('button.cat-chip', {
-          type: 'button', style: { '--chip': c.color }, onClick: () => commit(c.id),
-        }, [catIcon(c), el('.cat-name', { text: store.categoryName(c) })]));
+        const badge = (c.currency && c.currency !== base)
+          ? el('.cat-cur', { text: (CURRENCIES[c.currency] && CURRENCIES[c.currency].symbol) || c.currency }) : null;
+        const chip = el('button.cat-chip', { type: 'button', style: { '--chip': c.color } },
+          [catIcon(c), el('.cat-name', { text: store.categoryName(c) }), badge]);
+        // Тап — записать операцию; долгое нажатие — выбрать валюту категории.
+        attachLongPress(chip, { onTap: () => commit(c.id), onLong: () => openCurrencyPopover(c, chip) });
+        grid.appendChild(chip);
       } else {
         grid.appendChild(el('button.cat-chip.cat-add', { type: 'button', 'aria-label': t('add_category'), onClick: openAdd }, [el('.cat-add-plus', { text: '+' })]));
       }
@@ -410,7 +465,7 @@ function renderRow(trx, base) {
   const sign = trx.type === 'income' ? 1 : -1;
   const amountBase = store.baseAmount(trx) * sign;
   const showOrig = trx.currency !== base;
-  return el('.trx-row', { onClick: () => openTransactionForm(trx) }, [
+  const row = el('.trx-row', {}, [
     catIcon(cat, 'trx-icon'),
     el('.trx-main', {}, [
       el('.trx-title', { text: cat ? store.categoryName(cat) : '—' }),
@@ -421,6 +476,68 @@ function renderRow(trx, base) {
       showOrig ? el('.trx-amount-orig', { text: money(trx.amount, trx.currency) }) : null,
     ]),
   ]);
+  attachRowActions(row, trx);
+  return row;
+}
+
+// Жесты строки истории: свайп вправо — комментарий, влево — удалить,
+// долгое нажатие (или тап) — изменить (цена/категория/день).
+export function attachRowActions(row, trx) {
+  let sx = 0, sy = 0, dir = null, dragging = false, longFired = false, longTimer = null;
+  const reset = () => { row.style.transition = 'transform .2s ease, background-color .2s'; row.style.transform = ''; row.style.backgroundColor = ''; };
+  const begin = (x, y) => {
+    sx = x; sy = y; dir = null; dragging = true; longFired = false; row.style.transition = 'none';
+    longTimer = setTimeout(() => { longFired = true; dragging = false; openTransactionForm(trx); }, 500);
+  };
+  const move = (x, y, e) => {
+    if (!dragging) return;
+    const dx = x - sx, dy = y - sy;
+    if (dir === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) { dir = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'; clearTimeout(longTimer); }
+    if (dir === 'h') {
+      if (e && e.cancelable) e.preventDefault();
+      row.style.transform = `translateX(${dx}px)`;
+      row.style.backgroundColor = dx > 0
+        ? 'color-mix(in srgb, var(--accent) 16%, transparent)'
+        : 'color-mix(in srgb, var(--red) 16%, transparent)';
+    }
+  };
+  const end = (x) => {
+    clearTimeout(longTimer);
+    if (!dragging) return;
+    dragging = false;
+    if (dir !== 'h') { if (!longFired) openTransactionForm(trx); reset(); return; }
+    const dx = x - sx;
+    if (dx > 80) { reset(); openCommentEditor(trx); }
+    else if (dx < -80) { reset(); confirmDeleteRow(trx); }
+    else reset();
+  };
+  row.addEventListener('touchstart', (e) => { const p = e.changedTouches[0]; begin(p.clientX, p.clientY); }, { passive: true });
+  row.addEventListener('touchmove', (e) => { const p = e.changedTouches[0]; move(p.clientX, p.clientY, e); }, { passive: false });
+  row.addEventListener('touchend', (e) => { const p = e.changedTouches[0]; end(p.clientX); }, { passive: true });
+  row.addEventListener('mousedown', (e) => {
+    begin(e.clientX, e.clientY);
+    const mm = (ev) => move(ev.clientX, ev.clientY, ev);
+    const mu = (ev) => { end(ev.clientX); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
+    window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);
+  });
+}
+
+async function confirmDeleteRow(trx) {
+  if (await confirmDialog(t('confirm_delete'))) await store.deleteTransaction(trx.id);
+}
+
+// Быстрый редактор комментария (свайп вправо по строке).
+function openCommentEditor(trx) {
+  const input = el('input.select', { type: 'text', placeholder: t('note_ph'), value: trx.note || '' });
+  const body = el('.form', {}, [
+    field(t('note'), input).row,
+    el('button.btn-primary', {
+      type: 'button', text: t('save'),
+      onClick: async () => { await store.saveTransaction({ id: trx.id, note: input.value.trim() }); modal.close(); },
+    }),
+  ]);
+  const modal = sheet(t('note'), body);
+  setTimeout(() => input.focus(), 300);
 }
 
 function dayLabel(iso) {

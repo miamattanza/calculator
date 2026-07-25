@@ -199,9 +199,11 @@ function openCategoriesManager() {
 }
 
 export function openCategoryEditor(existing, onDone = () => {}, presetType) {
+  // Цвет назначается автоматически (выбор цвета из редактора убран).
+  const autoColor = COLOR_CHOICES[store.getState().categories.length % COLOR_CHOICES.length];
   const model = existing
     ? { ...existing, name: store.categoryName(existing) }
-    : { name: '', type: presetType || 'expense', icon: '🔖', color: '#8E8E93', image: null };
+    : { name: '', type: presetType || 'expense', icon: '🔖', color: autoColor, image: null };
   const body = el('.form');
 
   const nameInput = el('input.select', { type: 'text', placeholder: t('category_name'), value: model.name });
@@ -252,15 +254,6 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType) {
 
   updatePreview();
 
-  const colorGrid = el('.color-grid');
-  COLOR_CHOICES.forEach((col) => {
-    const b = el('button.color-pick', {
-      type: 'button', class: col === model.color ? 'active' : '', style: { background: col },
-      onClick: () => { model.color = col; colorGrid.querySelectorAll('.color-pick').forEach((x) => x.classList.remove('active')); b.classList.add('active'); updatePreview(); },
-    });
-    colorGrid.appendChild(b);
-  });
-
   const saveBtn = el('button.btn-primary', { type: 'button', text: t('save') });
 
   body.append(
@@ -268,7 +261,6 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType) {
     field(t('type'), typeSeg).row,
     field(t('icon'), el('.icon-field', {}, [iconPreview, emojiGrid, uploadBtn, uploadInput])).row,
     el('.icon-rules', { text: t('icon_rules') }),
-    field(t('color'), colorGrid).row,
     error, saveBtn,
   );
 
@@ -368,10 +360,12 @@ function buildBackgroundPicker() {
     if (id === 'none') c.appendChild(el('.bg-none-x', { text: '✕' }));
     cells[id] = c; wrap.appendChild(c);
   }
-  // Свой рисунок из галереи.
+  // Свой рисунок из галереи (+ кнопка удаления загруженного).
   const custom = store.getState().settings.bgCustom;
-  const customCell = el('button.bg-swatch.bg-custom', { type: 'button' }, [el('.bg-plus', { text: '+' })]);
+  const customCell = el('button.bg-swatch.bg-custom', { type: 'button' }, [el('.bg-plus', { text: custom ? '' : '+' })]);
   if (custom) customCell.style.backgroundImage = `url("${custom}")`;
+  const delBadge = el('.bg-del', { text: '✕', style: { display: custom ? '' : 'none' } });
+  customCell.appendChild(delBadge);
   const fileInput = el('input', { type: 'file', accept: 'image/*', style: { display: 'none' } });
   fileInput.addEventListener('change', () => {
     const f = fileInput.files && fileInput.files[0]; fileInput.value = '';
@@ -380,10 +374,24 @@ function buildBackgroundPicker() {
       await store.setSetting('bgCustom', durl);
       await store.setSetting('background', 'custom');
       customCell.style.backgroundImage = `url("${durl}")`;
-      applyBackground('custom'); highlight();
+      customCell.querySelector('.bg-plus').textContent = '';
+      delBadge.style.display = ''; applyBackground('custom'); highlight();
     }, () => toast(t('icon_rules')));
   });
-  customCell.addEventListener('click', () => fileInput.click());
+  customCell.addEventListener('click', (e) => {
+    if (e.target === delBadge) {
+      e.stopPropagation();
+      store.setSetting('bgCustom', null);
+      store.setSetting('background', 'none').then(() => {
+        customCell.style.backgroundImage = '';
+        customCell.querySelector('.bg-plus').textContent = '+';
+        delBadge.style.display = 'none';
+        applyBackground('none'); highlight();
+      });
+      return;
+    }
+    fileInput.click();
+  });
   cells.custom = customCell;
   wrap.append(customCell, fileInput);
   highlight();

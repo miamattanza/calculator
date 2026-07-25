@@ -1,6 +1,6 @@
 // models.js — фабрики сущностей и данные по умолчанию.
 
-export const APP_VERSION = '1.11.1';
+export const APP_VERSION = '1.12';
 
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -29,10 +29,11 @@ export const DEFAULT_CATEGORIES = [
   { key: 'other_income',  name: 'Прочее',      type: 'income',  icon: '💰', color: '#8E8E93' },
 ];
 
-export function makeCategory({ name, type, icon, color, order, key, image }) {
+export function makeCategory({ name, type, icon, color, order, key, image, currency }) {
   const c = { id: uid(), name, type, icon: icon || '🔖', color: color || '#8E8E93', order: order || 0 };
   if (key) c.key = key;
   if (image) c.image = image;
+  if (currency) c.currency = currency;
   return c;
 }
 

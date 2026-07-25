@@ -156,8 +156,13 @@ export async function deleteCategory(id) {
 
 export async function saveTransaction(data) {
   const existing = data.id ? state.transactions.find((t) => t.id === data.id) : null;
-  const trx = existing ? { ...existing, ...data, amount: Number(data.amount), rate: Number(data.rate) || 1 }
-                       : makeTransaction(data);
+  // При частичном обновлении (например, только заметки) сохраняем прежние
+  // значения полей, которых нет в data.
+  const trx = existing
+    ? { ...existing, ...data,
+        amount: data.amount != null ? Number(data.amount) : existing.amount,
+        rate: data.rate != null ? Number(data.rate) : existing.rate }
+    : makeTransaction(data);
   await db.put('transactions', trx);
   const idx = state.transactions.findIndex((t) => t.id === trx.id);
   if (idx >= 0) state.transactions[idx] = trx; else state.transactions.push(trx);

@@ -3,9 +3,9 @@
 
 import * as store from '../store.js';
 import { t } from '../i18n.js';
-import { el, clear, sheet, field, rowCols } from '../dom.js';
+import { el, clear, sheet, field, rowCols, catIcon } from '../dom.js';
 import { money, signedMoney, formatDate } from '../format.js';
-import { openTransactionForm } from './transactions.js';
+import { openTransactionForm, attachRowActions } from './transactions.js';
 
 export function openSearch(initial = {}) {
   const base = store.baseCurrency();
@@ -94,8 +94,8 @@ export function openSearch(initial = {}) {
   function row(trx, base) {
     const cat = store.categoryById(trx.categoryId);
     const amountBase = store.baseAmount(trx) * (trx.type === 'income' ? 1 : -1);
-    return el('.trx-row', { onClick: () => { modal.close(); openTransactionForm(trx); } }, [
-      el('.trx-icon', { style: { '--chip': cat ? cat.color : '#8E8E93' }, text: cat ? cat.icon : '🔖' }),
+    const row = el('.trx-row', {}, [
+      catIcon(cat, 'trx-icon'),
       el('.trx-main', {}, [
         el('.trx-title', { text: cat ? store.categoryName(cat) : '—' }),
         el('.trx-note', { text: (trx.note ? trx.note + ' · ' : '') + formatDate(trx.date, { day: 'numeric', month: 'short', year: 'numeric' }) }),
@@ -104,6 +104,8 @@ export function openSearch(initial = {}) {
         el('.trx-amount-main', { class: trx.type, text: signedMoney(amountBase, base) }),
       ]),
     ]);
+    attachRowActions(row, trx);
+    return row;
   }
 
   run();
