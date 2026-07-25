@@ -8,6 +8,7 @@ import { el, clear } from './dom.js';
 import { renderHome } from './views/transactions.js';
 import { renderAnalytics } from './views/analytics.js';
 import { renderForecast } from './views/forecast.js';
+import { renderPlanning } from './views/planning.js';
 import { renderBudgets } from './views/budgets.js';
 import { renderSettings, applyTheme, applyBackground } from './views/settings.js';
 
@@ -16,6 +17,7 @@ const SECTIONS = [
   { id: 'home',      icon: '🏠', labelKey: 'tab_home',      render: (r) => renderHome(r) },
   { id: 'analytics', icon: '📊', labelKey: 'tab_analytics', render: (r) => renderAnalytics(r) },
   { id: 'forecast',  icon: '📈', labelKey: 'tab_forecast',  render: (r) => renderForecast(r) },
+  { id: 'planning',  icon: '🧮', labelKey: 'tab_planning',  render: (r) => renderPlanning(r) },
   { id: 'budgets',   icon: '🎯', labelKey: 'tab_budgets',   render: (r) => renderBudgets(r) },
   { id: 'settings',  icon: '⚙️', labelKey: 'settings_title', render: (r) => renderSettings(r, rerenderAll) },
 ];

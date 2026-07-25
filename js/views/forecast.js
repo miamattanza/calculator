@@ -46,6 +46,10 @@ export function renderForecast(root) {
   ]);
   root.appendChild(hero);
 
+  if (!f.enoughData) {
+    root.appendChild(el('.data-note', { text: t('not_enough_data') }));
+  }
+
   // Расшифровка: текущий баланс + плановые + тренд.
   const breakdown = el('.card', {}, [
     lineRow(t('current_balance'), money(f.balance, base)),

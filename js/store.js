@@ -8,7 +8,7 @@ import { setLang, t } from './i18n.js';
 import { dateISO, monthKey, addDays, daysBetween } from './format.js';
 import {
   DEFAULT_CATEGORIES, DEFAULT_SETTINGS, makeCategory,
-  makeTransaction, makePlanned, makeBudget,
+  makeTransaction, makePlanned, makeBudget, makeGoal,
 } from './models.js';
 
 const state = {
@@ -16,6 +16,7 @@ const state = {
   categories: [],
   planned: [],
   budgets: [],
+  goals: [],
   settings: { ...DEFAULT_SETTINGS },
 };
 
@@ -26,11 +27,12 @@ function emit() { for (const fn of listeners) fn(state); }
 // ---- Инициализация -------------------------------------------------------
 
 export async function init() {
-  const [transactions, categories, planned, budgets, settingsRows] = await Promise.all([
+  const [transactions, categories, planned, budgets, goals, settingsRows] = await Promise.all([
     db.getAll('transactions'),
     db.getAll('categories'),
     db.getAll('planned'),
     db.getAll('budgets'),
+    db.getAll('goals'),
     db.getAll('settings'),
   ]);
 
@@ -38,6 +40,7 @@ export async function init() {
   state.categories = categories;
   state.planned = planned;
   state.budgets = budgets;
+  state.goals = goals;
 
   const settings = { ...DEFAULT_SETTINGS };
   for (const row of settingsRows) settings[row.key] = row.value;
@@ -351,22 +354,49 @@ function nextOnOrAfter(p, fromISO) {
 
 // ---- Прогноз -------------------------------------------------------------
 
-// Средний дневной чистый поток (доходы−расходы). По окну winDays; если в окне
-// нет операций — по всей истории от первой операции до сегодня.
-export function averageDailyNet(winDays = 90) {
+// Число дней ведения учёта: от самой ранней операции до сегодня включительно.
+export function dataSpanDays() {
   if (!state.transactions.length) return 0;
-  const today = dateISO();
-  const from = addDays(today, -winDays);
-  let inSum = 0, outSum = 0, has = false;
-  for (const t of state.transactions) {
-    if (t.date >= from && t.date <= today) { has = true; if (t.type === 'income') inSum += baseAmount(t); else outSum += baseAmount(t); }
-  }
-  if (has) return (inSum - outSum) / winDays;
-  const dates = state.transactions.map((t) => t.date).sort();
-  const span = Math.max(1, daysBetween(dates[0], today) + 1);
+  let min = null;
+  for (const t of state.transactions) if (min === null || t.date < min) min = t.date;
+  return Math.max(1, daysBetween(min, dateISO()) + 1);
+}
+
+// Средний дневной чистый поток (доходы−расходы) за ВЕСЬ период ведения учёта:
+// (все доходы − все расходы) ÷ число дней. Чем дольше ведётся учёт, тем точнее.
+export function averageDailyNet() {
+  if (!state.transactions.length) return 0;
   let i = 0, o = 0;
   for (const t of state.transactions) { if (t.type === 'income') i += baseAmount(t); else o += baseAmount(t); }
-  return (i - o) / span;
+  return (i - o) / dataSpanDays();
+}
+
+// Средний дневной вклад плановых платежей (зарплата и т.п.), приведённый к дню.
+export function plannedDailyNet() {
+  const perDay = { once: 0, daily: 1, weekly: 1 / 7, monthly: 1 / 30.44, yearly: 1 / 365 };
+  let sum = 0;
+  for (const p of state.planned) {
+    if (!p.active) continue;
+    const rate = perDay[p.recurrence] || 0;
+    if (!rate) continue;
+    sum += baseAmount(p) * rate * (p.type === 'income' ? 1 : -1);
+  }
+  return sum;
+}
+
+// Оценка накопления на цель. dailyRate = тренд по истории + плановые доходы.
+export function planningEstimate(goalAmount) {
+  const spanDays = dataSpanDays();
+  const enoughData = spanDays >= 30;
+  const dailyRate = averageDailyNet() + plannedDailyNet();
+  const amount = Number(goalAmount) || 0;
+  let days = null, date = null, reachable = false;
+  if (dailyRate > 0 && amount > 0) {
+    days = Math.ceil(amount / dailyRate);
+    date = addDays(dateISO(), days);
+    reachable = true;
+  }
+  return { enoughData, spanDays, dailyRate, monthlyRate: dailyRate * 30.44, days, date, reachable };
 }
 
 // Прогноз остатка на целевую дату:
@@ -391,12 +421,12 @@ export function forecast(targetISO) {
     }
   }
 
-  const trendDaily = averageDailyNet(90);
+  const trendDaily = averageDailyNet();
   const trendDelta = trendDaily * daysAhead;
   const projected = balance + plannedIn - plannedOut + trendDelta;
 
   return {
-    today, targetISO, daysAhead,
+    today, targetISO, daysAhead, enoughData: dataSpanDays() >= 30,
     balance, plannedIn, plannedOut, trendDaily, trendDelta, projected,
     items: items.sort((a, b) => (a.next < b.next ? -1 : 1)),
   };
@@ -438,6 +468,32 @@ export function budgetStatus() {
   }).sort((a, b) => b.ratio - a.ratio);
 }
 
+// Все расходы за текущий месяц (для общего лимита).
+export function monthExpenseTotal() {
+  const [from, to] = periodRange('month');
+  let sum = 0;
+  for (const t of transactionsInRange(from, to)) if (t.type === 'expense') sum += baseAmount(t);
+  return sum;
+}
+
+// ---- Цели (Планирование) -------------------------------------------------
+
+export async function saveGoal(data) {
+  const existing = data.id ? state.goals.find((g) => g.id === data.id) : null;
+  const g = existing ? { ...existing, ...data, amount: Number(data.amount) || 0 } : makeGoal(data);
+  await db.put('goals', g);
+  const idx = state.goals.findIndex((x) => x.id === g.id);
+  if (idx >= 0) state.goals[idx] = g; else state.goals.push(g);
+  emit();
+  return g;
+}
+
+export async function deleteGoal(id) {
+  await db.remove('goals', id);
+  state.goals = state.goals.filter((g) => g.id !== id);
+  emit();
+}
+
 // ---- Экспорт / импорт ----------------------------------------------------
 
 export async function exportAll() {
@@ -466,8 +522,8 @@ export function transactionsToCSV() {
 
 export async function resetAll({ keepCategories = false } = {}) {
   const stores = keepCategories
-    ? ['transactions', 'planned', 'budgets']
-    : ['transactions', 'categories', 'planned', 'budgets'];
+    ? ['transactions', 'planned', 'budgets', 'goals']
+    : ['transactions', 'categories', 'planned', 'budgets', 'goals'];
   for (const s of stores) await db.clear(s);
   await init(); // настройки (язык/тема/фон) сохраняются; категории пере-создаются, если удалены
 }

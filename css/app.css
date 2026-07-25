@@ -635,6 +635,27 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 
 .reset-msg { font-size: 15px; color: var(--text-2); line-height: 1.4; }
 
+/* ---- Планирование ---- */
+.goal-card { }
+.goal-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.goal-name { font-size: 17px; font-weight: 600; }
+.goal-amount { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.goal-result { display: flex; flex-direction: column; gap: 6px; }
+.goal-eta-label { color: var(--text-3); font-size: 14px; }
+.goal-eta-date { font-size: 15px; font-weight: 600; }
+.goal-loan { font-size: 13px; color: var(--text-3); line-height: 1.4; }
+.goal-note { font-size: 14px; color: var(--text-3); line-height: 1.4; }
+.goal-note.warn { color: var(--red); }
+.goal-del { margin-top: 12px; color: var(--red); font-size: 14px; font-weight: 500; }
+.data-note { font-size: 13px; color: var(--text-3); text-align: center; padding: 0 8px 14px; line-height: 1.4; }
+
+/* ---- Предупреждение о превышении лимита ---- */
+.budget-alert {
+  background: color-mix(in srgb, var(--red) 16%, transparent); color: var(--red);
+  border-radius: 12px; padding: 12px 14px; font-size: 14px; font-weight: 600; text-align: center;
+  margin-bottom: 16px;
+}
+
 /* ---- Пикер цвета ручной темы ---- */
 .theme-preview { height: 64px; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--sep); }
 .range { width: 100%; accent-color: var(--accent); height: 28px; }

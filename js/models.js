@@ -1,6 +1,6 @@
 // models.js — фабрики сущностей и данные по умолчанию.
 
-export const APP_VERSION = '1.10';
+export const APP_VERSION = '1.11';
 
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -70,6 +70,10 @@ export function makeBudget({ categoryId, limit, currency }) {
   return { id: uid(), categoryId, limit: Number(limit), currency: currency || 'RUB', period: 'month' };
 }
 
+export function makeGoal({ name, amount, currency }) {
+  return { id: uid(), name: name || '', amount: Number(amount) || 0, currency: currency || 'RUB', createdAt: Date.now() };
+}
+
 // Настройки по умолчанию.
 export const DEFAULT_SETTINGS = {
   baseCurrency: 'RUB',
@@ -82,5 +86,7 @@ export const DEFAULT_SETTINGS = {
   background: 'none',   // фоновый паттерн ('none' | id | 'custom')
   bgCustom: null,       // свой фон (dataURL)
   themeColor: '#241C15',// базовый цвет ручной темы
+  budgetTotal: 0,       // общий месячный лимит (0 = не задан)
+  budgetDetailed: false,// детализировать лимиты по категориям
   seeded: false,        // созданы ли дефолтные категории
 };

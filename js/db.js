@@ -13,6 +13,7 @@ const STORES = {
   categories:   { keyPath: 'id', indexes: [['type', 'type'], ['order', 'order']] },
   planned:      { keyPath: 'id', indexes: [['type', 'type'], ['startDate', 'startDate']] },
   budgets:      { keyPath: 'id', indexes: [['categoryId', 'categoryId']] },
+  goals:        { keyPath: 'id', indexes: [] },
   accounts:     { keyPath: 'id', indexes: [] },
   settings:     { keyPath: 'key', indexes: [] },
 };
