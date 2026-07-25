@@ -29,7 +29,7 @@ export function renderBudgets(root) {
       el('.budget-head', {}, [
         el('.budget-title', {}, [
           el('span.budget-emoji', { text: s.category ? s.category.icon : '🔖' }),
-          el('span', { text: s.category ? s.category.name : '—' }),
+          el('span', { text: s.category ? store.categoryName(s.category) : '—' }),
         ]),
         el('.budget-nums', { text: `${money(s.spent, base)} / ${money(s.limit, base)}` }),
       ]),
@@ -66,7 +66,7 @@ function openBudgetForm(existing, root) {
         catGrid.querySelectorAll('.cat-chip').forEach((x) => x.classList.remove('active'));
         chip.classList.add('active');
       },
-    }, [el('.cat-emoji', { text: c.icon }), el('.cat-name', { text: c.name })]);
+    }, [el('.cat-emoji', { text: c.icon }), el('.cat-name', { text: store.categoryName(c) })]);
     catGrid.appendChild(chip);
   }
 

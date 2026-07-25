@@ -69,7 +69,7 @@ export function openTransactionForm(existing) {
           catGrid.querySelectorAll('.cat-chip').forEach((x) => x.classList.remove('active'));
           chip.classList.add('active');
         },
-      }, [el('.cat-emoji', { text: c.icon }), el('.cat-name', { text: c.name })]);
+      }, [el('.cat-emoji', { text: c.icon }), el('.cat-name', { text: store.categoryName(c) })]);
       catGrid.appendChild(chip);
     }
   }
@@ -225,7 +225,7 @@ function openCategoryPicker(type, onPick) {
     grid.appendChild(el('button.cat-chip', {
       type: 'button', style: { '--chip': c.color },
       onClick: async () => { modal.close(); await onPick(c.id); },
-    }, [el('.cat-emoji', { text: c.icon }), el('.cat-name', { text: c.name })]));
+    }, [el('.cat-emoji', { text: c.icon }), el('.cat-name', { text: store.categoryName(c) })]));
   }
   body.appendChild(grid);
   const modal = sheet(t('category'), body);
@@ -417,7 +417,7 @@ function renderRow(trx, base) {
   return el('.trx-row', { onClick: () => openTransactionForm(trx) }, [
     el('.trx-icon', { style: { '--chip': cat ? cat.color : '#8E8E93' }, text: cat ? cat.icon : '🔖' }),
     el('.trx-main', {}, [
-      el('.trx-title', { text: cat ? cat.name : '—' }),
+      el('.trx-title', { text: cat ? store.categoryName(cat) : '—' }),
       trx.note ? el('.trx-note', { text: trx.note }) : null,
     ]),
     el('.trx-amount', {}, [

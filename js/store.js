@@ -4,7 +4,7 @@
 // на облачную синхронизацию (iCloud): меняется только db-слой.
 
 import { db } from './db.js';
-import { setLang } from './i18n.js';
+import { setLang, t } from './i18n.js';
 import { dateISO, monthKey, addDays, daysBetween } from './format.js';
 import {
   DEFAULT_CATEGORIES, DEFAULT_SETTINGS, makeCategory,
@@ -43,13 +43,25 @@ export async function init() {
   for (const row of settingsRows) settings[row.key] = row.value;
   state.settings = settings;
 
-  // Первый запуск — создаём дефолтные категории.
+  // Первый запуск — создаём дефолтные категории (с ключами перевода).
   if (!settings.seeded || categories.length === 0) {
     const seeded = DEFAULT_CATEGORIES.map((c, i) => makeCategory({ ...c, order: i }));
     await db.bulkPut('categories', seeded);
     state.categories = seeded;
     await setSetting('seeded', true);
   }
+
+  // Миграция: у ранее созданных установок дефолтные категории без ключа —
+  // проставляем ключ по совпадению имени и типа, чтобы имена переводились.
+  const keyByName = new Map(DEFAULT_CATEGORIES.map((c) => [c.type + '|' + c.name, c.key]));
+  const migrated = [];
+  for (const c of state.categories) {
+    if (!c.key) {
+      const k = keyByName.get(c.type + '|' + c.name);
+      if (k) { c.key = k; migrated.push(c); }
+    }
+  }
+  if (migrated.length) await db.bulkPut('categories', migrated);
 
   setLang(state.settings.language);
   emit();
@@ -80,9 +92,24 @@ export function categoryById(id) {
   return state.categories.find((c) => c.id === id) || null;
 }
 
+// Локализованное имя категории: если задан key и есть перевод — берём его;
+// иначе — пользовательское имя как есть.
+export function categoryName(cat) {
+  if (cat && cat.key) {
+    const s = t('cat_' + cat.key);
+    if (s && s !== 'cat_' + cat.key) return s;
+  }
+  return cat ? cat.name : '';
+}
+
 export async function saveCategory(data) {
   const existing = data.id ? categoryById(data.id) : null;
   const cat = existing ? { ...existing, ...data } : makeCategory(data);
+  // Если пользователь переименовал дефолтную категорию (имя отличается от
+  // локализованного), снимаем key — дальше показываем его собственное имя.
+  if (existing && existing.key && data.name && data.name !== categoryName(existing)) {
+    delete cat.key;
+  }
   await db.put('categories', cat);
   const idx = state.categories.findIndex((c) => c.id === cat.id);
   if (idx >= 0) state.categories[idx] = cat; else state.categories.push(cat);
@@ -231,7 +258,7 @@ export function searchTransactions(f = {}) {
     if (max != null && !Number.isNaN(max) && amt > max) return false;
     if (q) {
       const cat = categoryById(t.categoryId);
-      const hay = ((t.note || '') + ' ' + (cat ? cat.name : '')).toLowerCase();
+      const hay = ((t.note || '') + ' ' + categoryName(cat)).toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -396,7 +423,7 @@ export function transactionsToCSV() {
   for (const t of sortedTransactions()) {
     const cat = categoryById(t.categoryId);
     rows.push([
-      t.date, t.type, cat ? cat.name : '', t.amount, t.currency,
+      t.date, t.type, cat ? categoryName(cat) : '', t.amount, t.currency,
       t.rate, baseAmount(t).toFixed(2),
       (t.note || '').replace(/"/g, '""'),
     ]);

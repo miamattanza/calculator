@@ -130,6 +130,7 @@ const DICT = {
 
     install_hint: 'Чтобы установить: Поделиться → «На экран „Домой“»',
     installed: 'Приложение готово к работе офлайн',
+    cat_groceries: 'Продукты', cat_cafe: 'Кафе', cat_transport: 'Транспорт', cat_housing: 'Жильё', cat_health: 'Здоровье', cat_entertainment: 'Развлечения', cat_shopping: 'Покупки', cat_communication: 'Связь', cat_other: 'Прочее', cat_salary: 'Зарплата', cat_sidejob: 'Подработка', cat_gift: 'Подарок', cat_investments: 'Инвестиции', cat_other_income: 'Прочее',
   },
 
   en: {
@@ -260,6 +261,7 @@ const DICT = {
 
     install_hint: 'To install: Share → “Add to Home Screen”',
     installed: 'App is ready to work offline',
+    cat_groceries: 'Groceries', cat_cafe: 'Cafe', cat_transport: 'Transport', cat_housing: 'Housing', cat_health: 'Health', cat_entertainment: 'Entertainment', cat_shopping: 'Shopping', cat_communication: 'Communication', cat_other: 'Other', cat_salary: 'Salary', cat_sidejob: 'Side job', cat_gift: 'Gift', cat_investments: 'Investments', cat_other_income: 'Other',
   },
 
   it: {
@@ -276,6 +278,7 @@ const DICT = {
     manage_categories: 'Categorie', add_category: 'Aggiungi categoria', category_name: 'Nome', icon: 'Icona', color: 'Colore', category_in_use: 'La categoria è usata nelle operazioni',
     required: 'Campo obbligatorio', invalid_amount: 'Inserisci un importo maggiore di zero',
     install_hint: 'Per installare: Condividi → «Aggiungi a Home»', installed: 'App pronta per l’uso offline',
+    cat_groceries: 'Alimentari', cat_cafe: 'Caffè', cat_transport: 'Trasporti', cat_housing: 'Casa', cat_health: 'Salute', cat_entertainment: 'Svago', cat_shopping: 'Acquisti', cat_communication: 'Comunicazioni', cat_other: 'Altro', cat_salary: 'Stipendio', cat_sidejob: 'Lavoretto', cat_gift: 'Regalo', cat_investments: 'Investimenti', cat_other_income: 'Altro',
   },
 
   id: {
@@ -292,6 +295,7 @@ const DICT = {
     manage_categories: 'Kategori', add_category: 'Tambah kategori', category_name: 'Nama', icon: 'Ikon', color: 'Warna', category_in_use: 'Kategori sedang dipakai di transaksi',
     required: 'Wajib diisi', invalid_amount: 'Masukkan jumlah lebih dari nol',
     install_hint: 'Untuk memasang: Bagikan → «Tambah ke Layar Utama»', installed: 'Aplikasi siap dipakai offline',
+    cat_groceries: 'Bahan makanan', cat_cafe: 'Kafe', cat_transport: 'Transportasi', cat_housing: 'Rumah', cat_health: 'Kesehatan', cat_entertainment: 'Hiburan', cat_shopping: 'Belanja', cat_communication: 'Komunikasi', cat_other: 'Lainnya', cat_salary: 'Gaji', cat_sidejob: 'Kerja sampingan', cat_gift: 'Hadiah', cat_investments: 'Investasi', cat_other_income: 'Lainnya',
   },
 
   es: {
@@ -308,6 +312,7 @@ const DICT = {
     manage_categories: 'Categorías', add_category: 'Añadir categoría', category_name: 'Nombre', icon: 'Icono', color: 'Color', category_in_use: 'La categoría se usa en operaciones',
     required: 'Campo obligatorio', invalid_amount: 'Introduce un importe mayor que cero',
     install_hint: 'Para instalar: Compartir → «Añadir a inicio»', installed: 'App lista para usar sin conexión',
+    cat_groceries: 'Comestibles', cat_cafe: 'Café', cat_transport: 'Transporte', cat_housing: 'Vivienda', cat_health: 'Salud', cat_entertainment: 'Ocio', cat_shopping: 'Compras', cat_communication: 'Comunicación', cat_other: 'Otros', cat_salary: 'Salario', cat_sidejob: 'Trabajo extra', cat_gift: 'Regalo', cat_investments: 'Inversiones', cat_other_income: 'Otros',
   },
 
   ar: {
@@ -324,6 +329,7 @@ const DICT = {
     manage_categories: 'الفئات', add_category: 'إضافة فئة', category_name: 'الاسم', icon: 'أيقونة', color: 'اللون', category_in_use: 'الفئة مستخدمة في العمليات',
     required: 'هذا الحقل مطلوب', invalid_amount: 'أدخل مبلغًا أكبر من صفر',
     install_hint: 'للتثبيت: مشاركة ← «أضف إلى الشاشة الرئيسية»', installed: 'التطبيق جاهز للعمل دون اتصال',
+    cat_groceries: 'بقالة', cat_cafe: 'مقهى', cat_transport: 'مواصلات', cat_housing: 'سكن', cat_health: 'صحة', cat_entertainment: 'ترفيه', cat_shopping: 'تسوق', cat_communication: 'اتصالات', cat_other: 'أخرى', cat_salary: 'راتب', cat_sidejob: 'عمل إضافي', cat_gift: 'هدية', cat_investments: 'استثمارات', cat_other_income: 'أخرى',
   },
 };
 

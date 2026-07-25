@@ -23,7 +23,7 @@ export function openSearch(initial = {}) {
   const cats = initial.type ? store.categoriesByType(initial.type) : store.getState().categories;
   const catSelect = el('select.select', {}, [
     el('option', { value: '' }, t('all_categories')),
-    ...cats.map((c) => el('option', { value: c.id }, `${c.icon} ${c.name}`)),
+    ...cats.map((c) => el('option', { value: c.id }, `${c.icon} ${store.categoryName(c)}`)),
   ]);
   const dateFrom = el('input.select', { type: 'date' });
   const dateTo = el('input.select', { type: 'date' });
@@ -97,7 +97,7 @@ export function openSearch(initial = {}) {
     return el('.trx-row', { onClick: () => { modal.close(); openTransactionForm(trx); } }, [
       el('.trx-icon', { style: { '--chip': cat ? cat.color : '#8E8E93' }, text: cat ? cat.icon : '🔖' }),
       el('.trx-main', {}, [
-        el('.trx-title', { text: cat ? cat.name : '—' }),
+        el('.trx-title', { text: cat ? store.categoryName(cat) : '—' }),
         el('.trx-note', { text: (trx.note ? trx.note + ' · ' : '') + formatDate(trx.date, { day: 'numeric', month: 'short', year: 'numeric' }) }),
       ]),
       el('.trx-amount', {}, [

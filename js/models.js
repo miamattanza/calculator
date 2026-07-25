@@ -1,6 +1,6 @@
 // models.js — фабрики сущностей и данные по умолчанию.
 
-export const APP_VERSION = '1.7';
+export const APP_VERSION = '1.7.1';
 
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -8,27 +8,31 @@ export function uid() {
 
 // Категории по умолчанию (создаются при первом запуске).
 // icon — эмодзи (нативно рендерится на iOS), color — акцент.
+// key — стабильный идентификатор для перевода имени (см. i18n «cat_<key>»).
+// У пользовательских категорий key отсутствует — показывается их имя как есть.
 export const DEFAULT_CATEGORIES = [
   // Расходы
-  { name: 'Продукты',    type: 'expense', icon: '🛒', color: '#34C759' },
-  { name: 'Кафе',        type: 'expense', icon: '☕️', color: '#FF9500' },
-  { name: 'Транспорт',   type: 'expense', icon: '🚕', color: '#5AC8FA' },
-  { name: 'Жильё',       type: 'expense', icon: '🏠', color: '#AF52DE' },
-  { name: 'Здоровье',    type: 'expense', icon: '💊', color: '#FF2D55' },
-  { name: 'Развлечения', type: 'expense', icon: '🎬', color: '#FF375F' },
-  { name: 'Покупки',     type: 'expense', icon: '🛍', color: '#BF5AF2' },
-  { name: 'Связь',       type: 'expense', icon: '📱', color: '#64D2FF' },
-  { name: 'Прочее',      type: 'expense', icon: '🔖', color: '#8E8E93' },
+  { key: 'groceries',     name: 'Продукты',    type: 'expense', icon: '🛒', color: '#34C759' },
+  { key: 'cafe',          name: 'Кафе',        type: 'expense', icon: '☕️', color: '#FF9500' },
+  { key: 'transport',     name: 'Транспорт',   type: 'expense', icon: '🚕', color: '#5AC8FA' },
+  { key: 'housing',       name: 'Жильё',       type: 'expense', icon: '🏠', color: '#AF52DE' },
+  { key: 'health',        name: 'Здоровье',    type: 'expense', icon: '💊', color: '#FF2D55' },
+  { key: 'entertainment', name: 'Развлечения', type: 'expense', icon: '🎬', color: '#FF375F' },
+  { key: 'shopping',      name: 'Покупки',     type: 'expense', icon: '🛍', color: '#BF5AF2' },
+  { key: 'communication', name: 'Связь',       type: 'expense', icon: '📱', color: '#64D2FF' },
+  { key: 'other',         name: 'Прочее',      type: 'expense', icon: '🔖', color: '#8E8E93' },
   // Доходы
-  { name: 'Зарплата',    type: 'income',  icon: '💼', color: '#34C759' },
-  { name: 'Подработка',  type: 'income',  icon: '🧾', color: '#30D158' },
-  { name: 'Подарок',     type: 'income',  icon: '🎁', color: '#FF9F0A' },
-  { name: 'Инвестиции',  type: 'income',  icon: '📈', color: '#0A84FF' },
-  { name: 'Прочее',      type: 'income',  icon: '💰', color: '#8E8E93' },
+  { key: 'salary',        name: 'Зарплата',    type: 'income',  icon: '💼', color: '#34C759' },
+  { key: 'sidejob',       name: 'Подработка',  type: 'income',  icon: '🧾', color: '#30D158' },
+  { key: 'gift',          name: 'Подарок',     type: 'income',  icon: '🎁', color: '#FF9F0A' },
+  { key: 'investments',   name: 'Инвестиции',  type: 'income',  icon: '📈', color: '#0A84FF' },
+  { key: 'other_income',  name: 'Прочее',      type: 'income',  icon: '💰', color: '#8E8E93' },
 ];
 
-export function makeCategory({ name, type, icon, color, order }) {
-  return { id: uid(), name, type, icon: icon || '🔖', color: color || '#8E8E93', order: order || 0 };
+export function makeCategory({ name, type, icon, color, order, key }) {
+  const c = { id: uid(), name, type, icon: icon || '🔖', color: color || '#8E8E93', order: order || 0 };
+  if (key) c.key = key;
+  return c;
 }
 
 export function makeTransaction({ type, amount, currency, rate, categoryId, date, note }) {

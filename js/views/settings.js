@@ -174,7 +174,7 @@ function openCategoriesManager() {
       for (const c of store.categoriesByType(type)) {
         group.appendChild(el('.cat-manage-row', { onClick: () => openCategoryEditor(c, refresh) }, [
           el('.trx-icon', { style: { '--chip': c.color }, text: c.icon }),
-          el('.cat-manage-name', { text: c.name }),
+          el('.cat-manage-name', { text: store.categoryName(c) }),
           el('.nav-chevron', { text: '›' }),
         ]));
       }
@@ -191,7 +191,7 @@ function openCategoriesManager() {
 }
 
 function openCategoryEditor(existing, onDone) {
-  const model = existing ? { ...existing } : { name: '', type: 'expense', icon: '🔖', color: '#8E8E93' };
+  const model = existing ? { ...existing, name: store.categoryName(existing) } : { name: '', type: 'expense', icon: '🔖', color: '#8E8E93' };
   const body = el('.form');
 
   const nameInput = el('input.select', { type: 'text', placeholder: t('category_name'), value: model.name });

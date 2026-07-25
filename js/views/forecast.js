@@ -83,7 +83,7 @@ export function renderForecast(root) {
       list.appendChild(el('.trx-row', { onClick: () => openPlannedForm(p, root) }, [
         el('.trx-icon', { style: { '--chip': cat ? cat.color : '#8E8E93' }, text: cat ? cat.icon : (p.type === 'income' ? '💰' : '🧾') }),
         el('.trx-main', {}, [
-          el('.trx-title', { text: p.note || (cat ? cat.name : (p.type === 'income' ? t('income') : t('expense'))) }),
+          el('.trx-title', { text: p.note || (cat ? store.categoryName(cat) : (p.type === 'income' ? t('income') : t('expense'))) }),
           el('.trx-note', { text: `${recLabel[p.recurrence]} · ${t('start_date')}: ${formatDate(p.startDate, { day: 'numeric', month: 'short' })}` }),
         ]),
         el('.trx-amount', {}, [
@@ -157,7 +157,7 @@ function openPlannedForm(existing, root) {
           catGrid.querySelectorAll('.cat-chip').forEach((x) => x.classList.remove('active'));
           chip.classList.add('active');
         },
-      }, [el('.cat-emoji', { text: c.icon }), el('.cat-name', { text: c.name })]);
+      }, [el('.cat-emoji', { text: c.icon }), el('.cat-name', { text: store.categoryName(c) })]);
       catGrid.appendChild(chip);
     }
   }

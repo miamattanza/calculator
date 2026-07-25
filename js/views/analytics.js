@@ -39,7 +39,7 @@ export function renderAnalytics(root) {
     card.appendChild(el('.empty-inline', { text: t('no_data') }));
   } else {
     const data = breakdown.map((b) => ({
-      label: b.category ? b.category.name : '—',
+      label: b.category ? store.categoryName(b.category) : '—',
       amount: b.amount,
       color: b.category ? b.category.color : '#8E8E93',
     }));
@@ -53,7 +53,7 @@ export function renderAnalytics(root) {
       const pct = total > 0 ? Math.round(b.amount / total * 100) : 0;
       legend.appendChild(el('.legend-row', {}, [
         el('.legend-dot', { style: { background: b.category ? b.category.color : '#8E8E93' } }),
-        el('.legend-name', { text: b.category ? `${b.category.icon} ${b.category.name}` : '—' }),
+        el('.legend-name', { text: b.category ? `${b.category.icon} ${store.categoryName(b.category)}` : '—' }),
         el('.legend-pct', { text: pct + '%' }),
         el('.legend-amount', { text: money(b.amount, base) }),
       ]));
