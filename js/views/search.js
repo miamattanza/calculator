@@ -5,7 +5,7 @@ import * as store from '../store.js';
 import { t } from '../i18n.js';
 import { el, clear, sheet, field, rowCols, catIcon } from '../dom.js';
 import { money, signedMoney, formatDate } from '../format.js';
-import { openTransactionForm, attachRowActions } from './transactions.js';
+import { openTransactionForm, wrapSwipeRow } from './transactions.js';
 
 export function openSearch(initial = {}) {
   const base = store.baseCurrency();
@@ -104,8 +104,7 @@ export function openSearch(initial = {}) {
         el('.trx-amount-main', { class: trx.type, text: signedMoney(amountBase, base) }),
       ]),
     ]);
-    attachRowActions(row, trx);
-    return row;
+    return wrapSwipeRow(row, trx);
   }
 
   run();

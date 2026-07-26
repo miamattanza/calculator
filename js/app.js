@@ -28,16 +28,20 @@ const menuBtn = document.getElementById('menu-btn');
 const modeLabel = document.getElementById('mode-label');
 const headBalance = document.getElementById('head-balance');
 const analyticsBtn = document.getElementById('analytics-btn');
+const budgetRing = document.getElementById('budget-ring');
+
+export function goSection(id) { activeSection = id; renderSection(); }
 
 function renderSection() {
   clear(content);
   content.scrollTop = 0;
   const onHome = activeSection === 'home';
-  // Шапка с балансом/меткой окна и иконка Аналитики — только на «Обзоре».
+  // Шапка с балансом/меткой окна, сигнал лимита и иконка Аналитики — на «Обзоре».
   if (!onHome) {
     content.classList.remove('fit-mode');
     if (modeLabel) { modeLabel.textContent = ''; modeLabel.className = ''; }
     if (headBalance) { headBalance.textContent = ''; headBalance.style.display = 'none'; }
+    if (budgetRing) { clear(budgetRing); budgetRing.style.display = 'none'; }
   }
   if (analyticsBtn) analyticsBtn.style.display = onHome ? '' : 'none';
   const section = SECTIONS.find((x) => x.id === activeSection);
@@ -117,6 +121,7 @@ async function main() {
 
   menuBtn.addEventListener('click', openMenu);
   if (analyticsBtn) analyticsBtn.addEventListener('click', () => { activeSection = 'analytics'; renderSection(); });
+  document.addEventListener('go-section', (e) => goSection(e.detail));
 
   // Перерисовка при изменении данных (только активный раздел).
   store.subscribe(() => renderSection());

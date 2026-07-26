@@ -27,6 +27,20 @@ export function renderBudgets(root) {
   } else {
     renderDetailed(root, base);
   }
+
+  // Управление уведомлением о превышении лимита.
+  const bs = store.budgetOverallStatus();
+  if (bs.has) {
+    const muted = bs.muted;
+    root.appendChild(el('.settings-group', {}, [
+      el('.nav-row', {
+        onClick: async () => { await store.setSetting('budgetMutedMonth', muted ? '' : store.currentMonthKey()); },
+      }, [
+        el('.nav-icon', { text: muted ? '🔔' : '🔕' }),
+        el('.nav-label', { text: muted ? t('unmute_alert') : t('mute_alert') }),
+      ]),
+    ]));
+  }
 }
 
 // ---- Общий лимит ----

@@ -3,17 +3,19 @@
 
 import * as store from '../store.js';
 import { t } from '../i18n.js';
-import { el, clear, segmented } from '../dom.js';
-import { money } from '../format.js';
+import { el, clear, segmented, field, rowCols } from '../dom.js';
+import { money, dateISO, addDays } from '../format.js';
 import { donut, groupedBars } from '../charts.js';
 
 let period = 'month';
 let type = 'expense';
+let customFrom = addDays(dateISO(), -30);
+let customTo = dateISO();
 
 export function renderAnalytics(root) {
   clear(root);
   const base = store.baseCurrency();
-  const [from, to] = store.periodRange(period);
+  const [from, to] = period === 'custom' ? [customFrom, customTo] : store.periodRange(period);
 
   root.appendChild(el('.screen-title', { text: t('analytics_title') }));
 
@@ -21,8 +23,17 @@ export function renderAnalytics(root) {
     { value: 'week', label: t('period_week') },
     { value: 'month', label: t('period_month') },
     { value: 'year', label: t('period_year') },
-    { value: 'all', label: t('period_all') },
+    { value: 'custom', label: t('period_custom') },
   ], period, (v) => { period = v; renderAnalytics(root); })]));
+
+  // Для «Выбранного периода» — поля дат начала и конца.
+  if (period === 'custom') {
+    const fromInput = el('input.select', { type: 'date', value: customFrom });
+    const toInput = el('input.select', { type: 'date', value: customTo });
+    fromInput.addEventListener('change', () => { customFrom = fromInput.value || customFrom; renderAnalytics(root); });
+    toInput.addEventListener('change', () => { customTo = toInput.value || customTo; renderAnalytics(root); });
+    root.appendChild(el('.card', {}, [rowCols(field(t('date_from'), fromInput).row, field(t('date_to'), toInput).row)]));
+  }
 
   root.appendChild(el('.period-bar', {}, [segmented([
     { value: 'expense', label: t('expense') },

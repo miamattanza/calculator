@@ -676,4 +676,26 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .theme-preview { height: 64px; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--sep); }
 .range { width: 100%; accent-color: var(--accent); height: 28px; }
 
+/* ---- Сигнал лимита в шапке ---- */
+#budget-ring { display: flex; align-items: center; justify-content: center; margin-inline-start: 8px; padding: 0; background: none; width: 28px; height: 28px; }
+.budget-ring-svg.over { animation: ringPulse 1s ease-in-out infinite; }
+@keyframes ringPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.86); } }
+
+/* ---- Свайп-действия в строке истории ---- */
+.swipe-wrap { position: relative; overflow: hidden; }
+.trx-group > .swipe-wrap { border-bottom: 0.5px solid var(--sep); }
+.trx-group > .swipe-wrap:last-child { border-bottom: none; }
+.swipe-content { position: relative; z-index: 1; background: var(--card); }
+.swipe-del { position: absolute; top: 0; bottom: 0; inset-inline-end: 0; width: 84px; background: var(--red); color: #fff; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+.swipe-comment { position: absolute; inset: 0; display: flex; align-items: center; gap: 8px; padding: 0 12px; background: var(--bg-elev); }
+.swipe-note-input { flex: 1; min-width: 0; background: var(--fill); border: none; border-radius: 8px; padding: 8px 10px; font-size: 15px; }
+.swipe-note-save { width: 38px; height: 32px; flex-shrink: 0; border-radius: 8px; background: var(--green); color: #fff; font-size: 16px; }
+
+/* ---- Конвертер валют ---- */
+.conv-result { text-align: center; font-size: 18px; font-weight: 700; padding: 12px 0; font-variant-numeric: tabular-nums; }
+
+/* ---- Выравнивание полей (в т.ч. даты) в формах ---- */
+.select { min-height: 46px; box-sizing: border-box; }
+input[type="date"].select, input[type="date"].row-control { -webkit-appearance: none; appearance: none; }
+
 body.modal-open { overflow: hidden; }

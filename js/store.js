@@ -395,13 +395,17 @@ export function planningEstimate(goalAmount) {
   const enoughData = spanDays >= 30;
   const dailyRate = averageDailyNet() + plannedDailyNet();
   const amount = Number(goalAmount) || 0;
+  const balance = currentBalance();
+  const canBuyNow = amount > 0 && balance >= amount; // уже хватает — покупка сразу
   let days = null, date = null, reachable = false;
-  if (dailyRate > 0 && amount > 0) {
-    days = Math.ceil(amount / dailyRate);
+  if (!canBuyNow && dailyRate > 0 && amount > 0) {
+    // копим недостающую часть от текущего баланса
+    const need = amount - Math.max(0, balance);
+    days = Math.ceil(need / dailyRate);
     date = addDays(dateISO(), days);
     reachable = true;
   }
-  return { enoughData, spanDays, dailyRate, monthlyRate: dailyRate * 30.44, days, date, reachable };
+  return { enoughData, spanDays, dailyRate, monthlyRate: dailyRate * 30.44, days, date, reachable, balance, canBuyNow, remainingAfter: balance - amount };
 }
 
 // Прогноз остатка на целевую дату:
@@ -479,6 +483,27 @@ export function monthExpenseTotal() {
   let sum = 0;
   for (const t of transactionsInRange(from, to)) if (t.type === 'expense') sum += baseAmount(t);
   return sum;
+}
+
+export function currentMonthKey() { return monthKey(dateISO()); }
+
+// Сводный статус лимита за месяц (для сигнала в шапке). В детальном режиме —
+// сумма лимитов и трат по бюджетным категориям; иначе — общий лимит.
+export function budgetOverallStatus() {
+  const s = state.settings;
+  let limit = 0, spent = 0;
+  if (s.budgetDetailed) {
+    const [from, to] = periodRange('month');
+    for (const b of state.budgets) {
+      limit += Number(b.limit) || 0;
+      for (const t of transactionsInRange(from, to)) if (t.type === 'expense' && t.categoryId === b.categoryId) spent += baseAmount(t);
+    }
+  } else {
+    limit = Number(s.budgetTotal) || 0;
+    spent = monthExpenseTotal();
+  }
+  const ratio = limit > 0 ? spent / limit : 0;
+  return { has: limit > 0, limit, spent, ratio, over: limit > 0 && spent > limit, muted: s.budgetMutedMonth === currentMonthKey() };
 }
 
 // ---- Цели (Планирование) -------------------------------------------------

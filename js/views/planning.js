@@ -53,7 +53,12 @@ export function renderPlanning(root) {
   for (const g of goals) {
     const est = store.planningEstimate(g.amount);
     let resultNode;
-    if (!est.enoughData) {
+    if (est.canBuyNow) {
+      resultNode = el('.goal-result', {}, [
+        el('.goal-eta', {}, [el('span.goal-eta-date', { text: '✅ ' + t('buy_now') })]),
+        el('.goal-loan', { text: `${t('remaining_after')}: ${money(est.remainingAfter, base)}` }),
+      ]);
+    } else if (!est.enoughData) {
       resultNode = el('.goal-note', { text: t('not_enough_data') });
     } else if (!est.reachable) {
       resultNode = el('.goal-note.warn', { text: t('goal_unreachable') });

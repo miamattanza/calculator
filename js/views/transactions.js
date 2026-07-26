@@ -234,6 +234,28 @@ function attachCatSwipe(node, onPrev, onNext) {
   node.addEventListener('mouseup', (e) => finish(e.clientX, e.clientY));
 }
 
+// Кольцо-индикатор лимита для шапки.
+function budgetRingSvg(ratio) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const size = 26, sw = 3.5, r = (size - sw) / 2, cx = size / 2, c = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(1, ratio));
+  let color = 'var(--text-3)';
+  if (ratio >= 1) color = '#8B1A1A'; else if (ratio >= 0.9) color = 'var(--red)'; else if (ratio >= 0.8) color = '#FF9500';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${size} ${size}`); svg.setAttribute('width', size); svg.setAttribute('height', size);
+  svg.setAttribute('class', ratio >= 1 ? 'budget-ring-svg over' : 'budget-ring-svg');
+  const mk = (stroke, dash) => {
+    const el2 = document.createElementNS(NS, 'circle');
+    el2.setAttribute('cx', cx); el2.setAttribute('cy', cx); el2.setAttribute('r', r);
+    el2.setAttribute('fill', 'none'); el2.setAttribute('stroke', stroke); el2.setAttribute('stroke-width', sw);
+    if (dash) { el2.setAttribute('stroke-dasharray', dash); el2.setAttribute('stroke-linecap', 'round'); el2.setAttribute('transform', `rotate(-90 ${cx} ${cx})`); }
+    return el2;
+  };
+  svg.appendChild(mk('var(--sep)'));
+  svg.appendChild(mk(color, `${clamped * c} ${c}`));
+  return svg;
+}
+
 // Долгое нажатие (500мс) + обычный тап, с отменой при движении пальца.
 function attachLongPress(node, { onTap, onLong }) {
   let timer = null, longFired = false, sx = 0, sy = 0, moved = false;
@@ -294,6 +316,22 @@ export function renderHome(root) {
       el('.hb-label', { text: t('balance') }),
       el('.hb-value', { text: money(store.currentBalance(), base) }),
     );
+  }
+
+  // Сигнал лимита: круг-индикатор между меткой окна и балансом. Оранжевый ≥80%,
+  // красный ≥90%, бордовый пульсирующий при превышении. Тап → «Бюджеты».
+  const ringHost = document.getElementById('budget-ring');
+  if (ringHost) {
+    clear(ringHost);
+    const bs = store.budgetOverallStatus();
+    if (bs.has && !bs.muted) {
+      ringHost.style.display = '';
+      ringHost.appendChild(budgetRingSvg(bs.ratio));
+      ringHost.onclick = () => document.dispatchEvent(new CustomEvent('go-section', { detail: 'budgets' }));
+    } else {
+      ringHost.style.display = 'none';
+      ringHost.onclick = null;
+    }
   }
 
   const pager = el('.pager.home-pager', { class: isExpense ? 'expense-mode' : 'income-mode' });
@@ -465,7 +503,7 @@ function renderRow(trx, base) {
   const sign = trx.type === 'income' ? 1 : -1;
   const amountBase = store.baseAmount(trx) * sign;
   const showOrig = trx.currency !== base;
-  const row = el('.trx-row', {}, [
+  const content = el('.trx-row', {}, [
     catIcon(cat, 'trx-icon'),
     el('.trx-main', {}, [
       el('.trx-title', { text: cat ? store.categoryName(cat) : '—' }),
@@ -476,18 +514,39 @@ function renderRow(trx, base) {
       showOrig ? el('.trx-amount-orig', { text: money(trx.amount, trx.currency) }) : null,
     ]),
   ]);
-  attachRowActions(row, trx);
-  return row;
+  return wrapSwipeRow(content, trx);
 }
 
-// Жесты строки истории: свайп вправо — комментарий, влево — удалить,
-// долгое нажатие (или тап) — изменить (цена/категория/день).
-export function attachRowActions(row, trx) {
-  let sx = 0, sy = 0, dir = null, dragging = false, longFired = false, longTimer = null;
-  const reset = () => { row.style.transition = 'transform .2s ease, background-color .2s'; row.style.transform = ''; row.style.backgroundColor = ''; };
+// Одновременно открыт только один ряд.
+let closeOpenSwipe = null;
+
+// Оборачивает строку истории в свайп-контейнер: свайп влево выдвигает кнопку
+// удаления, свайп вправо — инлайн-поле комментария; долгое нажатие/тап —
+// редактирование. Никаких всплывающих окон.
+export function wrapSwipeRow(content, trx) {
+  content.classList.add('swipe-content');
+  const del = el('button.swipe-del', { type: 'button', text: '🗑' });
+  const noteInput = el('input.swipe-note-input', { type: 'text', placeholder: t('note_ph'), value: trx.note || '' });
+  const saveNote = async () => { await store.saveTransaction({ id: trx.id, note: noteInput.value.trim() }); };
+  const comment = el('.swipe-comment', {}, [noteInput, el('button.swipe-note-save', { type: 'button', text: '✓' })]);
+  const wrap = el('.swipe-wrap', {}, [comment, del, content]);
+  const DEL_W = 84;
+  let openState = 0; // 0 закрыт, -1 удаление, 1 комментарий
+  const setX = (x, anim) => { content.style.transition = anim ? 'transform .2s ease' : 'none'; content.style.transform = `translateX(${x}px)`; };
+  const closeFn = () => { openState = 0; setX(0, true); if (closeOpenSwipe === closeFn) closeOpenSwipe = null; };
+  const openDel = () => { if (closeOpenSwipe && closeOpenSwipe !== closeFn) closeOpenSwipe(); openState = -1; setX(-DEL_W, true); closeOpenSwipe = closeFn; };
+  const openComment = () => { if (closeOpenSwipe && closeOpenSwipe !== closeFn) closeOpenSwipe(); openState = 1; setX(wrap.offsetWidth, true); closeOpenSwipe = closeFn; setTimeout(() => noteInput.focus(), 200); };
+
+  del.addEventListener('click', async (e) => { e.stopPropagation(); if (await confirmDialog(t('confirm_delete'))) await store.deleteTransaction(trx.id); });
+  comment.querySelector('.swipe-note-save').addEventListener('click', (e) => { e.stopPropagation(); saveNote(); closeFn(); });
+  noteInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { saveNote(); noteInput.blur(); closeFn(); } });
+
+  let sx = 0, sy = 0, dir = null, dragging = false, longFired = false, longTimer = null, startX = 0;
   const begin = (x, y) => {
-    sx = x; sy = y; dir = null; dragging = true; longFired = false; row.style.transition = 'none';
-    longTimer = setTimeout(() => { longFired = true; dragging = false; openTransactionForm(trx); }, 500);
+    sx = x; sy = y; dir = null; dragging = true; longFired = false;
+    startX = openState === -1 ? -DEL_W : openState === 1 ? wrap.offsetWidth : 0;
+    content.style.transition = 'none';
+    longTimer = setTimeout(() => { longFired = true; dragging = false; closeFn(); openTransactionForm(trx); }, 500);
   };
   const move = (x, y, e) => {
     if (!dragging) return;
@@ -495,49 +554,32 @@ export function attachRowActions(row, trx) {
     if (dir === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) { dir = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'; clearTimeout(longTimer); }
     if (dir === 'h') {
       if (e && e.cancelable) e.preventDefault();
-      row.style.transform = `translateX(${dx}px)`;
-      row.style.backgroundColor = dx > 0
-        ? 'color-mix(in srgb, var(--accent) 16%, transparent)'
-        : 'color-mix(in srgb, var(--red) 16%, transparent)';
+      let nx = startX + dx;
+      if (nx > wrap.offsetWidth) nx = wrap.offsetWidth;
+      if (nx < -DEL_W * 1.4) nx = -DEL_W * 1.4;
+      setX(nx, false);
     }
   };
   const end = (x) => {
     clearTimeout(longTimer);
     if (!dragging) return;
     dragging = false;
-    if (dir !== 'h') { if (!longFired) openTransactionForm(trx); reset(); return; }
+    if (dir !== 'h') { if (!longFired) { if (openState !== 0) closeFn(); else openTransactionForm(trx); } return; }
     const dx = x - sx;
-    if (dx > 80) { reset(); openCommentEditor(trx); }
-    else if (dx < -80) { reset(); confirmDeleteRow(trx); }
-    else reset();
+    if (dx < -40) openDel();
+    else if (dx > wrap.offsetWidth * 0.35) openComment();
+    else closeFn();
   };
-  row.addEventListener('touchstart', (e) => { const p = e.changedTouches[0]; begin(p.clientX, p.clientY); }, { passive: true });
-  row.addEventListener('touchmove', (e) => { const p = e.changedTouches[0]; move(p.clientX, p.clientY, e); }, { passive: false });
-  row.addEventListener('touchend', (e) => { const p = e.changedTouches[0]; end(p.clientX); }, { passive: true });
-  row.addEventListener('mousedown', (e) => {
+  content.addEventListener('touchstart', (e) => { const p = e.changedTouches[0]; begin(p.clientX, p.clientY); }, { passive: true });
+  content.addEventListener('touchmove', (e) => { const p = e.changedTouches[0]; move(p.clientX, p.clientY, e); }, { passive: false });
+  content.addEventListener('touchend', (e) => { const p = e.changedTouches[0]; end(p.clientX); }, { passive: true });
+  content.addEventListener('mousedown', (e) => {
     begin(e.clientX, e.clientY);
     const mm = (ev) => move(ev.clientX, ev.clientY, ev);
     const mu = (ev) => { end(ev.clientX); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
     window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);
   });
-}
-
-async function confirmDeleteRow(trx) {
-  if (await confirmDialog(t('confirm_delete'))) await store.deleteTransaction(trx.id);
-}
-
-// Быстрый редактор комментария (свайп вправо по строке).
-function openCommentEditor(trx) {
-  const input = el('input.select', { type: 'text', placeholder: t('note_ph'), value: trx.note || '' });
-  const body = el('.form', {}, [
-    field(t('note'), input).row,
-    el('button.btn-primary', {
-      type: 'button', text: t('save'),
-      onClick: async () => { await store.saveTransaction({ id: trx.id, note: input.value.trim() }); modal.close(); },
-    }),
-  ]);
-  const modal = sheet(t('note'), body);
-  setTimeout(() => input.focus(), 300);
+  return wrap;
 }
 
 function dayLabel(iso) {

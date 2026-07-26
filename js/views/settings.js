@@ -3,7 +3,7 @@
 
 import * as store from '../store.js';
 import { t, availableLangs, LANG_NAMES } from '../i18n.js';
-import { el, clear, sheet, field, toast, confirmDialog, toggle, catIcon } from '../dom.js';
+import { el, clear, sheet, field, toast, confirmDialog, toggle, catIcon, rowCols } from '../dom.js';
 import { CURRENCIES } from '../format.js';
 import { APP_VERSION } from '../models.js';
 
@@ -86,9 +86,10 @@ export function renderSettings(root, rerenderApp) {
   root.appendChild(el('.group-caption', { text: t('background') }));
   root.appendChild(el('.settings-group', {}, [el('.bg-picker-wrap', {}, [buildBackgroundPicker(s)])]));
 
-  // Категории
+  // Категории + конвертер валют
   root.appendChild(el('.settings-group', {}, [
     navRow('🏷', t('categories_manage'), () => openCategoriesManager()),
+    navRow('💱', t('converter'), () => openConverter()),
   ]));
 
   // Данные
@@ -405,6 +406,82 @@ export function applyBackground(id) {
   root.setAttribute('data-bg', bg);
   if (bg === 'custom' && settings.bgCustom) root.style.setProperty('--bg-custom', `url("${settings.bgCustom}")`);
   else root.style.removeProperty('--bg-custom');
+}
+
+// ---- Конвертер валют ----
+
+async function fetchRates(base, onOk, onErr) {
+  try {
+    const res = await fetch(`https://open.er-api.com/v6/latest/${base}`);
+    const j = await res.json();
+    if (!j || j.result !== 'success' || !j.rates) throw new Error('bad');
+    const rates = {};
+    for (const code of Object.keys(CURRENCIES)) {
+      if (code === base) { rates[code] = 1; continue; }
+      const perBase = j.rates[code];
+      if (perBase) rates[code] = 1 / perBase; // 1 <code> = 1/perBase базовой
+    }
+    await store.setSetting('rates', rates);
+    onOk();
+  } catch { onErr(); }
+}
+
+function openConverter() {
+  const base = store.baseCurrency();
+  const codes = Object.keys(CURRENCIES);
+  const rates = () => { const r = { ...(store.getState().settings.rates || {}) }; r[base] = 1; return r; };
+  const rateFor = (c) => (c === base ? 1 : (Number(rates()[c]) || null));
+
+  const body = el('.form');
+  const amountInput = el('input.select', { type: 'text', inputmode: 'decimal', value: '1' });
+  amountInput.addEventListener('input', () => { amountInput.value = amountInput.value.replace(/[^\d.,]/g, ''); calc(); });
+  const mkSel = (val) => el('select.select', {}, codes.map((c) => el('option', { value: c, selected: c === val }, `${c} · ${CURRENCIES[c].symbol}`)));
+  const fromSel = mkSel(base);
+  const toSel = mkSel(codes.find((c) => c !== base) || base);
+  const result = el('.conv-result');
+  const calc = () => {
+    const a = parseFloat(amountInput.value.replace(',', '.')) || 0;
+    const rf = rateFor(fromSel.value), rt = rateFor(toSel.value);
+    if (rf == null || rt == null) { result.textContent = t('rate_unknown'); return; }
+    const out = a * rf / rt;
+    result.textContent = `${a} ${fromSel.value} = ${out.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${toSel.value}`;
+  };
+  fromSel.addEventListener('change', calc); toSel.addEventListener('change', calc);
+
+  // Курсы к основной валюте (можно править вручную).
+  const ratesWrap = el('.settings-group');
+  const drawRates = () => {
+    clear(ratesWrap);
+    const r = rates();
+    for (const c of codes) {
+      if (c === base) continue;
+      const inp = el('input.row-control.num-input', { type: 'text', inputmode: 'decimal', value: r[c] != null ? r[c] : '' });
+      inp.addEventListener('change', async () => {
+        const next = { ...(store.getState().settings.rates || {}) };
+        const v = parseFloat(inp.value.replace(',', '.'));
+        if (v > 0) next[c] = v; else delete next[c];
+        await store.setSetting('rates', next); calc();
+      });
+      ratesWrap.appendChild(settingRow(`1 ${c} = ? ${base}`, inp));
+    }
+  };
+  drawRates();
+
+  const updateBtn = el('button.btn-upload', {
+    type: 'button', text: '🔄 ' + t('update_rates'),
+    onClick: () => fetchRates(base, () => { drawRates(); calc(); toast(t('rates_updated')); }, () => toast(t('rates_error'))),
+  });
+
+  body.append(
+    field(t('amount'), amountInput).row,
+    rowCols(field('', fromSel).row, field('', toSel).row),
+    result,
+    updateBtn,
+    el('.group-caption', { text: t('base_currency') }),
+    ratesWrap,
+  );
+  calc();
+  sheet(t('converter'), body, { full: true });
 }
 
 // ---- Тема ----

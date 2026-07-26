@@ -1,6 +1,6 @@
 // models.js — фабрики сущностей и данные по умолчанию.
 
-export const APP_VERSION = '1.12';
+export const APP_VERSION = '1.13';
 
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -89,5 +89,7 @@ export const DEFAULT_SETTINGS = {
   themeColor: '#241C15',// базовый цвет ручной темы
   budgetTotal: 0,       // общий месячный лимит (0 = не задан)
   budgetDetailed: false,// детализировать лимиты по категориям
+  budgetMutedMonth: '', // месяц (YYYY-MM), в котором уведомление о лимите отключено
+  rates: {},            // курсы валют к основной: 1 <code> = rates[code] базовой
   seeded: false,        // созданы ли дефолтные категории
 };
