@@ -182,8 +182,16 @@ function attachPagerSwipe(pager, root) {
     if (dir === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) dir = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
     if (dir === 'h') {
       if (e && e.cancelable) e.preventDefault();
-      pager.style.transform = `translateX(${dx}px)`;
-      pager.style.opacity = String(1 - Math.min(Math.abs(dx) / w, 1) * 0.35);
+      let d = dx;
+      const target = dx < 0 ? 'income' : 'expense'; // влево → доходы, вправо → расходы
+      if (target === homeMode) {
+        // В эту сторону страницы нет: тугая резинка со стопом на ~40% ширины,
+        // дальше листать нельзя.
+        const max = w * 0.4;
+        d = Math.sign(dx) * Math.min(Math.abs(dx) * 0.35, max);
+      }
+      pager.style.transform = `translateX(${d}px)`;
+      pager.style.opacity = String(1 - Math.min(Math.abs(d) / w, 1) * 0.35);
     }
   };
   const end = (x, y) => {
@@ -520,32 +528,63 @@ function renderRow(trx, base) {
 // Одновременно открыт только один ряд.
 let closeOpenSwipe = null;
 
-// Оборачивает строку истории в свайп-контейнер: свайп влево выдвигает кнопку
-// удаления, свайп вправо — инлайн-поле комментария; долгое нажатие/тап —
-// редактирование. Никаких всплывающих окон.
+// Оборачивает строку истории в свайп-контейнер: строка выдвигается единой
+// плашкой — влево показывается кнопка удаления (шириной со слово «Удалить»),
+// вправо — поле комментария (остаётся «хвост», чтобы потянуть обратно).
+// Реакция ТОЛЬКО на долгое нажатие (→ редактирование); короткий тап ничего
+// не делает, чтобы исключить случайные нажатия. Никаких всплывающих окон.
 export function wrapSwipeRow(content, trx) {
   content.classList.add('swipe-content');
-  const del = el('button.swipe-del', { type: 'button', text: '🗑' });
+  const del = el('button.swipe-del', { type: 'button', text: t('delete') });
   const noteInput = el('input.swipe-note-input', { type: 'text', placeholder: t('note_ph'), value: trx.note || '' });
-  const saveNote = async () => { await store.saveTransaction({ id: trx.id, note: noteInput.value.trim() }); };
-  const comment = el('.swipe-comment', {}, [noteInput, el('button.swipe-note-save', { type: 'button', text: '✓' })]);
+  const saveBtn = el('button.swipe-note-save', { type: 'button', text: '✓' });
+  const comment = el('.swipe-comment', {}, [noteInput, saveBtn]);
   const wrap = el('.swipe-wrap', {}, [comment, del, content]);
-  const DEL_W = 84;
-  let openState = 0; // 0 закрыт, -1 удаление, 1 комментарий
-  const setX = (x, anim) => { content.style.transition = anim ? 'transform .2s ease' : 'none'; content.style.transform = `translateX(${x}px)`; };
-  const closeFn = () => { openState = 0; setX(0, true); if (closeOpenSwipe === closeFn) closeOpenSwipe = null; };
-  const openDel = () => { if (closeOpenSwipe && closeOpenSwipe !== closeFn) closeOpenSwipe(); openState = -1; setX(-DEL_W, true); closeOpenSwipe = closeFn; };
-  const openComment = () => { if (closeOpenSwipe && closeOpenSwipe !== closeFn) closeOpenSwipe(); openState = 1; setX(wrap.offsetWidth, true); closeOpenSwipe = closeFn; setTimeout(() => noteInput.focus(), 200); };
 
+  const TAIL = 64;   // сколько строки остаётся видно справа, чтобы потянуть обратно
+  const SPRING = 'transform .32s cubic-bezier(.34,1.36,.5,1)'; // пружинка с лёгким перелётом
+  const EASE = 'transform .22s ease';
+  let COMMENT_W = 0, DEL_W = 0;
+  const measure = () => {
+    COMMENT_W = Math.max(140, wrap.offsetWidth - TAIL);
+    DEL_W = del.offsetWidth || 96;
+    comment.style.width = COMMENT_W + 'px';
+  };
+
+  let openState = 0; // 0 закрыт, -1 удаление, 1 комментарий
+
+  // Параллакс трёх слоёв: строка двигается на x; плашка комментария выезжает
+  // слева синхронно (единая плашка), кнопка удаления — справа. Обе спрятаны за
+  // краями, поэтому при свайпе влево комментарий не «просвечивает».
+  const place = (x) => {
+    content.style.transform = `translateX(${x}px)`;
+    comment.style.transform = `translateX(${-COMMENT_W + Math.max(0, x)}px)`;
+    del.style.transform = `translateX(${DEL_W + Math.min(0, x)}px)`;
+  };
+  const anim = (on) => { content.style.transition = comment.style.transition = del.style.transition = on || 'none'; };
+
+  const closeFn = () => { openState = 0; anim(EASE); place(0); if (closeOpenSwipe === closeFn) closeOpenSwipe = null; };
+  const openDel = () => { if (closeOpenSwipe && closeOpenSwipe !== closeFn) closeOpenSwipe(); openState = -1; anim(SPRING); place(-DEL_W); closeOpenSwipe = closeFn; };
+  const openComment = () => { if (closeOpenSwipe && closeOpenSwipe !== closeFn) closeOpenSwipe(); openState = 1; anim(SPRING); place(COMMENT_W); closeOpenSwipe = closeFn; setTimeout(() => noteInput.focus(), 220); };
+
+  const saveNote = async () => { await store.saveTransaction({ id: trx.id, note: noteInput.value.trim() }); };
   del.addEventListener('click', async (e) => { e.stopPropagation(); if (await confirmDialog(t('confirm_delete'))) await store.deleteTransaction(trx.id); });
-  comment.querySelector('.swipe-note-save').addEventListener('click', (e) => { e.stopPropagation(); saveNote(); closeFn(); });
+  saveBtn.addEventListener('click', (e) => { e.stopPropagation(); saveNote(); closeFn(); });
   noteInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { saveNote(); noteInput.blur(); closeFn(); } });
+
+  // Резинка за пределами открытого положения (сопротивление у краёв).
+  const clamp = (nx) => {
+    if (nx > COMMENT_W) return COMMENT_W + (nx - COMMENT_W) * 0.25;
+    if (nx < -DEL_W) return -DEL_W + (nx + DEL_W) * 0.25;
+    return nx;
+  };
 
   let sx = 0, sy = 0, dir = null, dragging = false, longFired = false, longTimer = null, startX = 0;
   const begin = (x, y) => {
+    measure();
     sx = x; sy = y; dir = null; dragging = true; longFired = false;
-    startX = openState === -1 ? -DEL_W : openState === 1 ? wrap.offsetWidth : 0;
-    content.style.transition = 'none';
+    startX = openState === -1 ? -DEL_W : openState === 1 ? COMMENT_W : 0;
+    anim(false);
     longTimer = setTimeout(() => { longFired = true; dragging = false; closeFn(); openTransactionForm(trx); }, 500);
   };
   const move = (x, y, e) => {
@@ -554,21 +593,27 @@ export function wrapSwipeRow(content, trx) {
     if (dir === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) { dir = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'; clearTimeout(longTimer); }
     if (dir === 'h') {
       if (e && e.cancelable) e.preventDefault();
-      let nx = startX + dx;
-      if (nx > wrap.offsetWidth) nx = wrap.offsetWidth;
-      if (nx < -DEL_W * 1.4) nx = -DEL_W * 1.4;
-      setX(nx, false);
+      place(clamp(startX + dx));
     }
   };
   const end = (x) => {
     clearTimeout(longTimer);
     if (!dragging) return;
     dragging = false;
-    if (dir !== 'h') { if (!longFired) { if (openState !== 0) closeFn(); else openTransactionForm(trx); } return; }
-    const dx = x - sx;
-    if (dx < -40) openDel();
-    else if (dx > wrap.offsetWidth * 0.35) openComment();
-    else closeFn();
+    // Вертикаль или короткий тап — ничего не делаем (защита от случайных
+    // нажатий). Редактирование срабатывает только по долгому нажатию (выше).
+    if (dir !== 'h') return;
+    const moved = x - sx;
+    // Магнит: доводим до ближайшего устойчивого положения.
+    if (openState === 0) {
+      if (moved < -DEL_W * 0.5) openDel();
+      else if (moved > COMMENT_W * 0.4) openComment();
+      else closeFn();
+    } else if (openState === -1) {
+      if (moved > DEL_W * 0.35) closeFn(); else openDel();
+    } else {
+      if (moved < -COMMENT_W * 0.25) closeFn(); else openComment();
+    }
   };
   content.addEventListener('touchstart', (e) => { const p = e.changedTouches[0]; begin(p.clientX, p.clientY); }, { passive: true });
   content.addEventListener('touchmove', (e) => { const p = e.changedTouches[0]; move(p.clientX, p.clientY, e); }, { passive: false });

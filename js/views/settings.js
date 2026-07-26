@@ -361,13 +361,13 @@ function buildBackgroundPicker() {
     if (id === 'none') c.appendChild(el('.bg-none-x', { text: '✕' }));
     cells[id] = c; wrap.appendChild(c);
   }
-  // Свой рисунок из галереи (+ кнопка удаления загруженного).
+  // Свой рисунок из галереи. Тап — выбрать/сменить рисунок; долгое нажатие на
+  // загруженный рисунок — всплывающая кнопка удаления.
   const custom = store.getState().settings.bgCustom;
   const customCell = el('button.bg-swatch.bg-custom', { type: 'button' }, [el('.bg-plus', { text: custom ? '' : '+' })]);
   if (custom) customCell.style.backgroundImage = `url("${custom}")`;
-  const delBadge = el('.bg-del', { text: '✕', style: { display: custom ? '' : 'none' } });
-  customCell.appendChild(delBadge);
   const fileInput = el('input', { type: 'file', accept: 'image/*', style: { display: 'none' } });
+  const hasCustom = () => !!store.getState().settings.bgCustom;
   fileInput.addEventListener('change', () => {
     const f = fileInput.files && fileInput.files[0]; fileInput.value = '';
     if (!f) return;
@@ -376,21 +376,45 @@ function buildBackgroundPicker() {
       await store.setSetting('background', 'custom');
       customCell.style.backgroundImage = `url("${durl}")`;
       customCell.querySelector('.bg-plus').textContent = '';
-      delBadge.style.display = ''; applyBackground('custom'); highlight();
+      applyBackground('custom'); highlight();
     }, () => toast(t('icon_rules')));
   });
+  const removeBg = () => {
+    store.setSetting('bgCustom', null);
+    store.setSetting('background', 'none').then(() => {
+      customCell.style.backgroundImage = '';
+      customCell.querySelector('.bg-plus').textContent = '+';
+      applyBackground('none'); highlight();
+    });
+  };
+  // Всплывающая кнопка удаления рядом с плиткой.
+  let pop = null;
+  const onDoc = (e) => { if (pop && !pop.contains(e.target)) closePop(); };
+  const closePop = () => { if (pop) { pop.remove(); pop = null; document.removeEventListener('pointerdown', onDoc, true); } };
+  const openPop = () => {
+    if (!hasCustom()) return; closePop();
+    const btn = el('button.bg-del-btn', { type: 'button', text: '🗑 ' + t('delete'), onClick: (e) => { e.stopPropagation(); removeBg(); closePop(); } });
+    pop = el('.bg-del-pop', {}, [btn]);
+    document.body.appendChild(pop);
+    const r = customCell.getBoundingClientRect();
+    pop.style.left = Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 8, r.left + r.width / 2 - pop.offsetWidth / 2)) + 'px';
+    pop.style.top = Math.max(8, r.top - pop.offsetHeight - 8) + 'px';
+    requestAnimationFrame(() => { pop && pop.classList.add('open'); document.addEventListener('pointerdown', onDoc, true); });
+  };
+  // Долгое нажатие → всплывающая кнопка; короткий тап → выбор файла.
+  let lpTimer = null, lpFired = false, lsx = 0, lsy = 0, lpMoved = false;
+  const lpBegin = (x, y) => { lsx = x; lsy = y; lpMoved = false; lpFired = false; lpTimer = setTimeout(() => { lpFired = true; openPop(); }, 500); };
+  const lpTrack = (x, y) => { if (Math.abs(x - lsx) > 10 || Math.abs(y - lsy) > 10) { lpMoved = true; clearTimeout(lpTimer); } };
+  const lpEnd = () => clearTimeout(lpTimer);
+  customCell.addEventListener('touchstart', (e) => { const p = e.changedTouches[0]; lpBegin(p.clientX, p.clientY); }, { passive: true });
+  customCell.addEventListener('touchmove', (e) => { const p = e.changedTouches[0]; lpTrack(p.clientX, p.clientY); }, { passive: true });
+  customCell.addEventListener('touchend', lpEnd, { passive: true });
+  customCell.addEventListener('mousedown', (e) => lpBegin(e.clientX, e.clientY));
+  customCell.addEventListener('mouseup', lpEnd);
+  customCell.addEventListener('mouseleave', lpEnd);
   customCell.addEventListener('click', (e) => {
-    if (e.target === delBadge) {
-      e.stopPropagation();
-      store.setSetting('bgCustom', null);
-      store.setSetting('background', 'none').then(() => {
-        customCell.style.backgroundImage = '';
-        customCell.querySelector('.bg-plus').textContent = '+';
-        delBadge.style.display = 'none';
-        applyBackground('none'); highlight();
-      });
-      return;
-    }
+    if (lpFired) { e.preventDefault(); e.stopPropagation(); lpFired = false; return; }
+    if (lpMoved) return;
     fileInput.click();
   });
   cells.custom = customCell;
