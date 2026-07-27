@@ -5,6 +5,7 @@ import * as store from '../store.js';
 import { t, availableLangs, LANG_NAMES } from '../i18n.js';
 import { el, clear, sheet, field, toast, confirmDialog, toggle, catIcon, rowCols, swipeDeleteRow } from '../dom.js';
 import { CURRENCIES, roundRate } from '../format.js';
+import { CATEGORY_ICONS, categoryIconPath, isBuiltinIcon } from '../icons.js';
 import { APP_VERSION } from '../models.js';
 
 
@@ -205,7 +206,6 @@ function importJSON() {
 
 // ---- Управление категориями ----
 
-const EMOJI_CHOICES = ['🛒','☕️','🚕','🏠','💊','🎬','🛍','📱','💼','🧾','🎁','📈','💰','⛽️','✈️','🎓','🐾','👕','🍔','🏋️','🎵','💡','🔖','❤️'];
 const COLOR_CHOICES = ['#34C759','#FF9500','#5AC8FA','#AF52DE','#FF2D55','#FF375F','#BF5AF2','#64D2FF','#0A84FF','#30D158','#FF9F0A','#8E8E93'];
 
 function openCategoriesManager() {
@@ -215,22 +215,30 @@ function openCategoriesManager() {
   function refresh() {
     clear(listWrap);
     for (const type of ['expense', 'income']) {
-      listWrap.appendChild(el('.group-caption', { text: type === 'expense' ? t('expense') : t('income') }));
-      const group = el('.settings-group');
-      for (const c of store.categoriesByType(type)) {
-        group.appendChild(el('.cat-manage-row', { onClick: () => openCategoryEditor(c, refresh) }, [
-          catIcon(c, 'trx-icon'),
+      const cats = store.categoriesByType(type);
+      listWrap.appendChild(el('.cat-manage-head', {}, [
+        el('span', { text: type === 'expense' ? t('expense') : t('income') }),
+        el('span.cat-manage-count', { text: String(cats.length) }),
+      ]));
+      const group = el('.settings-group.cat-manage-group');
+      for (const c of cats) {
+        group.appendChild(el('button.cat-manage-row', { type: 'button', onClick: () => openCategoryEditor(c, refresh) }, [
+          catIcon(c, 'cat-manage-icon'),
           el('.cat-manage-name', { text: store.categoryName(c) }),
           el('.nav-chevron', { text: '›' }),
         ]));
       }
+      group.appendChild(el('button.cat-manage-add', { type: 'button', onClick: () => openCategoryEditor(null, refresh, type) }, [
+        el('.cat-manage-add-plus', { text: '＋' }),
+        el('span', { text: t('add_category') }),
+      ]));
       listWrap.appendChild(group);
     }
   }
   refresh();
 
   body.append(
-    el('button.btn-primary', { type: 'button', text: t('add_category'), onClick: () => openCategoryEditor(null, refresh) }),
+    el('.setting-hint', { text: t('reorder_hint') }),
     listWrap,
   );
   sheet(t('manage_categories'), body);
@@ -266,37 +274,50 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType) {
   const iconPreview = el('.icon-preview');
   const updatePreview = () => { clear(iconPreview); iconPreview.appendChild(catIcon({ icon: model.icon, color: model.color, image: model.image }, 'trx-icon')); };
 
-  // Иконки, уже занятые другими категориями, блокируем (нельзя две одинаковые)
-  // и выносим отдельной группой «уже используются». Собственную текущую иконку
-  // категории всегда оставляем доступной — даже если из-за старых данных есть
-  // дубликат, её можно оставить или вернуть.
-  const usedIcons = new Set(
+  // «Банк» встроенных иконок. Одну иконку нельзя назначить двум категориям:
+  // занятые другими — в группе «уже используются» (заблокированы). Своя текущая
+  // иконка всегда доступна.
+  const usedImages = new Set(
     store.getState().categories
       .filter((c) => !existing || c.id !== existing.id)
-      .map((c) => c.icon).filter(Boolean)
+      .map((c) => c.image).filter((im) => isBuiltinIcon(im))
   );
-  if (existing && existing.icon) usedIcons.delete(existing.icon);
-  const emojiGrid = el('.emoji-grid');
-  const usedGrid = el('.emoji-grid');
-  const markEmoji = (b) => {
-    [emojiGrid, usedGrid].forEach((g) => g.querySelectorAll('.emoji-pick').forEach((x) => x.classList.remove('active')));
+  if (existing && existing.image) usedImages.delete(existing.image);
+
+  const iconGrid = el('.icon-grid');
+  const usedGrid = el('.icon-grid');
+  const markIcon = (b) => {
+    [iconGrid, usedGrid].forEach((g) => g.querySelectorAll('.icon-pick').forEach((x) => x.classList.remove('active')));
     if (b) b.classList.add('active');
   };
-  const makePick = (em, disabled) => el('button.emoji-pick', {
-    type: 'button',
-    class: ((!model.image && em === model.icon) ? 'active' : '') + (disabled ? ' disabled' : ''),
-    text: em,
-    onClick: function () {
-      if (disabled) { toast(t('icon_used_already')); return; }
-      model.icon = em; model.image = null; markEmoji(this); updatePreview();
-    },
-  });
-  EMOJI_CHOICES.filter((em) => !usedIcons.has(em)).forEach((em) => emojiGrid.appendChild(makePick(em, false)));
-  const usedList = EMOJI_CHOICES.filter((em) => usedIcons.has(em));
-  usedList.forEach((em) => usedGrid.appendChild(makePick(em, true)));
+  const makePick = (item, disabled) => {
+    const path = categoryIconPath(item.key);
+    return el('button.icon-pick', {
+      type: 'button', title: item.label,
+      class: (model.image === path ? 'active' : '') + (disabled ? ' disabled' : ''),
+      onClick: function () {
+        if (disabled) { toast(t('icon_used_already')); return; }
+        model.image = path; markIcon(this); updatePreview();
+      },
+    }, [el('img', { src: path, alt: item.label, loading: 'lazy' })]);
+  };
+  const availIcons = CATEGORY_ICONS.filter((it) => !usedImages.has(categoryIconPath(it.key)));
+  availIcons.forEach((it) => iconGrid.appendChild(makePick(it, false)));
+  const usedList = CATEGORY_ICONS.filter((it) => usedImages.has(categoryIconPath(it.key)));
+  usedList.forEach((it) => usedGrid.appendChild(makePick(it, true)));
   const usedBlock = usedList.length
     ? el('.emoji-used-block', {}, [el('.emoji-used-caption', { text: t('icons_used') }), usedGrid])
     : null;
+
+  // Поиск по иконкам (их много).
+  const iconSearch = el('input.select', { type: 'search', placeholder: t('search') });
+  iconSearch.addEventListener('input', () => {
+    const q = iconSearch.value.trim().toLowerCase();
+    Array.from(iconGrid.children).forEach((btn, i) => {
+      const it = availIcons[i];
+      btn.style.display = (!q || (it && it.label.toLowerCase().includes(q))) ? '' : 'none';
+    });
+  });
 
   // Загрузка своей иконки из галереи. Безопасно: принимаем только изображение,
   // проверяем формат и размер, затем обрезаем и уменьшаем до 64×64 через canvas
@@ -307,7 +328,7 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType) {
     uploadInput.value = '';
     if (!file) return;
     processIconFile(file,
-      (dataUrl) => { model.image = dataUrl; error.textContent = ''; markEmoji(null); updatePreview(); },
+      (dataUrl) => { model.image = dataUrl; error.textContent = ''; markIcon(null); updatePreview(); },
       () => { error.textContent = t('icon_rules'); });
   });
   const uploadBtn = el('button.btn-upload', { type: 'button', text: '📷 ' + t('upload_icon'), onClick: () => uploadInput.click() });
@@ -330,7 +351,7 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType) {
   body.append(
     field(t('category_name'), nameInput).row,
     field(t('type'), typeSeg).row,
-    field(t('icon'), el('.icon-field', {}, [iconPreview, emojiGrid, usedBlock, uploadBtn, uploadInput])).row,
+    field(t('icon'), el('.icon-field', {}, [iconPreview, iconSearch, iconGrid, usedBlock, uploadBtn, uploadInput])).row,
     el('.icon-rules', { text: t('icon_rules') }),
     ...(currencyBtn ? [currencyBtn] : []),
     error, saveBtn,

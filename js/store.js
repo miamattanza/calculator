@@ -7,9 +7,10 @@ import { db } from './db.js';
 import { setLang, t } from './i18n.js';
 import { dateISO, monthKey, addDays, daysBetween, CURRENCIES } from './format.js';
 import {
-  DEFAULT_CATEGORIES, DEFAULT_SETTINGS, makeCategory,
+  DEFAULT_CATEGORIES, DEFAULT_SETTINGS, DEFAULT_ICON_MAP, makeCategory,
   makeTransaction, makePlanned, makeBudget, makeGoal,
 } from './models.js';
+import { categoryIconPath, isBuiltinIcon } from './icons.js';
 
 const state = {
   transactions: [],
@@ -65,6 +66,22 @@ export async function init() {
     }
   }
   if (migrated.length) await db.bulkPut('categories', migrated);
+
+  // Миграция иконок (один раз): у стандартных категорий расходов проставляем
+  // новые встроенные иконки. Не трогаем те, где пользователь загрузил свою
+  // картинку.
+  if (!state.settings.iconsV1) {
+    const changed = [];
+    for (const c of state.categories) {
+      const iconKey = c.key && DEFAULT_ICON_MAP[c.key];
+      if (!iconKey) continue;
+      if (c.image && !isBuiltinIcon(c.image)) continue;
+      const path = categoryIconPath(iconKey);
+      if (c.image !== path) { c.image = path; changed.push(c); }
+    }
+    if (changed.length) await db.bulkPut('categories', changed);
+    await setSetting('iconsV1', true);
+  }
 
   setLang(state.settings.language);
   emit();
@@ -159,26 +176,6 @@ export function categoryById(id) {
   return state.categories.find((c) => c.id === id) || null;
 }
 
-// Категории типа, отсортированные по недавнему использованию (часто/недавно
-// используемые — вперёд), затем по порядку. Для быстрого ввода на «Обзоре».
-export function categoriesByRecency(type) {
-  const cats = categoriesByType(type);
-  const lastUsed = new Map();
-  for (const tr of state.transactions) {
-    if (tr.type !== type) continue;
-    const key = tr.date + '|' + String(tr.createdAt).padStart(16, '0');
-    const cur = lastUsed.get(tr.categoryId);
-    if (!cur || key > cur) lastUsed.set(tr.categoryId, key);
-  }
-  return [...cats].sort((a, b) => {
-    const la = lastUsed.get(a.id), lb = lastUsed.get(b.id);
-    if (la && lb) return la < lb ? 1 : -1;
-    if (la) return -1;
-    if (lb) return 1;
-    return (a.order || 0) - (b.order || 0);
-  });
-}
-
 // Локализованное имя категории: если задан key и есть перевод — берём его;
 // иначе — пользовательское имя как есть.
 export function categoryName(cat) {
@@ -202,6 +199,19 @@ export async function saveCategory(data) {
   if (idx >= 0) state.categories[idx] = cat; else state.categories.push(cat);
   emit();
   return cat;
+}
+
+// Смена порядка категорий перетаскиванием: нормализуем порядок по текущему
+// виду и меняем местами две категории (A встаёт на место B и наоборот).
+export async function reorderCategorySwap(type, idA, idB) {
+  if (idA === idB) return;
+  const list = categoriesByType(type);
+  list.forEach((c, i) => { c.order = i; });
+  const a = list.find((c) => c.id === idA);
+  const b = list.find((c) => c.id === idB);
+  if (a && b) { const tmp = a.order; a.order = b.order; b.order = tmp; }
+  await db.bulkPut('categories', list);
+  emit();
 }
 
 export function categoryInUse(id) {

@@ -285,21 +285,6 @@ function budgetRingSvg(ratio, muted) {
   return svg;
 }
 
-// Долгое нажатие (500мс) + обычный тап, с отменой при движении пальца.
-function attachLongPress(node, { onTap, onLong }) {
-  let timer = null, longFired = false, sx = 0, sy = 0, moved = false;
-  const begin = (x, y) => { sx = x; sy = y; moved = false; longFired = false; timer = setTimeout(() => { longFired = true; if (onLong) onLong(); }, 500); };
-  const track = (x, y) => { if (Math.abs(x - sx) > 10 || Math.abs(y - sy) > 10) { moved = true; clearTimeout(timer); } };
-  const finish = () => { clearTimeout(timer); };
-  node.addEventListener('touchstart', (e) => { const p = e.changedTouches[0]; begin(p.clientX, p.clientY); }, { passive: true });
-  node.addEventListener('touchmove', (e) => { const p = e.changedTouches[0]; track(p.clientX, p.clientY); }, { passive: true });
-  node.addEventListener('touchend', finish, { passive: true });
-  node.addEventListener('click', (e) => { if (longFired) { e.preventDefault(); e.stopPropagation(); longFired = false; return; } if (!moved && onTap) onTap(); });
-  node.addEventListener('mousedown', (e) => begin(e.clientX, e.clientY));
-  node.addEventListener('mouseup', finish);
-  node.addEventListener('mouseleave', finish);
-}
-
 export function renderHome(root) {
   clear(root);
   root.classList.remove('fit-mode');
@@ -376,9 +361,10 @@ export function renderHome(root) {
   };
 
   // --- Категории: всегда 2 ряда по 4 (8 на страницу). Пустые ячейки — «+»,
-  // открывают добавление новой категории. Страницы листаются свайпом-каруселью
-  // (плавно, без пробелов). Недавние категории — вперёд. >16 → доп. страницы. ---
-  const cats = store.categoriesByRecency(homeMode);
+  // открывают добавление новой категории. Страницы листаются свайпом-каруселью.
+  // Порядок — пользовательский (можно менять перетаскиванием), без авто-
+  // сортировки по частоте. ---
+  const cats = store.categoriesByType(homeMode);
   // +1 — чтобы всегда была хотя бы одна пустая ячейка «+» для добавления.
   const pages = Math.max(1, Math.ceil((cats.length + 1) / CATS_PER_PAGE));
   if (catPage >= pages) catPage = 0;
@@ -386,6 +372,49 @@ export function renderHome(root) {
 
   const catViewport = el('.cat-viewport');
   const catTrack = el('.cat-track');
+
+  // Перетаскивание иконок для смены порядка (долгое нажатие «отрывает» иконку,
+  // тащим на место другой — они меняются местами). Пока карточка «взята»,
+  // карусель категорий не листается (dragActive). Короткий тап — запись.
+  let dragActive = false;
+  const attachChipDrag = (chip, cat) => {
+    chip.dataset.catId = cat.id;
+    let timer = null, sx = 0, sy = 0, moved = false, dragging = false, longFired = false;
+    const clearTargets = () => catViewport.querySelectorAll('.cat-chip.drop-target').forEach((x) => x.classList.remove('drop-target'));
+    const targetAt = (x, y) => {
+      const e = document.elementFromPoint(x, y);
+      const c = e && e.closest && e.closest('.cat-chip');
+      return (c && c !== chip && !c.classList.contains('cat-add') && c.dataset.catId) ? c : null;
+    };
+    const startDrag = () => { dragging = true; dragActive = true; longFired = true; chip.classList.add('dragging'); if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} } };
+    const down = (x, y) => { sx = x; sy = y; moved = false; dragging = false; longFired = false; timer = setTimeout(startDrag, 350); };
+    const move = (x, y, e) => {
+      if (!dragging) { if (Math.abs(x - sx) > 10 || Math.abs(y - sy) > 10) { moved = true; clearTimeout(timer); } return; }
+      if (e && e.cancelable) e.preventDefault();
+      chip.style.transform = `translate(${x - sx}px, ${y - sy}px) scale(1.12)`;
+      clearTargets(); const tg = targetAt(x, y); if (tg) tg.classList.add('drop-target');
+    };
+    const up = (x, y) => {
+      clearTimeout(timer);
+      if (dragging) {
+        const tg = targetAt(x, y);
+        chip.classList.remove('dragging'); chip.style.transform = ''; clearTargets();
+        dragging = false; setTimeout(() => { dragActive = false; }, 60);
+        if (tg) store.reorderCategorySwap(homeMode, cat.id, tg.dataset.catId);
+        return;
+      }
+      if (!moved && !longFired) commit(cat.id);
+    };
+    chip.addEventListener('touchstart', (e) => { const p = e.changedTouches[0]; down(p.clientX, p.clientY); }, { passive: true });
+    chip.addEventListener('touchmove', (e) => { const p = e.changedTouches[0]; move(p.clientX, p.clientY, e); }, { passive: false });
+    chip.addEventListener('touchend', (e) => { const p = e.changedTouches[0]; up(p.clientX, p.clientY); }, { passive: true });
+    chip.addEventListener('mousedown', (e) => {
+      down(e.clientX, e.clientY);
+      const mm = (ev) => move(ev.clientX, ev.clientY, ev);
+      const mu = (ev) => { up(ev.clientX, ev.clientY); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
+      window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);
+    });
+  };
   for (let p = 0; p < pages; p++) {
     const grid = el('.cat-page');
     for (let i = 0; i < CATS_PER_PAGE; i++) {
@@ -395,9 +424,9 @@ export function renderHome(root) {
           ? el('.cat-cur', { text: (CURRENCIES[c.currency] && CURRENCIES[c.currency].symbol) || c.currency }) : null;
         const chip = el('button.cat-chip', { type: 'button', style: { '--chip': c.color } },
           [catIcon(c), el('.cat-name', { text: store.categoryName(c) }), badge]);
-        // Тап — записать операцию; долгое нажатие — редактировать категорию
-        // (название и иконка).
-        attachLongPress(chip, { onTap: () => commit(c.id), onLong: () => openCategoryEditor(c, () => {}) });
+        // Тап — записать операцию; долгое нажатие — перетащить (сменить порядок).
+        // Редактирование категорий — через меню «Категории».
+        attachChipDrag(chip, c);
         grid.appendChild(chip);
       } else {
         grid.appendChild(el('button.cat-chip.cat-add', { type: 'button', 'aria-label': t('add_category'), onClick: openAdd }, [el('.cat-add-plus', { text: '+' })]));
@@ -420,9 +449,9 @@ export function renderHome(root) {
 
   // Карусель категорий (перетаскивание пальцем внутри зоны).
   let csx = 0, csy = 0, cdir = null, cdrag = false;
-  const cStart = (x, y) => { csx = x; csy = y; cdir = null; cdrag = true; catTrack.style.transition = 'none'; };
+  const cStart = (x, y) => { if (dragActive) { cdrag = false; return; } csx = x; csy = y; cdir = null; cdrag = true; catTrack.style.transition = 'none'; };
   const cMove = (x, y, e) => {
-    if (!cdrag) return;
+    if (!cdrag || dragActive) return;
     const dx = x - csx, dy = y - csy;
     if (cdir === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) cdir = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
     if (cdir === 'h') {

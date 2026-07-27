@@ -2,6 +2,7 @@
 // (модальные листы в стиле iOS, тосты, диалог подтверждения).
 
 import { t } from './i18n.js';
+import { isBuiltinIcon } from './icons.js';
 
 // el('div.class#id', {attrs}, [children | 'text'])
 export function el(tag, attrs = {}, children = []) {
@@ -40,8 +41,14 @@ export function clear(node) { while (node.firstChild) node.removeChild(node.firs
 // Иконка категории: загруженное изображение (если есть) либо эмодзи.
 export function catIcon(cat, cls) {
   const box = el('.' + (cls || 'cat-emoji'), { style: { '--chip': cat ? cat.color : '#8E8E93' } });
-  if (cat && cat.image) box.appendChild(el('img.cat-img', { src: cat.image, alt: '' }));
-  else box.textContent = cat ? cat.icon : '🔖';
+  if (cat && cat.image) {
+    // Встроенные иконки (тёмный контур) показываем на светлой подложке, чтобы
+    // они были видны и в тёмной теме.
+    if (isBuiltinIcon(cat.image)) box.classList.add('builtin-icon');
+    box.appendChild(el('img.cat-img', { src: cat.image, alt: '' }));
+  } else {
+    box.textContent = cat ? cat.icon : '🔖';
+  }
   return box;
 }
 

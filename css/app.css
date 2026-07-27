@@ -400,7 +400,10 @@ select.select { appearance: none; -webkit-appearance: none; }
 }
 .cat-chip.active { background: color-mix(in srgb, var(--chip, var(--accent)) 22%, transparent); box-shadow: inset 0 0 0 2px var(--chip, var(--accent)); }
 .cat-chip.disabled { opacity: 0.35; }
-.cat-emoji { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 19px; background: color-mix(in srgb, var(--chip, #8E8E93) 32%, transparent); }
+/* Перетаскивание порядка иконок */
+.cat-chip.dragging { z-index: 30; transition: none !important; box-shadow: 0 8px 24px rgba(0,0,0,0.28); opacity: 0.96; pointer-events: none; }
+.cat-chip.drop-target { box-shadow: inset 0 0 0 2px var(--accent); background: var(--fill-2); }
+.cat-emoji { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 19px; background: color-mix(in srgb, var(--chip, #8E8E93) 32%, transparent); overflow: hidden; }
 .cat-name { font-size: 11px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 
 /* ---- Пикеры эмодзи/цвета ---- */
@@ -408,15 +411,28 @@ select.select { appearance: none; -webkit-appearance: none; }
 .emoji-pick { aspect-ratio: 1; border-radius: 9px; background: var(--fill); font-size: 20px; display: flex; align-items: center; justify-content: center; }
 .emoji-pick.active { box-shadow: inset 0 0 0 2px var(--accent); }
 .emoji-pick.disabled { opacity: 0.32; filter: grayscale(1); cursor: default; }
+/* Банк встроенных иконок (картинки) */
+.icon-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.icon-pick { aspect-ratio: 1; border-radius: 12px; background: #FFFFFF; padding: 9%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px var(--sep); }
+.icon-pick img { width: 100%; height: 100%; object-fit: contain; }
+.icon-pick.active { box-shadow: inset 0 0 0 2px var(--accent); }
+.icon-pick.disabled { opacity: 0.3; filter: grayscale(0.5); cursor: default; }
 .emoji-used-block { display: flex; flex-direction: column; gap: 6px; }
 .emoji-used-caption { font-size: 12px; color: var(--text-3); }
 .color-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
 .color-pick { aspect-ratio: 1; border-radius: 50%; }
 .color-pick.active { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--accent); }
 .cat-manage-list { display: flex; flex-direction: column; }
-.cat-manage-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 0.5px solid var(--sep); }
-.cat-manage-row:last-child { border-bottom: none; }
-.cat-manage-name { flex: 1; font-size: 16px; }
+.cat-manage-head { display: flex; align-items: baseline; justify-content: space-between; margin: 18px 6px 8px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-3); }
+.cat-manage-count { font-weight: 600; color: var(--text-3); }
+.cat-manage-group { padding: 4px; }
+.cat-manage-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: start; padding: 9px 10px; border-radius: 12px; background: transparent; }
+.cat-manage-row:active { background: var(--fill); }
+.cat-manage-icon { width: 40px; height: 40px; flex-shrink: 0; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 22px; background: var(--fill); overflow: hidden; }
+.cat-manage-name { flex: 1; font-size: 16px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-manage-add { display: flex; align-items: center; gap: 12px; width: 100%; text-align: start; padding: 9px 10px; border-radius: 12px; color: var(--accent); font-size: 16px; font-weight: 600; }
+.cat-manage-add:active { background: var(--fill); }
+.cat-manage-add-plus { width: 40px; height: 40px; flex-shrink: 0; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 22px; background: var(--fill); color: var(--accent); }
 
 /* ---- Модальный лист (sheet) ---- */
 .sheet-backdrop {
@@ -653,6 +669,9 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .icon-rules { font-size: 12px; color: var(--text-3); text-align: center; margin-top: -6px; }
 .btn-upload { background: var(--fill); border-radius: 10px; padding: 11px; font-size: 15px; font-weight: 500; color: var(--accent); }
 .cat-img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
+/* Встроенные иконки-контуры: светлая подложка + вписываем целиком. */
+.builtin-icon { background: #FFFFFF !important; }
+.builtin-icon .cat-img { object-fit: contain; padding: 8%; box-sizing: border-box; }
 
 /* ---- Категории на «Обзоре»: карусель + пустые ячейки ---- */
 .cat-viewport { overflow: hidden; }
