@@ -4,13 +4,13 @@
 import * as store from '../store.js';
 import { t } from '../i18n.js';
 import { el, clear, sheet, field, rowCols, catIcon } from '../dom.js';
-import { money } from '../format.js';
+import { money, CURRENCIES } from '../format.js';
 import { openTransactionForm, wrapSwipeRow, dayLabel, trxAmountNode } from './transactions.js';
 
 export function openSearch(initial = {}) {
   const base = store.baseCurrency();
   const f = {
-    query: '', categoryId: '', dateFrom: '', dateTo: '', amountMin: '', amountMax: '',
+    query: '', categoryId: '', currency: '', dateFrom: '', dateTo: '', amountMin: '', amountMax: '',
     type: initial.type || '',
   };
 
@@ -25,6 +25,14 @@ export function openSearch(initial = {}) {
     el('option', { value: '' }, t('all_categories')),
     ...cats.map((c) => el('option', { value: c.id }, `${c.icon} ${store.categoryName(c)}`)),
   ]);
+  // Фильтр по валюте — только среди валют, реально встречавшихся в операциях.
+  const usedCur = store.usedCurrencies();
+  const currencySelect = usedCur.length > 1
+    ? el('select.select', {}, [
+        el('option', { value: '' }, t('all_currencies')),
+        ...usedCur.map((c) => el('option', { value: c }, `${c} · ${(CURRENCIES[c] && CURRENCIES[c].symbol) || c}`)),
+      ])
+    : null;
   const dateFrom = el('input.select', { type: 'date' });
   const dateTo = el('input.select', { type: 'date' });
   const amtMin = el('input.select', { type: 'number', inputmode: 'decimal', placeholder: '0' });
@@ -34,6 +42,7 @@ export function openSearch(initial = {}) {
     node.addEventListener(evt, () => { f[key] = node.value; run(); });
   bind(queryInput, 'query');
   bind(catSelect, 'categoryId', 'change');
+  if (currencySelect) bind(currencySelect, 'currency', 'change');
   bind(dateFrom, 'dateFrom', 'change');
   bind(dateTo, 'dateTo', 'change');
   bind(amtMin, 'amountMin');
@@ -44,17 +53,32 @@ export function openSearch(initial = {}) {
     onClick: () => {
       Object.keys(f).forEach((k) => { f[k] = ''; });
       f.type = initial.type || '';
-      catSelect.value = ''; dateFrom.value = '';
-      dateTo.value = ''; amtMin.value = ''; amtMax.value = '';
+      catSelect.value = ''; if (currencySelect) currencySelect.value = '';
+      dateFrom.value = ''; dateTo.value = ''; amtMin.value = ''; amtMax.value = '';
       run();
     },
   });
 
+  // Категория + валюта — в одну строку. Дата и Сумма — двумя вертикальными
+  // столбиками (в каждом: заголовок, «от», «до»).
+  const catCurRow = currencySelect
+    ? rowCols(field(t('category'), catSelect).row, field(t('currency'), currencySelect).row)
+    : field(t('category'), catSelect).row;
+  const dateCol = el('.filter-col', {}, [
+    el('.filter-col-title', { text: t('date') }),
+    field(t('from'), dateFrom).row,
+    field(t('to'), dateTo).row,
+  ]);
+  const amtCol = el('.filter-col', {}, [
+    el('.filter-col-title', { text: t('amount') }),
+    field(t('from'), amtMin).row,
+    field(t('to'), amtMax).row,
+  ]);
+
   // Панель фильтров — скрыта по умолчанию, раскрывается кнопкой «Фильтр».
   const filterPanel = el('.filter-panel', {}, [
-    field(t('category'), catSelect).row,
-    rowCols(field(t('date_from'), dateFrom).row, field(t('date_to'), dateTo).row),
-    rowCols(field(t('amount_from'), amtMin).row, field(t('amount_to'), amtMax).row),
+    catCurRow,
+    el('.filter-cols', {}, [dateCol, amtCol]),
     resetBtn,
   ]);
   let filtersOpen = false;

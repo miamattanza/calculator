@@ -326,6 +326,7 @@ export function searchTransactions(f = {}) {
   return sortedTransactions().filter((t) => {
     if (f.type && t.type !== f.type) return false;
     if (f.categoryId && t.categoryId !== f.categoryId) return false;
+    if (f.currency && t.currency !== f.currency) return false;
     if (f.dateFrom && t.date < f.dateFrom) return false;
     if (f.dateTo && t.date > f.dateTo) return false;
     const amt = baseAmount(t);
@@ -338,6 +339,16 @@ export function searchTransactions(f = {}) {
     }
     return true;
   });
+}
+
+// Валюты, реально использованные в операциях (для фильтра поиска).
+// Порядок: сначала основная (если встречалась), затем прочие по алфавиту.
+export function usedCurrencies() {
+  const base = state.settings.baseCurrency;
+  const set = new Set();
+  for (const t of state.transactions) if (t.currency) set.add(t.currency);
+  const list = [...set];
+  return list.sort((a, b) => (a === base ? -1 : b === base ? 1 : a.localeCompare(b)));
 }
 
 // ---- Плановые платежи ----------------------------------------------------

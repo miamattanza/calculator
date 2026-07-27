@@ -48,7 +48,7 @@ export const CURRENCIES = {
   AUD: { symbol: 'A$', name: 'Австралийский доллар' },
 };
 
-const LOCALE = { ru: 'ru-RU', en: 'en-US' };
+const LOCALE = { ru: 'ru-RU', en: 'en-US', it: 'it-IT', id: 'id-ID', es: 'es-ES', ar: 'ar', fr: 'fr-FR' };
 
 export function locale() {
   return LOCALE[getLang()] || 'ru-RU';

@@ -551,6 +551,9 @@ select.select { appearance: none; -webkit-appearance: none; }
 .filter-panel.open { display: flex; }
 .row-2 { display: flex; gap: 12px; }
 .row-2 > .field { flex: 1; min-width: 0; }
+.filter-cols { display: flex; gap: 12px; }
+.filter-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.filter-col-title { font-size: 13px; font-weight: 700; color: var(--text-2); }
 .search-summary { font-size: 14px; color: var(--text-3); text-align: center; padding: 4px 0; }
 .search-results { display: flex; flex-direction: column; }
 input[type="search"] { -webkit-appearance: none; appearance: none; }
