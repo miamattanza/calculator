@@ -262,12 +262,15 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType) {
   const updatePreview = () => { clear(iconPreview); iconPreview.appendChild(catIcon({ icon: model.icon, color: model.color, image: model.image }, 'trx-icon')); };
 
   // Иконки, уже занятые другими категориями, блокируем (нельзя две одинаковые)
-  // и выносим отдельной группой «уже используются».
+  // и выносим отдельной группой «уже используются». Собственную текущую иконку
+  // категории всегда оставляем доступной — даже если из-за старых данных есть
+  // дубликат, её можно оставить или вернуть.
   const usedIcons = new Set(
     store.getState().categories
       .filter((c) => !existing || c.id !== existing.id)
       .map((c) => c.icon).filter(Boolean)
   );
+  if (existing && existing.icon) usedIcons.delete(existing.icon);
   const emojiGrid = el('.emoji-grid');
   const usedGrid = el('.emoji-grid');
   const markEmoji = (b) => {
@@ -306,6 +309,17 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType) {
 
   updatePreview();
 
+  // Валюта категории (из прежней версии) — теперь её нельзя назначать, но
+  // оставшуюся у некоторых категорий можно убрать.
+  let catCurrency = existing ? (existing.currency || null) : null;
+  let currencyBtn = null;
+  if (catCurrency) {
+    currencyBtn = el('button.btn-danger', {
+      type: 'button', text: `${t('reset_cat_currency')} (${catCurrency})`,
+      onClick: () => { catCurrency = null; if (currencyBtn) { currencyBtn.remove(); currencyBtn = null; } },
+    });
+  }
+
   const saveBtn = el('button.btn-primary', { type: 'button', text: t('save') });
 
   body.append(
@@ -313,6 +327,7 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType) {
     field(t('type'), typeSeg).row,
     field(t('icon'), el('.icon-field', {}, [iconPreview, emojiGrid, usedBlock, uploadBtn, uploadInput])).row,
     el('.icon-rules', { text: t('icon_rules') }),
+    ...(currencyBtn ? [currencyBtn] : []),
     error, saveBtn,
   );
 
@@ -330,7 +345,7 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType) {
 
   saveBtn.addEventListener('click', async () => {
     if (!model.name.trim()) { error.textContent = t('required'); return; }
-    await store.saveCategory({ id: existing ? existing.id : undefined, name: model.name.trim(), type: model.type, icon: model.icon, color: model.color, image: model.image || null });
+    await store.saveCategory({ id: existing ? existing.id : undefined, name: model.name.trim(), type: model.type, icon: model.icon, color: model.color, image: model.image || null, currency: catCurrency });
     modal.close(); onDone();
   });
 }
@@ -485,20 +500,57 @@ export function applyBackground(id) {
 
 // ---- Конвертер валют ----
 
+// Обновление курсов онлайн. Основной источник — open.er-api.com (рыночные
+// курсы). Резерв — официальные курсы ЦБ РФ (JSON-зеркало cbr-xml-daily.ru),
+// на случай если основной сервис недоступен. Возвращённые курсы объединяются с
+// уже заданными вручную (их не затираем, если источник валюту не отдал).
 async function fetchRates(base, onOk, onErr) {
-  try {
-    const res = await fetch(`https://open.er-api.com/v6/latest/${base}`);
-    const j = await res.json();
-    if (!j || j.result !== 'success' || !j.rates) throw new Error('bad');
-    const rates = {};
-    for (const code of Object.keys(CURRENCIES)) {
-      if (code === base) { rates[code] = 1; continue; }
-      const perBase = j.rates[code];
-      if (perBase) rates[code] = roundRate(1 / perBase); // 1 <code> = 1/perBase базовой (до десятых)
-    }
+  const apply = async (fetched) => {
+    if (!fetched || !Object.keys(fetched).length) throw new Error('empty');
+    const rates = { ...(store.getState().settings.rates || {}), ...fetched };
+    rates[base] = 1;
     await store.setSetting('rates', rates);
     onOk();
-  } catch { onErr(); }
+  };
+  try { await apply(await fetchFromErApi(base)); return; } catch (e) { /* пробуем резерв */ }
+  try { await apply(await fetchFromCBR(base)); return; } catch (e) { /* оба источника недоступны */ }
+  onErr();
+}
+
+// Основной источник: open.er-api.com (1 base = j.rates[code] code).
+async function fetchFromErApi(base) {
+  const res = await fetch(`https://open.er-api.com/v6/latest/${base}`);
+  const j = await res.json();
+  if (!j || j.result !== 'success' || !j.rates) throw new Error('bad');
+  const out = {};
+  for (const code of Object.keys(CURRENCIES)) {
+    if (code === base) { out[code] = 1; continue; }
+    const perBase = j.rates[code];
+    if (perBase) out[code] = roundRate(1 / perBase); // 1 <code> = 1/perBase базовой (до десятых)
+  }
+  return out;
+}
+
+// Резерв: официальные курсы ЦБ РФ. Valute[code] = { Value, Nominal } — сколько
+// рублей за Nominal единиц валюты. Пересчитываем к нужной базе через рубль.
+async function fetchFromCBR(base) {
+  const res = await fetch('https://www.cbr-xml-daily.ru/daily_json.js');
+  const j = await res.json();
+  if (!j || !j.Valute) throw new Error('bad');
+  const rubPer = (code) => {
+    if (code === 'RUB') return 1;
+    const v = j.Valute[code];
+    return v && v.Value > 0 && v.Nominal > 0 ? v.Value / v.Nominal : null;
+  };
+  const baseRub = rubPer(base);
+  if (!baseRub) throw new Error('no base rate');
+  const out = {};
+  for (const code of Object.keys(CURRENCIES)) {
+    if (code === base) { out[code] = 1; continue; }
+    const cr = rubPer(code);
+    if (cr) out[code] = roundRate(cr / baseRub); // 1 code = cr руб = cr/baseRub базовой
+  }
+  return out;
 }
 
 function openConverter() {
