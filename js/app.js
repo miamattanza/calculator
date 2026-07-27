@@ -10,7 +10,7 @@ import { renderAnalytics } from './views/analytics.js';
 import { renderForecast } from './views/forecast.js';
 import { renderPlanning } from './views/planning.js';
 import { renderBudgets } from './views/budgets.js';
-import { renderSettings, applyTheme, applyBackground } from './views/settings.js';
+import { renderSettings, applyTheme, applyBackground, exportJSON } from './views/settings.js';
 
 // Разделы приложения. Обзор — главный экран, остальные открываются из меню.
 const SECTIONS = [
@@ -46,6 +46,29 @@ function renderSection() {
   if (analyticsBtn) analyticsBtn.style.display = onHome ? '' : 'none';
   const section = SECTIONS.find((x) => x.id === activeSection);
   section.render(content);
+  if (onHome) maybeBackupBanner();
+}
+
+// Мягкое напоминание о резервной копии: данные хранятся только на устройстве,
+// и некоторые браузеры (особенно iOS Safari без установки на экран «Домой»)
+// могут их удалить. Ненавязчиво: только на «Обзоре», при накопленных данных,
+// не чаще раза в снуз-период, с кнопкой «Позже».
+function maybeBackupBanner() {
+  const s = store.getState().settings;
+  if (store.getState().transactions.length < 5) return;
+  const now = Date.now();
+  if (s.backupSnoozeUntil && now < s.backupSnoozeUntil) return;
+  const last = s.lastBackupAt || 0;
+  const MONTH = 30 * 24 * 3600 * 1000;
+  if (last && now - last < MONTH) return;
+  const banner = el('.backup-banner', {}, [
+    el('.backup-banner-text', { text: t('backup_reminder') }),
+    el('.backup-banner-actions', {}, [
+      el('button.backup-btn.primary', { type: 'button', text: t('backup_now'), onClick: () => { banner.remove(); exportJSON(); } }),
+      el('button.backup-btn', { type: 'button', text: t('later'), onClick: async () => { banner.remove(); await store.setSetting('backupSnoozeUntil', Date.now() + 21 * 24 * 3600 * 1000); } }),
+    ]),
+  ]);
+  content.insertBefore(banner, content.firstChild);
 }
 
 // Всплывающее меню со всеми пятью разделами.

@@ -31,17 +31,20 @@ export function renderSettings(root, rerenderApp) {
   });
 
   // Текущая («ходовая») валюта — в ней записываются новые операции (напр. в
-  // поездке). Выбрать можно только валюту с заданным курсом (курс — в
-  // конвертере), иначе суммы считались бы 1:1. По умолчанию — основная.
+  // поездке). Если у выбранной валюты нет курса к основной — сразу предлагаем
+  // ввести курс (иначе суммы считались бы 1:1). По умолчанию — основная.
   const isRated = (code) => code === s.baseCurrency || store.rateToBase(code) != null;
   const curNow = store.currentCurrency(); // эффективная текущая валюта (устойчивая)
   const curNowSelect = el('select.row-control', {}, Object.keys(CURRENCIES).map((code) =>
-    el('option', { value: code, selected: code === curNow, disabled: !isRated(code) },
-      `${code} · ${CURRENCIES[code].symbol}`)));
+    el('option', { value: code, selected: code === curNow }, `${code} · ${CURRENCIES[code].symbol}`)));
   curNowSelect.addEventListener('change', async () => {
-    if (!isRated(curNowSelect.value)) { curNowSelect.value = curNow; toast(t('rate_needed')); return; }
-    await store.setSetting('currentCurrency', curNowSelect.value);
-    rerenderApp();
+    const code = curNowSelect.value;
+    if (isRated(code)) { await store.setSetting('currentCurrency', code); rerenderApp(); return; }
+    // Курса нет — открываем ввод курса прямо здесь.
+    openRateDialog(code, async (ok) => {
+      if (ok) { await store.setSetting('currentCurrency', code); rerenderApp(); }
+      else { curNowSelect.value = curNow; }
+    });
   });
 
   // Переключатель сценария отображения истории при валюте, отличной от основной.
@@ -130,6 +133,7 @@ export function renderSettings(root, rerenderApp) {
     navRow('🧾', t('export_csv'), exportCSV),
     navRow('📥', t('import_json'), importJSON),
   ]));
+  root.appendChild(el('.setting-hint', { text: t('data_local_note') }));
 
   root.appendChild(el('.settings-group', {}, [
     navRow('🗑', t('reset_all'), () => openResetDialog(rerenderApp), true),
@@ -170,9 +174,11 @@ function download(filename, content, mime) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-async function exportJSON() {
+export async function exportJSON() {
   const dump = await store.exportAll();
   download(`fintracker-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(dump, null, 2), 'application/json');
+  await store.setSetting('lastBackupAt', Date.now()); // отметка резервной копии
+  toast(t('backup_done'));
 }
 
 function exportCSV() {
@@ -550,6 +556,30 @@ async function fetchFromCBR(base) {
     if (cr) out[code] = roundRate(cr / baseRub); // 1 code = cr руб = cr/baseRub базовой
   }
   return out;
+}
+
+// Быстрый ввод курса валюты к основной — когда выбирают валюту без курса.
+function openRateDialog(code, onDone) {
+  const base = store.baseCurrency();
+  let saved = false;
+  const input = el('input.select', { type: 'text', inputmode: 'decimal', placeholder: '0' });
+  const err = el('.form-error');
+  const saveBtn = el('button.btn-primary', { type: 'button', text: t('save') });
+  const body = el('.form', {}, [
+    el('.rate-dialog-q', { text: `1 ${code} = ? ${base}` }),
+    input, err, saveBtn,
+  ]);
+  const modal = sheet(t('rate_to_base', { base }), body, { onClose: () => { if (!saved) onDone(false); } });
+  input.addEventListener('input', () => { input.value = input.value.replace(/[^\d.,]/g, ''); });
+  saveBtn.addEventListener('click', async () => {
+    const v = parseFloat((input.value || '').replace(',', '.'));
+    if (!(v > 0)) { err.textContent = t('invalid_amount'); return; }
+    const next = { ...(store.getState().settings.rates || {}) };
+    next[code] = roundRate(v);
+    await store.setSetting('rates', next);
+    saved = true; modal.close(); onDone(true);
+  });
+  setTimeout(() => input.focus(), 250);
 }
 
 function openConverter() {

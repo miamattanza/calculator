@@ -54,6 +54,22 @@
   --shadow: 0 1px 3px rgba(0,0,0,0.45);
 }
 
+/* Фолбэк для старых браузеров без color-mix() (например старые Android /
+   Samsung Internet): полупрозрачные «смеси» цветов заменяем сплошными,
+   иначе заливки кнопок и карточек могли бы пропасть. */
+@supports not (background: color-mix(in srgb, red, blue)) {
+  :root { --fill: #E9E9EE; --fill-2: #D9D9DF; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --fill: #342A20; --fill-2: #40342A; }
+  }
+  :root[data-theme="dark"] { --fill: #342A20; --fill-2: #40342A; }
+  :root[data-theme="light"] { --fill: #E9E9EE; --fill-2: #D9D9DF; }
+  #tabbar { background: var(--bg-elev); }
+  .trx-group.alt, .trx-group.alt .swipe-content { background: var(--fill); }
+  .cat-emoji, .cat-chip.active { background: var(--fill-2); }
+  .budget-alert { background: rgba(255,59,48,0.15); }
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 /* touch-action: manipulation убирает двойной тап-зум iOS (мешал при быстром
@@ -724,5 +740,14 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 /* ---- Выравнивание полей (в т.ч. даты) в формах ---- */
 .select { min-height: 46px; box-sizing: border-box; }
 input[type="date"].select, input[type="date"].row-control { -webkit-appearance: none; appearance: none; }
+
+.rate-dialog-q { font-size: 17px; font-weight: 700; text-align: center; padding: 4px 0 10px; }
+
+/* ---- Напоминание о резервной копии ---- */
+.backup-banner { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--fill); border: 1px solid var(--sep-strong); border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; }
+.backup-banner-text { flex: 1; min-width: 140px; font-size: 13px; color: var(--text-2); line-height: 1.3; }
+.backup-banner-actions { display: flex; gap: 8px; }
+.backup-btn { font-size: 13px; font-weight: 600; padding: 8px 12px; border-radius: 9px; background: var(--fill-2); color: var(--text); white-space: nowrap; }
+.backup-btn.primary { background: var(--accent); color: #fff; }
 
 body.modal-open { overflow: hidden; }

@@ -1,6 +1,6 @@
 // models.js — фабрики сущностей и данные по умолчанию.
 
-export const APP_VERSION = '1.20.1';
+export const APP_VERSION = '1.21';
 
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -95,5 +95,7 @@ export const DEFAULT_SETTINGS = {
   budgetMutedMonth: '', // месяц (YYYY-MM), в котором уведомление о лимите отключено
   rates: {},            // курсы валют к основной: 1 <code> = rates[code] базовой
   convCurrencies: null, // список валют конвертера (null = все по умолчанию)
+  lastBackupAt: 0,      // время последней резервной копии (Экспорт)
+  backupSnoozeUntil: 0, // до какого времени отложено напоминание о копии
   seeded: false,        // созданы ли дефолтные категории
 };
