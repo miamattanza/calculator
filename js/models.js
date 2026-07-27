@@ -1,6 +1,6 @@
 // models.js — фабрики сущностей и данные по умолчанию.
 
-export const APP_VERSION = '1.20';
+export const APP_VERSION = '1.20.1';
 
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -78,7 +78,7 @@ export function makeGoal({ name, amount, currency }) {
 // Настройки по умолчанию.
 export const DEFAULT_SETTINGS = {
   baseCurrency: 'RUB',
-  currentCurrency: 'RUB', // «ходовая» валюта для новых операций (напр. в поездке)
+  currentCurrency: null,  // «ходовая» валюта (null = следует за основной)
   convertAll: false,      // false — сценарий 1 (у каждой операции своя валюта);
                           // true — сценарий 2 (вся история в текущей валюте)
   language: 'ru',

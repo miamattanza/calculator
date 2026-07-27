@@ -33,9 +33,8 @@ export function renderSettings(root, rerenderApp) {
   // Текущая («ходовая») валюта — в ней записываются новые операции (напр. в
   // поездке). Выбрать можно только валюту с заданным курсом (курс — в
   // конвертере), иначе суммы считались бы 1:1. По умолчанию — основная.
-  const curNowRaw = s.currentCurrency || s.baseCurrency;
   const isRated = (code) => code === s.baseCurrency || store.rateToBase(code) != null;
-  const curNow = isRated(curNowRaw) ? curNowRaw : s.baseCurrency;
+  const curNow = store.currentCurrency(); // эффективная текущая валюта (устойчивая)
   const curNowSelect = el('select.row-control', {}, Object.keys(CURRENCIES).map((code) =>
     el('option', { value: code, selected: code === curNow, disabled: !isRated(code) },
       `${code} · ${CURRENCIES[code].symbol}`)));

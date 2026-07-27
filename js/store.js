@@ -85,7 +85,16 @@ export function baseCurrency() { return state.settings.baseCurrency; }
 
 // Текущая («ходовая») валюта — в ней записываются новые операции; по умолчанию
 // совпадает с основной. Меняется, например, на время поездки.
-export function currentCurrency() { return state.settings.currentCurrency || state.settings.baseCurrency; }
+// Устойчиво: если валюта не задана, совпадает с основной или её курс к основной
+// неизвестен — используем основную валюту (иначе на экране могла появиться
+// «зависшая» старая валюта, напр. рубль при основной евро).
+export function currentCurrency() {
+  const base = state.settings.baseCurrency;
+  const cur = state.settings.currentCurrency;
+  if (!cur || cur === base) return base;
+  if (rateToBase(cur) == null) return base;
+  return cur;
+}
 
 // Курс валюты к ОСНОВНОЙ: 1 <cur> = rateToBase(cur) основной валюты.
 // null — курс неизвестен (не задан вручную и не загружен).
@@ -127,6 +136,14 @@ export async function changeBaseCurrency(newBase) {
   }
   state.settings.baseCurrency = newBase;
   await db.put('settings', { key: 'baseCurrency', value: newBase });
+  // Текущая валюта, если она «следовала» за основной (не задана или совпадала
+  // со старой основной), теперь следует за новой — иначе на главном экране
+  // осталась бы прежняя валюта.
+  const cur = state.settings.currentCurrency;
+  if (!cur || cur === oldBase) {
+    state.settings.currentCurrency = newBase;
+    await db.put('settings', { key: 'currentCurrency', value: newBase });
+  }
   emit();
 }
 
