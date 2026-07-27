@@ -12,8 +12,9 @@ import { openCategoryEditor } from './settings.js';
 
 export function openTransactionForm(existing) {
   const base = store.baseCurrency();
+  const startCur = store.currentCurrency();
   const model = existing ? { ...existing } : {
-    type: 'expense', amount: '', currency: base, rate: 1,
+    type: 'expense', amount: '', currency: startCur, rate: store.rateToBase(startCur) || 1,
     categoryId: null, date: dateISO(), note: '',
   };
 
@@ -50,6 +51,7 @@ export function openTransactionForm(existing) {
   currencySelect.addEventListener('change', () => {
     model.currency = currencySelect.value;
     if (model.currency === base) { model.rate = 1; rateField.input.value = 1; }
+    else { const r = store.rateToBase(model.currency); if (r) { model.rate = r; rateField.input.value = r; } }
     syncRateVisibility();
   });
 
@@ -346,9 +348,10 @@ export function renderHome(root) {
 
   // --- Табло суммы ---
   const amountEl = el('.entry-amount');
+  const entryCur = store.currentCurrency(); // ввод — в текущей («ходовой») валюте
   const renderAmount = () => {
     const v = entryDigits ? parseInt(entryDigits, 10) : 0;
-    amountEl.textContent = money(v, base);
+    amountEl.textContent = money(v, entryCur);
     amountEl.classList.toggle('zero', v <= 0);
   };
 
@@ -366,8 +369,10 @@ export function renderHome(root) {
     if (v <= 0) { amountEl.classList.add('shake'); setTimeout(() => amountEl.classList.remove('shake'), 400); return; }
     entryDigits = '';
     const cat = store.categoryById(categoryId);
-    const cur = (cat && cat.currency) || base; // у категории может быть своя валюта
-    await store.saveTransaction({ type: homeMode, amount: v, currency: cur, rate: 1, categoryId, date: dateISO(), note: '' });
+    // Валюта операции: своя у категории, иначе — текущая («ходовая»).
+    const cur = (cat && cat.currency) || store.currentCurrency();
+    const rate = store.rateToBase(cur) || 1; // курс к основной на момент записи
+    await store.saveTransaction({ type: homeMode, amount: v, currency: cur, rate, categoryId, date: dateISO(), note: '' });
     // saveTransaction → подписка → renderHome (табло сбрасывается, история обновляется)
   };
 
@@ -507,21 +512,41 @@ function renderGroupedRows(container, items, base) {
   }
 }
 
+// Ячейка суммы операции по текущему сценарию отображения валют:
+//  • сценарий 1 (convertAll=false): крупно — в валюте операции; снизу мелко —
+//    в основной валюте (если валюта операции отличается от основной);
+//  • сценарий 2 (convertAll=true): крупно — в текущей валюте (с конвертацией);
+//    снизу мелко — в основной (если текущая ≠ основной).
+// Прошлые данные не меняются: у каждой операции своя валюта и сумма.
+export function trxAmountNode(trx) {
+  const base = store.baseCurrency();
+  const sign = trx.type === 'income' ? 1 : -1;
+  const baseVal = store.baseAmount(trx);
+  let mainVal, mainCur, subText = null;
+  if (store.getState().settings.convertAll) {
+    mainCur = store.currentCurrency();
+    mainVal = store.convertFromBase(baseVal, mainCur);
+    if (mainCur !== base) subText = money(baseVal, base);
+  } else {
+    mainCur = trx.currency;
+    mainVal = Number(trx.amount) || 0;
+    if (trx.currency !== base) subText = money(baseVal, base);
+  }
+  return el('.trx-amount', {}, [
+    el('.trx-amount-main', { class: trx.type, text: signedMoney(mainVal * sign, mainCur) }),
+    subText ? el('.trx-amount-orig', { text: subText }) : null,
+  ]);
+}
+
 function renderRow(trx, base) {
   const cat = store.categoryById(trx.categoryId);
-  const sign = trx.type === 'income' ? 1 : -1;
-  const amountBase = store.baseAmount(trx) * sign;
-  const showOrig = trx.currency !== base;
   const content = el('.trx-row', {}, [
     catIcon(cat, 'trx-icon'),
     el('.trx-main', {}, [
       el('.trx-title', { text: cat ? store.categoryName(cat) : '—' }),
       trx.note ? el('.trx-note', { text: trx.note }) : null,
     ]),
-    el('.trx-amount', {}, [
-      el('.trx-amount-main', { class: trx.type, text: signedMoney(amountBase, base) }),
-      showOrig ? el('.trx-amount-orig', { text: money(trx.amount, trx.currency) }) : null,
-    ]),
+    trxAmountNode(trx),
   ]);
   return wrapSwipeRow(content, trx);
 }

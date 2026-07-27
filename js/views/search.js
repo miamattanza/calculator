@@ -4,8 +4,8 @@
 import * as store from '../store.js';
 import { t } from '../i18n.js';
 import { el, clear, sheet, field, rowCols, catIcon } from '../dom.js';
-import { money, signedMoney } from '../format.js';
-import { openTransactionForm, wrapSwipeRow, dayLabel } from './transactions.js';
+import { money } from '../format.js';
+import { openTransactionForm, wrapSwipeRow, dayLabel, trxAmountNode } from './transactions.js';
 
 export function openSearch(initial = {}) {
   const base = store.baseCurrency();
@@ -96,22 +96,19 @@ export function openSearch(initial = {}) {
         group = el('.trx-group' + (alt ? '.alt' : ''));
         results.appendChild(group);
       }
-      group.appendChild(row(trx, base));
+      group.appendChild(row(trx));
     }
   }
 
-  function row(trx, base) {
+  function row(trx) {
     const cat = store.categoryById(trx.categoryId);
-    const amountBase = store.baseAmount(trx) * (trx.type === 'income' ? 1 : -1);
     const row = el('.trx-row', {}, [
       catIcon(cat, 'trx-icon'),
       el('.trx-main', {}, [
         el('.trx-title', { text: cat ? store.categoryName(cat) : '—' }),
         trx.note ? el('.trx-note', { text: trx.note }) : null,
       ]),
-      el('.trx-amount', {}, [
-        el('.trx-amount-main', { class: trx.type, text: signedMoney(amountBase, base) }),
-      ]),
+      trxAmountNode(trx),
     ]);
     return wrapSwipeRow(row, trx);
   }

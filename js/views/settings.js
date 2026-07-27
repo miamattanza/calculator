@@ -21,11 +21,28 @@ export function renderSettings(root, rerenderApp) {
     rerenderApp();
   });
 
-  // Валюта
+  // Основная валюта (в ней считается статистика). Смена не «переклеивает»
+  // прошлые операции — они остаются в своих валютах.
   const curSelect = el('select.row-control', {}, Object.keys(CURRENCIES).map((code) =>
     el('option', { value: code, selected: code === s.baseCurrency }, `${code} · ${CURRENCIES[code].symbol}`)));
   curSelect.addEventListener('change', async () => {
-    await store.setSetting('baseCurrency', curSelect.value);
+    await store.changeBaseCurrency(curSelect.value);
+    rerenderApp();
+  });
+
+  // Текущая («ходовая») валюта — в ней записываются новые операции (напр. в
+  // поездке). По умолчанию совпадает с основной.
+  const curNow = s.currentCurrency || s.baseCurrency;
+  const curNowSelect = el('select.row-control', {}, Object.keys(CURRENCIES).map((code) =>
+    el('option', { value: code, selected: code === curNow }, `${code} · ${CURRENCIES[code].symbol}`)));
+  curNowSelect.addEventListener('change', async () => {
+    await store.setSetting('currentCurrency', curNowSelect.value);
+    rerenderApp();
+  });
+
+  // Переключатель сценария отображения истории при валюте, отличной от основной.
+  const convToggle = toggle(!!s.convertAll, async (checked) => {
+    await store.setSetting('convertAll', checked);
     rerenderApp();
   });
 
@@ -43,12 +60,21 @@ export function renderSettings(root, rerenderApp) {
   const themeGroup = el('.settings-group', {}, [
     settingRow(t('language'), langSelect),
     settingRow(t('theme'), themeSelect),
-    settingRow(t('base_currency'), curSelect),
   ]);
   if (s.theme === 'manual') {
     themeGroup.appendChild(navRow('🎨', t('theme_color'), () => openThemeColorPicker(rerenderApp)));
   }
   root.appendChild(themeGroup);
+
+  // Валюты: основная + текущая + сценарий отображения.
+  root.appendChild(el('.group-caption', { text: t('currency') }));
+  const curGroup = el('.settings-group', {}, [
+    settingRow(t('base_currency'), curSelect),
+    settingRow(t('current_currency'), curNowSelect),
+    settingRow(t('convert_all'), convToggle),
+    el('.setting-hint', { text: t('convert_all_hint') }),
+  ]);
+  root.appendChild(curGroup);
 
   // Отображение: раздельная / общая история; подгонка истории под экран.
   const splitToggle = toggle(s.splitHistory !== false, async (checked) => {

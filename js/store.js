@@ -5,7 +5,7 @@
 
 import { db } from './db.js';
 import { setLang, t } from './i18n.js';
-import { dateISO, monthKey, addDays, daysBetween } from './format.js';
+import { dateISO, monthKey, addDays, daysBetween, CURRENCIES } from './format.js';
 import {
   DEFAULT_CATEGORIES, DEFAULT_SETTINGS, makeCategory,
   makeTransaction, makePlanned, makeBudget, makeGoal,
@@ -82,6 +82,53 @@ export async function setSetting(key, value) {
 }
 
 export function baseCurrency() { return state.settings.baseCurrency; }
+
+// Текущая («ходовая») валюта — в ней записываются новые операции; по умолчанию
+// совпадает с основной. Меняется, например, на время поездки.
+export function currentCurrency() { return state.settings.currentCurrency || state.settings.baseCurrency; }
+
+// Курс валюты к ОСНОВНОЙ: 1 <cur> = rateToBase(cur) основной валюты.
+// null — курс неизвестен (не задан вручную и не загружен).
+export function rateToBase(cur) {
+  const base = state.settings.baseCurrency;
+  if (cur === base) return 1;
+  const v = Number((state.settings.rates || {})[cur]);
+  return v > 0 ? v : null;
+}
+
+// Перевод суммы из основной валюты в произвольную (для отображения).
+export function convertFromBase(baseValue, cur) {
+  const r = rateToBase(cur);
+  return r ? baseValue / r : baseValue;
+}
+
+// Безопасная смена ОСНОВНОЙ валюты: прошлые операции не «переклеиваются» —
+// они хранят свою валюту и сумму; пересчитываем лишь курс к новой базе и
+// карту курсов, чтобы статистика оставалась верной. Если курс новой базы к
+// старой неизвестен — оставляем как есть (визуально суммы уже в своих валютах).
+export async function changeBaseCurrency(newBase) {
+  const oldBase = state.settings.baseCurrency;
+  if (!newBase || newBase === oldBase) return;
+  const oldRates = state.settings.rates || {};
+  const oldToBase = (c) => (c === oldBase ? 1 : (Number(oldRates[c]) > 0 ? Number(oldRates[c]) : null));
+  const K = oldToBase(newBase); // сколько старой базы в 1 новой базе
+  if (K) {
+    const newRates = {};
+    for (const c of Object.keys(CURRENCIES)) {
+      if (c === newBase) continue;
+      const rc = oldToBase(c);
+      if (rc != null) newRates[c] = rc / K;
+    }
+    state.settings.rates = newRates;
+    await db.put('settings', { key: 'rates', value: newRates });
+    // Курс у операций/плановых — снимок native→база; переносим к новой базе.
+    for (const t of state.transactions) { t.rate = (Number(t.rate) || 1) / K; await db.put('transactions', t); }
+    for (const p of state.planned) { p.rate = (Number(p.rate) || 1) / K; await db.put('planned', p); }
+  }
+  state.settings.baseCurrency = newBase;
+  await db.put('settings', { key: 'baseCurrency', value: newBase });
+  emit();
+}
 
 // ---- Категории -----------------------------------------------------------
 
