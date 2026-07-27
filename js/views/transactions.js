@@ -244,16 +244,19 @@ function attachCatSwipe(node, onPrev, onNext) {
   node.addEventListener('mouseup', (e) => finish(e.clientX, e.clientY));
 }
 
-// Кольцо-индикатор лимита для шапки.
-function budgetRingSvg(ratio) {
+// Кольцо-индикатор лимита для шапки. muted=true — уведомление отключено:
+// индикатор остаётся на месте, но «заморожен» (серый, без пульса, с косой
+// чертой), чтобы было понятно, что оповещение выключено.
+function budgetRingSvg(ratio, muted) {
   const NS = 'http://www.w3.org/2000/svg';
   const size = 26, sw = 3.5, r = (size - sw) / 2, cx = size / 2, c = 2 * Math.PI * r;
   const clamped = Math.max(0, Math.min(1, ratio));
   let color = 'var(--text-3)';
-  if (ratio >= 1) color = '#8B1A1A'; else if (ratio >= 0.9) color = 'var(--red)'; else if (ratio >= 0.8) color = '#FF9500';
+  if (muted) color = 'var(--text-3)';
+  else if (ratio >= 1) color = '#8B1A1A'; else if (ratio >= 0.9) color = 'var(--red)'; else if (ratio >= 0.8) color = '#FF9500';
   const svg = document.createElementNS(NS, 'svg');
   svg.setAttribute('viewBox', `0 0 ${size} ${size}`); svg.setAttribute('width', size); svg.setAttribute('height', size);
-  svg.setAttribute('class', ratio >= 1 ? 'budget-ring-svg over' : 'budget-ring-svg');
+  svg.setAttribute('class', 'budget-ring-svg' + (muted ? ' muted' : (ratio >= 1 ? ' over' : '')));
   const mk = (stroke, dash) => {
     const el2 = document.createElementNS(NS, 'circle');
     el2.setAttribute('cx', cx); el2.setAttribute('cy', cx); el2.setAttribute('r', r);
@@ -263,6 +266,15 @@ function budgetRingSvg(ratio) {
   };
   svg.appendChild(mk('var(--sep)'));
   svg.appendChild(mk(color, `${clamped * c} ${c}`));
+  // Отключено: косая черта поверх кольца (как у «выкл»/🔕).
+  if (muted) {
+    const off = size * 0.5 / Math.SQRT2 * 0.62; // длина черты от центра
+    const line = document.createElementNS(NS, 'line');
+    line.setAttribute('x1', cx - off); line.setAttribute('y1', cx + off);
+    line.setAttribute('x2', cx + off); line.setAttribute('y2', cx - off);
+    line.setAttribute('stroke', 'var(--text-2)'); line.setAttribute('stroke-width', 2.2); line.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(line);
+  }
   return svg;
 }
 
@@ -330,7 +342,7 @@ export function renderHome(root) {
     clear(headBalance);
     headBalance.append(
       el('.hb-label', { text: t('balance') }),
-      el('.hb-value', { text: money(store.currentBalance(), base) }),
+      el('.hb-value', { text: money(Math.round(store.currentBalance()), base) }),
     );
   }
 
@@ -340,9 +352,11 @@ export function renderHome(root) {
   if (ringHost) {
     clear(ringHost);
     const bs = store.budgetOverallStatus();
-    if (bs.has && !bs.muted) {
+    if (bs.has) {
+      // Индикатор показываем всегда (если задан лимит). При отключённом
+      // уведомлении он остаётся на месте, но «заморожен» (см. budgetRingSvg).
       ringHost.style.display = '';
-      ringHost.appendChild(budgetRingSvg(bs.ratio));
+      ringHost.appendChild(budgetRingSvg(bs.ratio, bs.muted));
       ringHost.onclick = () => document.dispatchEvent(new CustomEvent('go-section', { detail: 'budgets' }));
     } else {
       ringHost.style.display = 'none';

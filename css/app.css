@@ -391,6 +391,9 @@ select.select { appearance: none; -webkit-appearance: none; }
 .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
 .emoji-pick { aspect-ratio: 1; border-radius: 9px; background: var(--fill); font-size: 20px; display: flex; align-items: center; justify-content: center; }
 .emoji-pick.active { box-shadow: inset 0 0 0 2px var(--accent); }
+.emoji-pick.disabled { opacity: 0.32; filter: grayscale(1); cursor: default; }
+.emoji-used-block { display: flex; flex-direction: column; gap: 6px; }
+.emoji-used-caption { font-size: 12px; color: var(--text-3); }
 .color-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
 .color-pick { aspect-ratio: 1; border-radius: 50%; }
 .color-pick.active { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--accent); }
@@ -693,6 +696,8 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 #budget-ring { display: flex; align-items: center; justify-content: center; margin-inline-start: 0; margin-inline-end: 12px; padding: 0; background: none; width: 28px; height: 28px; }
 .budget-ring-svg.over { animation: ringPulse 1s ease-in-out infinite; }
 @keyframes ringPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.86); } }
+/* Отключённое уведомление: «заморожённый» индикатор — приглушён, без пульса. */
+.budget-ring-svg.muted { opacity: 0.5; animation: none; }
 
 /* ---- Свайп-действия в строке истории ---- */
 .swipe-wrap { position: relative; overflow: hidden; }

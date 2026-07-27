@@ -261,15 +261,34 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType) {
   const iconPreview = el('.icon-preview');
   const updatePreview = () => { clear(iconPreview); iconPreview.appendChild(catIcon({ icon: model.icon, color: model.color, image: model.image }, 'trx-icon')); };
 
+  // Иконки, уже занятые другими категориями, блокируем (нельзя две одинаковые)
+  // и выносим отдельной группой «уже используются».
+  const usedIcons = new Set(
+    store.getState().categories
+      .filter((c) => !existing || c.id !== existing.id)
+      .map((c) => c.icon).filter(Boolean)
+  );
   const emojiGrid = el('.emoji-grid');
-  const markEmoji = (b) => { emojiGrid.querySelectorAll('.emoji-pick').forEach((x) => x.classList.remove('active')); if (b) b.classList.add('active'); };
-  EMOJI_CHOICES.forEach((em) => {
-    const b = el('button.emoji-pick', {
-      type: 'button', class: (!model.image && em === model.icon) ? 'active' : '', text: em,
-      onClick: () => { model.icon = em; model.image = null; markEmoji(b); updatePreview(); },
-    });
-    emojiGrid.appendChild(b);
+  const usedGrid = el('.emoji-grid');
+  const markEmoji = (b) => {
+    [emojiGrid, usedGrid].forEach((g) => g.querySelectorAll('.emoji-pick').forEach((x) => x.classList.remove('active')));
+    if (b) b.classList.add('active');
+  };
+  const makePick = (em, disabled) => el('button.emoji-pick', {
+    type: 'button',
+    class: ((!model.image && em === model.icon) ? 'active' : '') + (disabled ? ' disabled' : ''),
+    text: em,
+    onClick: function () {
+      if (disabled) { toast(t('icon_used_already')); return; }
+      model.icon = em; model.image = null; markEmoji(this); updatePreview();
+    },
   });
+  EMOJI_CHOICES.filter((em) => !usedIcons.has(em)).forEach((em) => emojiGrid.appendChild(makePick(em, false)));
+  const usedList = EMOJI_CHOICES.filter((em) => usedIcons.has(em));
+  usedList.forEach((em) => usedGrid.appendChild(makePick(em, true)));
+  const usedBlock = usedList.length
+    ? el('.emoji-used-block', {}, [el('.emoji-used-caption', { text: t('icons_used') }), usedGrid])
+    : null;
 
   // Загрузка своей иконки из галереи. Безопасно: принимаем только изображение,
   // проверяем формат и размер, затем обрезаем и уменьшаем до 64×64 через canvas
@@ -292,7 +311,7 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType) {
   body.append(
     field(t('category_name'), nameInput).row,
     field(t('type'), typeSeg).row,
-    field(t('icon'), el('.icon-field', {}, [iconPreview, emojiGrid, uploadBtn, uploadInput])).row,
+    field(t('icon'), el('.icon-field', {}, [iconPreview, emojiGrid, usedBlock, uploadBtn, uploadInput])).row,
     el('.icon-rules', { text: t('icon_rules') }),
     error, saveBtn,
   );
@@ -489,11 +508,12 @@ function openConverter() {
   const rateFor = (c) => (c === base ? 1 : (Number(rates()[c]) || null));
 
   // Список валют конвертера (пользователь добавляет/удаляет). По умолчанию —
-  // все доступные валюты, кроме основной.
+  // только валюты с уже заданным курсом (на новом устройстве список пуст, и
+  // валюты добавляются кнопкой «Добавить валюту»).
   const getList = () => {
     const s = store.getState().settings;
     if (Array.isArray(s.convCurrencies)) return s.convCurrencies.filter((c) => c !== base && CURRENCIES[c]);
-    return codes.filter((c) => c !== base);
+    return Object.keys(s.rates || {}).filter((c) => c !== base && CURRENCIES[c] && Number(s.rates[c]) > 0);
   };
   const setList = (arr) => store.setSetting('convCurrencies', arr);
 
