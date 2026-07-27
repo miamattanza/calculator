@@ -4,8 +4,8 @@
 import * as store from '../store.js';
 import { t } from '../i18n.js';
 import { el, clear, sheet, field, rowCols, catIcon } from '../dom.js';
-import { money, signedMoney, formatDate } from '../format.js';
-import { openTransactionForm, wrapSwipeRow } from './transactions.js';
+import { money, signedMoney } from '../format.js';
+import { openTransactionForm, wrapSwipeRow, dayLabel } from './transactions.js';
 
 export function openSearch(initial = {}) {
   const base = store.baseCurrency();
@@ -86,9 +86,18 @@ export function openSearch(initial = {}) {
       results.appendChild(el('.empty-inline', { text: t('nothing_found') }));
       return;
     }
-    const group = el('.trx-group');
-    for (const trx of list) group.appendChild(row(trx, base));
-    results.appendChild(group);
+    // Группировка по дням: заголовок дня (сегодня / вчера / «25 июля 2026»)
+    // + карточка-группа. Соседние дни чуть отличаются оттенком.
+    let last = null, group = null, alt = false;
+    for (const trx of list) {
+      if (trx.date !== last) {
+        results.appendChild(el('.trx-day', { text: dayLabel(trx.date) }));
+        last = trx.date; alt = !alt;
+        group = el('.trx-group' + (alt ? '.alt' : ''));
+        results.appendChild(group);
+      }
+      group.appendChild(row(trx, base));
+    }
   }
 
   function row(trx, base) {
@@ -98,7 +107,7 @@ export function openSearch(initial = {}) {
       catIcon(cat, 'trx-icon'),
       el('.trx-main', {}, [
         el('.trx-title', { text: cat ? store.categoryName(cat) : '—' }),
-        el('.trx-note', { text: (trx.note ? trx.note + ' · ' : '') + formatDate(trx.date, { day: 'numeric', month: 'short', year: 'numeric' }) }),
+        trx.note ? el('.trx-note', { text: trx.note }) : null,
       ]),
       el('.trx-amount', {}, [
         el('.trx-amount-main', { class: trx.type, text: signedMoney(amountBase, base) }),

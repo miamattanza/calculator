@@ -130,6 +130,11 @@ async function main() {
   // истории помещается на экране.
   let resizeTimer = null;
   const onViewportChange = () => {
+    // Не перерисовываем, пока пользователь в поле ввода: открытие клавиатуры
+    // меняет visualViewport и иначе рушит открытую строку (например поле
+    // комментария в истории закрывалось при попытке поставить курсор).
+    const ae = document.activeElement;
+    if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.isContentEditable)) return;
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => { if (activeSection === 'home') renderSection(); }, 120);
   };

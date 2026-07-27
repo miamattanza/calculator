@@ -123,6 +123,49 @@ export function confirmDialog(message) {
   });
 }
 
+// Обёртка «свайп влево → Удалить» (как в истории операций): магнитная
+// доводка + резинка по краям. onDelete вызывается после подтверждения.
+export function swipeDeleteRow(content, onDelete) {
+  content.classList.add('swipe-content');
+  const del = el('button.swipe-del', { type: 'button', text: t('delete') });
+  const wrap = el('.swipe-wrap', {}, [del, content]);
+  const SPRING = 'transform .32s cubic-bezier(.34,1.36,.5,1)';
+  const EASE = 'transform .22s ease';
+  let DEL_W = 0, open = false;
+  const measure = () => { DEL_W = del.offsetWidth || 96; };
+  const place = (x) => { content.style.transform = `translateX(${x}px)`; del.style.transform = `translateX(${DEL_W + Math.min(0, x)}px)`; };
+  const anim = (on) => { content.style.transition = del.style.transition = on || 'none'; };
+  const close = () => { open = false; anim(EASE); place(0); };
+  const openD = () => { open = true; anim(SPRING); place(-DEL_W); };
+  del.addEventListener('click', async (e) => { e.stopPropagation(); if (await confirmDialog(t('confirm_delete'))) onDelete(); });
+  const clamp = (nx) => (nx < -DEL_W ? -DEL_W + (nx + DEL_W) * 0.25 : (nx > 0 ? nx * 0.25 : nx));
+  let sx = 0, sy = 0, dir = null, dragging = false, startX = 0;
+  const begin = (x, y) => { measure(); sx = x; sy = y; dir = null; dragging = true; startX = open ? -DEL_W : 0; anim(false); };
+  const move = (x, y, e) => {
+    if (!dragging) return;
+    const dx = x - sx, dy = y - sy;
+    if (dir === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) dir = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+    if (dir === 'h') { if (e && e.cancelable) e.preventDefault(); place(clamp(startX + dx)); }
+  };
+  const end = (x) => {
+    if (!dragging) return; dragging = false;
+    if (dir !== 'h') return;
+    const moved = x - sx;
+    if (!open) { if (moved < -DEL_W * 0.5) openD(); else close(); }
+    else { if (moved > DEL_W * 0.35) close(); else openD(); }
+  };
+  content.addEventListener('touchstart', (e) => { const p = e.changedTouches[0]; begin(p.clientX, p.clientY); }, { passive: true });
+  content.addEventListener('touchmove', (e) => { const p = e.changedTouches[0]; move(p.clientX, p.clientY, e); }, { passive: false });
+  content.addEventListener('touchend', (e) => { const p = e.changedTouches[0]; end(p.clientX); }, { passive: true });
+  content.addEventListener('mousedown', (e) => {
+    begin(e.clientX, e.clientY);
+    const mm = (ev) => move(ev.clientX, ev.clientY, ev);
+    const mu = (ev) => { end(ev.clientX); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
+    window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);
+  });
+  return wrap;
+}
+
 // Поле формы: label + input/select. Возвращает {row, input}.
 export function field(labelText, inputNode) {
   const row = el('.field', {}, [

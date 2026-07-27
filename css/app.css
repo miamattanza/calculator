@@ -114,7 +114,7 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 #head-balance {
   display: flex; flex-direction: column; align-items: center; gap: 1px;
   padding: 3px 10px; border: 1px solid var(--sep-strong); border-radius: 10px;
-  line-height: 1.1; margin-inline-end: 8px;
+  line-height: 1.1; margin-inline-end: 12px;
 }
 .hb-label { font-size: 9px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.3px; }
 .hb-value { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -158,7 +158,7 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .mini-hist { margin-top: 18px; }
 .mini-hist-head { display: flex; align-items: center; justify-content: space-between; margin: 0 4px 8px; }
 .mini-hist-head span { font-size: 15px; font-weight: 600; color: var(--text-2); }
-.mini-more { color: var(--accent); font-size: 14px; font-weight: 600; }
+.mini-more { display: block; width: 100%; text-align: center; color: var(--accent); font-size: 14px; font-weight: 600; padding: 12px 0 4px; }
 .mini-empty { text-align: center; color: var(--text-3); padding: 16px; font-size: 15px; }
 
 #content {
@@ -230,8 +230,11 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 
 /* ---- Список операций ---- */
 .trx-list { }
-.trx-day { font-size: 13px; font-weight: 600; color: var(--text-3); margin: 18px 8px 6px; text-transform: capitalize; }
+.trx-day { display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 700; color: var(--text-3); margin: 16px 6px 7px; text-transform: capitalize; letter-spacing: 0.3px; }
+.trx-day::before, .trx-day::after { content: ''; flex: 1; height: 2px; border-radius: 2px; background: var(--sep); }
 .trx-group { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.trx-group.alt { background: color-mix(in srgb, var(--text) 5%, var(--card)); }
+.trx-group.alt .swipe-content { background: color-mix(in srgb, var(--text) 5%, var(--card)); }
 .trx-row {
   display: flex; align-items: center; gap: 12px; padding: 11px 14px;
   border-bottom: 0.5px solid var(--sep);
@@ -686,7 +689,7 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .range { width: 100%; accent-color: var(--accent); height: 28px; }
 
 /* ---- Сигнал лимита в шапке ---- */
-#budget-ring { display: flex; align-items: center; justify-content: center; margin-inline-start: 8px; padding: 0; background: none; width: 28px; height: 28px; }
+#budget-ring { display: flex; align-items: center; justify-content: center; margin-inline-start: 0; margin-inline-end: 12px; padding: 0; background: none; width: 28px; height: 28px; }
 .budget-ring-svg.over { animation: ringPulse 1s ease-in-out infinite; }
 @keyframes ringPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.86); } }
 
@@ -697,11 +700,17 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .swipe-content { position: relative; z-index: 1; background: var(--card); will-change: transform; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .swipe-del { position: absolute; top: 0; bottom: 0; inset-inline-end: 0; padding: 0 22px; background: var(--red); color: #fff; font-size: 15px; font-weight: 600; white-space: nowrap; display: flex; align-items: center; justify-content: center; will-change: transform; }
 .swipe-comment { position: absolute; top: 0; bottom: 0; inset-inline-start: 0; display: flex; align-items: center; gap: 8px; padding: 0 12px; background: var(--bg-elev); will-change: transform; }
-.swipe-note-input { flex: 1; min-width: 0; background: var(--fill); border: none; border-radius: 8px; padding: 8px 10px; font-size: 15px; }
-.swipe-note-save { width: 38px; height: 32px; flex-shrink: 0; border-radius: 8px; background: var(--green); color: #fff; font-size: 16px; }
+.swipe-note-input { flex: 1; min-width: 0; background: var(--fill); border: none; border-radius: 8px; padding: 8px 12px; font-size: 15px; }
 
 /* ---- Конвертер валют ---- */
 .conv-result { text-align: center; font-size: 18px; font-weight: 700; padding: 12px 0; font-variant-numeric: tabular-nums; }
+.conv-rate-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; min-height: 48px; box-sizing: border-box; }
+.conv-rate-cur { flex: 0 0 auto; font-size: 15px; font-weight: 600; }
+.conv-rate-input { flex: 1; min-width: 0; text-align: end; background: var(--fill); border: none; border-radius: 8px; padding: 8px 12px; font-size: 15px; font-variant-numeric: tabular-nums; }
+.conv-add-row { display: block; width: 100%; text-align: start; padding: 13px 14px; font-size: 15px; background: var(--card); }
+.trx-group > .conv-add-row { border-bottom: 0.5px solid var(--sep); }
+.trx-group > .conv-add-row:last-child { border-bottom: none; }
+.conv-add-row:active { background: var(--fill); }
 
 /* ---- Выравнивание полей (в т.ч. даты) в формах ---- */
 .select { min-height: 46px; box-sizing: border-box; }

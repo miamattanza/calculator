@@ -3,7 +3,7 @@
 
 import * as store from '../store.js';
 import { t, availableLangs, LANG_NAMES } from '../i18n.js';
-import { el, clear, sheet, field, toast, confirmDialog, toggle, catIcon, rowCols } from '../dom.js';
+import { el, clear, sheet, field, toast, confirmDialog, toggle, catIcon, rowCols, swipeDeleteRow } from '../dom.js';
 import { CURRENCIES } from '../format.js';
 import { APP_VERSION } from '../models.js';
 
@@ -456,12 +456,20 @@ function openConverter() {
   const rates = () => { const r = { ...(store.getState().settings.rates || {}) }; r[base] = 1; return r; };
   const rateFor = (c) => (c === base ? 1 : (Number(rates()[c]) || null));
 
+  // Список валют конвертера (пользователь добавляет/удаляет). По умолчанию —
+  // все доступные валюты, кроме основной.
+  const getList = () => {
+    const s = store.getState().settings;
+    if (Array.isArray(s.convCurrencies)) return s.convCurrencies.filter((c) => c !== base && CURRENCIES[c]);
+    return codes.filter((c) => c !== base);
+  };
+  const setList = (arr) => store.setSetting('convCurrencies', arr);
+
   const body = el('.form');
   const amountInput = el('input.select', { type: 'text', inputmode: 'decimal', value: '1' });
   amountInput.addEventListener('input', () => { amountInput.value = amountInput.value.replace(/[^\d.,]/g, ''); calc(); });
-  const mkSel = (val) => el('select.select', {}, codes.map((c) => el('option', { value: c, selected: c === val }, `${c} · ${CURRENCIES[c].symbol}`)));
-  const fromSel = mkSel(base);
-  const toSel = mkSel(codes.find((c) => c !== base) || base);
+  const fromSel = el('select.select');
+  const toSel = el('select.select');
   const result = el('.conv-result');
   const calc = () => {
     const a = parseFloat(amountInput.value.replace(',', '.')) || 0;
@@ -472,24 +480,57 @@ function openConverter() {
   };
   fromSel.addEventListener('change', calc); toSel.addEventListener('change', calc);
 
-  // Курсы к основной валюте (можно править вручную).
-  const ratesWrap = el('.settings-group');
+  const fillOptions = (sel) => {
+    const prev = sel.value;
+    const opts = [base, ...getList()];
+    clear(sel);
+    for (const c of opts) sel.appendChild(el('option', { value: c }, `${c} · ${CURRENCIES[c].symbol}`));
+    sel.value = opts.includes(prev) ? prev : opts[0];
+  };
+
+  // Курсы к основной валюте (правятся вручную). Каждую валюту можно удалить
+  // свайпом влево, как строку истории.
+  const ratesWrap = el('.trx-group');
   const drawRates = () => {
     clear(ratesWrap);
     const r = rates();
-    for (const c of codes) {
-      if (c === base) continue;
-      const inp = el('input.row-control.num-input', { type: 'text', inputmode: 'decimal', value: r[c] != null ? r[c] : '' });
+    const list = getList();
+    if (!list.length) { ratesWrap.appendChild(el('.mini-empty', { text: '—' })); return; }
+    for (const c of list) {
+      const inp = el('input.conv-rate-input', { type: 'text', inputmode: 'decimal', value: r[c] != null ? r[c] : '', placeholder: '—' });
       inp.addEventListener('change', async () => {
         const next = { ...(store.getState().settings.rates || {}) };
         const v = parseFloat(inp.value.replace(',', '.'));
         if (v > 0) next[c] = v; else delete next[c];
         await store.setSetting('rates', next); calc();
       });
-      ratesWrap.appendChild(settingRow(`1 ${c} = ? ${base}`, inp));
+      const content = el('.conv-rate-row', {}, [
+        el('.conv-rate-cur', { text: `${c} · ${CURRENCIES[c].symbol}` }),
+        inp,
+      ]);
+      ratesWrap.appendChild(swipeDeleteRow(content, async () => {
+        await setList(list.filter((x) => x !== c));
+        redraw();
+      }));
     }
   };
-  drawRates();
+
+  const redraw = () => { fillOptions(fromSel); fillOptions(toSel); drawRates(); calc(); };
+
+  // Добавление валюты — выбор из ещё не добавленных.
+  const openAdd = () => {
+    const remaining = codes.filter((c) => c !== base && !getList().includes(c));
+    if (!remaining.length) { toast('—'); return; }
+    const listEl = el('.trx-group');
+    for (const c of remaining) {
+      listEl.appendChild(el('button.conv-add-row', {
+        type: 'button', text: `${c} · ${CURRENCIES[c].symbol} — ${CURRENCIES[c].name || ''}`.trim(),
+        onClick: async () => { await setList([...getList(), c]); redraw(); pickerModal.close(); },
+      }));
+    }
+    const pickerModal = sheet(t('add_currency'), el('.form', {}, [listEl]));
+  };
+  const addBtn = el('button.btn-upload', { type: 'button', text: '＋ ' + t('add_currency'), onClick: openAdd });
 
   const updateBtn = el('button.btn-upload', {
     type: 'button', text: '🔄 ' + t('update_rates'),
@@ -500,11 +541,12 @@ function openConverter() {
     field(t('amount'), amountInput).row,
     rowCols(field('', fromSel).row, field('', toSel).row),
     result,
-    updateBtn,
     el('.group-caption', { text: t('base_currency') }),
     ratesWrap,
+    addBtn,
+    updateBtn,
   );
-  calc();
+  redraw();
   sheet(t('converter'), body, { full: true });
 }
 

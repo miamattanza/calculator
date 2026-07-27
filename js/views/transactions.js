@@ -488,7 +488,8 @@ export function renderHome(root) {
     for (const trx of list.slice(0, maxRows)) { group.appendChild(renderRow(trx, base)); shown++; }
   }
   if (list.length > shown) {
-    head.appendChild(el('button.mini-more', { type: 'button', text: t('expand_history'), onClick: () => openSearch({ type: scope, title: t('history') }) }));
+    // Кнопка «Развернуть историю» — под последней строкой списка.
+    histWrap.appendChild(el('button.mini-more', { type: 'button', text: t('expand_history'), onClick: () => openSearch({ type: scope, title: t('history') }) }));
   }
 }
 
@@ -537,8 +538,7 @@ export function wrapSwipeRow(content, trx) {
   content.classList.add('swipe-content');
   const del = el('button.swipe-del', { type: 'button', text: t('delete') });
   const noteInput = el('input.swipe-note-input', { type: 'text', placeholder: t('note_ph'), value: trx.note || '' });
-  const saveBtn = el('button.swipe-note-save', { type: 'button', text: '✓' });
-  const comment = el('.swipe-comment', {}, [noteInput, saveBtn]);
+  const comment = el('.swipe-comment', {}, [noteInput]);
   const wrap = el('.swipe-wrap', {}, [comment, del, content]);
 
   const TAIL = 64;   // сколько строки остаётся видно справа, чтобы потянуть обратно
@@ -563,14 +563,18 @@ export function wrapSwipeRow(content, trx) {
   };
   const anim = (on) => { content.style.transition = comment.style.transition = del.style.transition = on || 'none'; };
 
-  const closeFn = () => { openState = 0; anim(EASE); place(0); if (closeOpenSwipe === closeFn) closeOpenSwipe = null; };
+  // Комментарий сохраняется сам при закрытии (обратным свайпом за «хвост»,
+  // тапом по другой строке или Enter) — отдельная кнопка-галочка не нужна.
+  const commitNote = () => {
+    const v = noteInput.value.trim();
+    if (v !== (trx.note || '')) store.saveTransaction({ id: trx.id, note: v });
+  };
+  const closeFn = () => { openState = 0; anim(EASE); place(0); if (document.activeElement === noteInput) noteInput.blur(); commitNote(); if (closeOpenSwipe === closeFn) closeOpenSwipe = null; };
   const openDel = () => { if (closeOpenSwipe && closeOpenSwipe !== closeFn) closeOpenSwipe(); openState = -1; anim(SPRING); place(-DEL_W); closeOpenSwipe = closeFn; };
   const openComment = () => { if (closeOpenSwipe && closeOpenSwipe !== closeFn) closeOpenSwipe(); openState = 1; anim(SPRING); place(COMMENT_W); closeOpenSwipe = closeFn; setTimeout(() => noteInput.focus(), 220); };
 
-  const saveNote = async () => { await store.saveTransaction({ id: trx.id, note: noteInput.value.trim() }); };
   del.addEventListener('click', async (e) => { e.stopPropagation(); if (await confirmDialog(t('confirm_delete'))) await store.deleteTransaction(trx.id); });
-  saveBtn.addEventListener('click', (e) => { e.stopPropagation(); saveNote(); closeFn(); });
-  noteInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { saveNote(); noteInput.blur(); closeFn(); } });
+  noteInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { noteInput.blur(); closeFn(); } });
 
   // Резинка за пределами открытого положения (сопротивление у краёв).
   const clamp = (nx) => {
@@ -627,10 +631,10 @@ export function wrapSwipeRow(content, trx) {
   return wrap;
 }
 
-function dayLabel(iso) {
+export function dayLabel(iso) {
   const today = dateISO();
   const y = dateISO(new Date(Date.now() - 86400000));
   if (iso === today) return t('today');
   if (iso === y) return t('yesterday');
-  return formatDate(iso, { day: 'numeric', month: 'long' });
+  return formatDate(iso, { day: 'numeric', month: 'long', year: 'numeric' });
 }
