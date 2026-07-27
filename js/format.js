@@ -46,6 +46,16 @@ export function signedMoney(amount, currency = 'RUB') {
   return sign + money(Math.abs(n), currency);
 }
 
+// Курс валюты — короткое представление: до десятых для курсов ≥ 1
+// (длинные хвосты после точки не нужны); для мелких курсов сохраняем
+// значимость, чтобы не получить 0.
+export function roundRate(r) {
+  r = Number(r) || 0;
+  if (r <= 0) return 0;
+  if (r >= 1) return Math.round(r * 10) / 10;
+  return Number(r.toPrecision(2));
+}
+
 export function dateISO(d = new Date()) {
   const x = new Date(d);
   const off = x.getTimezoneOffset();

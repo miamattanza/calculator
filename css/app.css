@@ -114,7 +114,7 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 #head-balance {
   display: flex; flex-direction: column; align-items: center; gap: 1px;
   padding: 3px 10px; border: 1px solid var(--sep-strong); border-radius: 10px;
-  line-height: 1.1; margin-inline-end: 12px;
+  line-height: 1.1; margin-inline-end: 8px;
 }
 .hb-label { font-size: 9px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.3px; }
 .hb-value { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -693,7 +693,7 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 .range { width: 100%; accent-color: var(--accent); height: 28px; }
 
 /* ---- Сигнал лимита в шапке ---- */
-#budget-ring { display: flex; align-items: center; justify-content: center; margin-inline-start: 0; margin-inline-end: 12px; padding: 0; background: none; width: 28px; height: 28px; }
+#budget-ring { display: flex; align-items: center; justify-content: center; margin-inline-start: 0; margin-inline-end: 8px; padding: 0; background: none; width: 28px; height: 28px; }
 .budget-ring-svg.over { animation: ringPulse 1s ease-in-out infinite; }
 @keyframes ringPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.86); } }
 /* Отключённое уведомление: «заморожённый» индикатор — приглушён, без пульса. */

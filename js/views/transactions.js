@@ -4,7 +4,7 @@
 import * as store from '../store.js';
 import { t } from '../i18n.js';
 import { el, clear, sheet, field, segmented, toast, confirmDialog, catIcon } from '../dom.js';
-import { money, signedMoney, formatDate, dateISO, CURRENCIES } from '../format.js';
+import { money, signedMoney, formatDate, dateISO, CURRENCIES, roundRate } from '../format.js';
 import { openSearch } from './search.js';
 import { openCategoryEditor } from './settings.js';
 
@@ -35,11 +35,15 @@ export function openTransactionForm(existing) {
     model.amount = amountInput.value;
   });
 
+  // Символ валюты рядом с суммой — валюты операции (не основной).
+  const curSymbol = (code) => (CURRENCIES[code] && CURRENCIES[code].symbol) || code;
+  const amountCur = el('.amount-cur', { text: curSymbol(model.currency) });
+
   // Валюта + курс
   const currencySelect = el('select.select', {}, Object.keys(CURRENCIES).map((code) =>
     el('option', { value: code, selected: code === model.currency }, `${code} ${CURRENCIES[code].symbol}`)));
   const rateField = field(t('rate_to_base', { base }), el('input.select', {
-    type: 'text', inputmode: 'decimal', value: model.rate,
+    type: 'text', inputmode: 'decimal', value: model.currency === base ? '' : roundRate(model.rate),
   }));
   rateField.input.addEventListener('input', () => {
     rateField.input.value = rateField.input.value.replace(/[^\d.,]/g, '').replace(',', '.');
@@ -50,8 +54,9 @@ export function openTransactionForm(existing) {
   }
   currencySelect.addEventListener('change', () => {
     model.currency = currencySelect.value;
+    amountCur.textContent = curSymbol(model.currency);
     if (model.currency === base) { model.rate = 1; rateField.input.value = 1; }
-    else { const r = store.rateToBase(model.currency); if (r) { model.rate = r; rateField.input.value = r; } }
+    else { const r = store.rateToBase(model.currency); if (r) { model.rate = roundRate(r); rateField.input.value = roundRate(r); } }
     syncRateVisibility();
   });
 
@@ -90,8 +95,10 @@ export function openTransactionForm(existing) {
   const saveBtn = el('button.btn-primary', { type: 'button', text: t('save') });
 
   body.append(
-    field(t('type'), typeSeg).row,
-    el('.amount-wrap', {}, [amountInput, el('.amount-cur', { text: CURRENCIES[base].symbol })]),
+    // Тип показываем только при создании; при редактировании тип операции
+    // фиксирован (расход остаётся расходом, доход — доходом).
+    ...(existing ? [] : [field(t('type'), typeSeg).row]),
+    el('.amount-wrap', {}, [amountInput, amountCur]),
     field(t('category'), catGrid).row,
     field(t('currency'), currencySelect).row,
     rateField.row,
@@ -293,37 +300,6 @@ function attachLongPress(node, { onTap, onLong }) {
   node.addEventListener('mouseleave', finish);
 }
 
-// Всплывающий выбор валюты для категории — рядом с самой категорией.
-function openCurrencyPopover(cat, anchor) {
-  const base = store.baseCurrency();
-  const cur = cat.currency || base;
-  const backdrop = el('.pop-backdrop');
-  const menu = el('.currency-pop');
-  for (const code of Object.keys(CURRENCIES)) {
-    // Валюту с курсом (или основную) можно выбрать; без курса — заблокирована,
-    // курс задаётся в конвертере.
-    const rated = code === base || store.rateToBase(code) != null;
-    menu.appendChild(el('button.cur-opt', {
-      type: 'button', class: (code === cur ? 'active' : '') + (rated ? '' : ' disabled'),
-      onClick: async () => {
-        if (!rated) { toast(t('rate_needed')); return; }
-        await store.saveCategory({ id: cat.id, currency: code === base ? null : code }); close();
-      },
-    }, `${CURRENCIES[code].symbol}  ${code}`));
-  }
-  backdrop.appendChild(menu);
-  document.body.appendChild(backdrop);
-  const r = anchor.getBoundingClientRect();
-  const mw = 150;
-  menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - mw - 8)) + 'px';
-  const below = r.bottom + 6;
-  if (below + 240 > window.innerHeight) menu.style.top = Math.max(8, r.top - 244) + 'px';
-  else menu.style.top = below + 'px';
-  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
-  requestAnimationFrame(() => backdrop.classList.add('open'));
-  function close() { backdrop.classList.remove('open'); setTimeout(() => backdrop.remove(), 180); }
-}
-
 export function renderHome(root) {
   clear(root);
   root.classList.remove('fit-mode');
@@ -419,8 +395,9 @@ export function renderHome(root) {
           ? el('.cat-cur', { text: (CURRENCIES[c.currency] && CURRENCIES[c.currency].symbol) || c.currency }) : null;
         const chip = el('button.cat-chip', { type: 'button', style: { '--chip': c.color } },
           [catIcon(c), el('.cat-name', { text: store.categoryName(c) }), badge]);
-        // Тап — записать операцию; долгое нажатие — выбрать валюту категории.
-        attachLongPress(chip, { onTap: () => commit(c.id), onLong: () => openCurrencyPopover(c, chip) });
+        // Тап — записать операцию; долгое нажатие — редактировать категорию
+        // (название и иконка).
+        attachLongPress(chip, { onTap: () => commit(c.id), onLong: () => openCategoryEditor(c, () => {}) });
         grid.appendChild(chip);
       } else {
         grid.appendChild(el('button.cat-chip.cat-add', { type: 'button', 'aria-label': t('add_category'), onClick: openAdd }, [el('.cat-add-plus', { text: '+' })]));

@@ -4,7 +4,7 @@
 import * as store from '../store.js';
 import { t, availableLangs, LANG_NAMES } from '../i18n.js';
 import { el, clear, sheet, field, toast, confirmDialog, toggle, catIcon, rowCols, swipeDeleteRow } from '../dom.js';
-import { CURRENCIES } from '../format.js';
+import { CURRENCIES, roundRate } from '../format.js';
 import { APP_VERSION } from '../models.js';
 
 
@@ -494,7 +494,7 @@ async function fetchRates(base, onOk, onErr) {
     for (const code of Object.keys(CURRENCIES)) {
       if (code === base) { rates[code] = 1; continue; }
       const perBase = j.rates[code];
-      if (perBase) rates[code] = 1 / perBase; // 1 <code> = 1/perBase базовой
+      if (perBase) rates[code] = roundRate(1 / perBase); // 1 <code> = 1/perBase базовой (до десятых)
     }
     await store.setSetting('rates', rates);
     onOk();
@@ -549,11 +549,11 @@ function openConverter() {
     const list = getList();
     if (!list.length) { ratesWrap.appendChild(el('.mini-empty', { text: '—' })); return; }
     for (const c of list) {
-      const inp = el('input.conv-rate-input', { type: 'text', inputmode: 'decimal', value: r[c] != null ? r[c] : '', placeholder: '—' });
+      const inp = el('input.conv-rate-input', { type: 'text', inputmode: 'decimal', value: r[c] != null ? roundRate(r[c]) : '', placeholder: '—' });
       inp.addEventListener('change', async () => {
         const next = { ...(store.getState().settings.rates || {}) };
         const v = parseFloat(inp.value.replace(',', '.'));
-        if (v > 0) next[c] = v; else delete next[c];
+        if (v > 0) { const rr = roundRate(v); next[c] = rr; inp.value = rr; } else delete next[c];
         await store.setSetting('rates', next); calc();
       });
       const content = el('.conv-rate-row', {}, [
