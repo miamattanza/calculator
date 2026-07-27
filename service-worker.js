@@ -1,7 +1,7 @@
 // service-worker.js — офлайн-кэш «оболочки приложения».
 // При обновлении кода увеличивайте CACHE_VERSION, чтобы обновить кэш.
 
-const CACHE_VERSION = 'fintracker-v27';
+const CACHE_VERSION = 'fintracker-v28';
 const APP_SHELL = [
   './',
   './index.html',
@@ -31,7 +31,12 @@ const APP_SHELL = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_VERSION)
-      .then((cache) => cache.addAll(APP_SHELL))
+      // {cache:'reload'} — тянем свежие файлы в обход HTTP-кэша браузера,
+      // иначе в новый кэш мог попасть старый JS (и версия «зависала»).
+      .then((cache) => Promise.all(APP_SHELL.map((url) =>
+        fetch(new Request(url, { cache: 'reload' }))
+          .then((res) => (res && res.ok ? cache.put(url, res) : null))
+          .catch(() => null))))
       .then(() => self.skipWaiting())
   );
 });
@@ -50,15 +55,24 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  // Навигационные запросы: сеть → кэш → index.html (SPA-фолбэк).
-  if (req.mode === 'navigate') {
+  // Код приложения (навигация + html/js/css/manifest) — «сеть в приоритете»:
+  // когда есть интернет, всегда берём свежую версию (иначе версия «зависала»
+  // на старом кэше); офлайн — из кэша, для навигации фолбэк на index.html.
+  const isCode = req.mode === 'navigate' || /\.(?:html|js|css|webmanifest)$/.test(url.pathname);
+  if (isCode) {
     event.respondWith(
-      fetch(req).catch(() => caches.match(req).then((r) => r || caches.match('./index.html')))
+      fetch(req).then((res) => {
+        if (res && res.status === 200 && res.type === 'basic') {
+          const clone = res.clone();
+          caches.open(CACHE_VERSION).then((cache) => cache.put(req, clone));
+        }
+        return res;
+      }).catch(() => caches.match(req).then((r) => r || caches.match('./index.html')))
     );
     return;
   }
 
-  // Остальное: cache-first с дозаписью в кэш.
+  // Остальное (иконки/картинки): cache-first с дозаписью в кэш.
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached;

@@ -179,7 +179,20 @@ async function main() {
 
   // Service Worker для офлайн-работы и установки на домашний экран.
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+    // Когда новая версия SW берёт управление — перезагружаем страницу, чтобы
+    // подхватить свежий код (иначе номер версии/правки могли «зависать» на
+    // старом кэше). Только если раньше уже был контроллер — на первом запуске
+    // лишней перезагрузки не будет.
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || reloading) return;
+      reloading = true;
+      window.location.reload();
+    });
+    navigator.serviceWorker.register('./service-worker.js')
+      .then((reg) => { if (reg.update) reg.update(); })
+      .catch(() => {});
   }
 }
 
