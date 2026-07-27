@@ -31,11 +31,16 @@ export function renderSettings(root, rerenderApp) {
   });
 
   // Текущая («ходовая») валюта — в ней записываются новые операции (напр. в
-  // поездке). По умолчанию совпадает с основной.
-  const curNow = s.currentCurrency || s.baseCurrency;
+  // поездке). Выбрать можно только валюту с заданным курсом (курс — в
+  // конвертере), иначе суммы считались бы 1:1. По умолчанию — основная.
+  const curNowRaw = s.currentCurrency || s.baseCurrency;
+  const isRated = (code) => code === s.baseCurrency || store.rateToBase(code) != null;
+  const curNow = isRated(curNowRaw) ? curNowRaw : s.baseCurrency;
   const curNowSelect = el('select.row-control', {}, Object.keys(CURRENCIES).map((code) =>
-    el('option', { value: code, selected: code === curNow }, `${code} · ${CURRENCIES[code].symbol}`)));
+    el('option', { value: code, selected: code === curNow, disabled: !isRated(code) },
+      `${code} · ${CURRENCIES[code].symbol}`)));
   curNowSelect.addEventListener('change', async () => {
+    if (!isRated(curNowSelect.value)) { curNowSelect.value = curNow; toast(t('rate_needed')); return; }
     await store.setSetting('currentCurrency', curNowSelect.value);
     rerenderApp();
   });
@@ -71,6 +76,8 @@ export function renderSettings(root, rerenderApp) {
   const curGroup = el('.settings-group', {}, [
     settingRow(t('base_currency'), curSelect),
     settingRow(t('current_currency'), curNowSelect),
+    el('.setting-hint', { text: t('current_currency_hint') }),
+    navRow('💱', t('converter'), () => openConverter()),
     settingRow(t('convert_all'), convToggle),
     el('.setting-hint', { text: t('convert_all_hint') }),
   ]);
@@ -112,10 +119,9 @@ export function renderSettings(root, rerenderApp) {
   root.appendChild(el('.group-caption', { text: t('background') }));
   root.appendChild(el('.settings-group', {}, [el('.bg-picker-wrap', {}, [buildBackgroundPicker(s)])]));
 
-  // Категории + конвертер валют
+  // Категории
   root.appendChild(el('.settings-group', {}, [
     navRow('🏷', t('categories_manage'), () => openCategoriesManager()),
-    navRow('💱', t('converter'), () => openConverter()),
   ]));
 
   // Данные

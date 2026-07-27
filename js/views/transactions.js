@@ -288,9 +288,15 @@ function openCurrencyPopover(cat, anchor) {
   const backdrop = el('.pop-backdrop');
   const menu = el('.currency-pop');
   for (const code of Object.keys(CURRENCIES)) {
+    // Валюту с курсом (или основную) можно выбрать; без курса — заблокирована,
+    // курс задаётся в конвертере.
+    const rated = code === base || store.rateToBase(code) != null;
     menu.appendChild(el('button.cur-opt', {
-      type: 'button', class: code === cur ? 'active' : '',
-      onClick: async () => { await store.saveCategory({ id: cat.id, currency: code === base ? null : code }); close(); },
+      type: 'button', class: (code === cur ? 'active' : '') + (rated ? '' : ' disabled'),
+      onClick: async () => {
+        if (!rated) { toast(t('rate_needed')); return; }
+        await store.saveCategory({ id: cat.id, currency: code === base ? null : code }); close();
+      },
     }, `${CURRENCIES[code].symbol}  ${code}`));
   }
   backdrop.appendChild(menu);
@@ -370,8 +376,11 @@ export function renderHome(root) {
     entryDigits = '';
     const cat = store.categoryById(categoryId);
     // Валюта операции: своя у категории, иначе — текущая («ходовая»).
-    const cur = (cat && cat.currency) || store.currentCurrency();
-    const rate = store.rateToBase(cur) || 1; // курс к основной на момент записи
+    let cur = (cat && cat.currency) || store.currentCurrency();
+    let rate = store.rateToBase(cur);
+    // Защита: без известного курса не записываем в чужой валюте (иначе 1:1 —
+    // доллары превратились бы в рубли). Пишем в основной валюте.
+    if (rate == null) { cur = base; rate = 1; }
     await store.saveTransaction({ type: homeMode, amount: v, currency: cur, rate, categoryId, date: dateISO(), note: '' });
     // saveTransaction → подписка → renderHome (табло сбрасывается, история обновляется)
   };
