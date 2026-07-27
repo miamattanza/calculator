@@ -3,17 +3,49 @@
 import { getLang } from './i18n.js';
 
 // Поддерживаемые валюты. Курсы к базовой валюте хранятся у операций,
-// здесь только метаданные для отображения.
+// здесь только метаданные для отображения. Коды — ISO 4217 (их же понимает
+// онлайн-сервис курсов), поэтому список можно свободно расширять.
 export const CURRENCIES = {
+  // Основные мировые
   RUB: { symbol: '₽', name: 'Рубль' },
   USD: { symbol: '$', name: 'Доллар США' },
   EUR: { symbol: '€', name: 'Евро' },
+  GBP: { symbol: '£', name: 'Фунт стерлингов' },
+  CNY: { symbol: '¥', name: 'Юань' },
+  JPY: { symbol: '¥', name: 'Иена' },
+  CHF: { symbol: '₣', name: 'Швейцарский франк' },
+  // СНГ / ЕАЭС
   KZT: { symbol: '₸', name: 'Тенге' },
   UAH: { symbol: '₴', name: 'Гривна' },
-  GBP: { symbol: '£', name: 'Фунт' },
-  CNY: { symbol: '¥', name: 'Юань' },
-  TRY: { symbol: '₺', name: 'Лира' },
+  BYN: { symbol: 'Br', name: 'Белорусский рубль' },
   GEL: { symbol: '₾', name: 'Лари' },
+  AMD: { symbol: '֏', name: 'Драм' },
+  AZN: { symbol: '₼', name: 'Азербайджанский манат' },
+  KGS: { symbol: 'с', name: 'Киргизский сом' },
+  TJS: { symbol: 'смн', name: 'Сомони' },
+  UZS: { symbol: 'сўм', name: 'Узбекский сум' },
+  MDL: { symbol: 'L', name: 'Молдавский лей' },
+  TMT: { symbol: 'm', name: 'Туркменский манат' },
+  // Азия / Ближний Восток
+  TRY: { symbol: '₺', name: 'Турецкая лира' },
+  AED: { symbol: 'د.إ', name: 'Дирхам ОАЭ' },
+  INR: { symbol: '₹', name: 'Индийская рупия' },
+  IDR: { symbol: 'Rp', name: 'Индонезийская рупия' },
+  THB: { symbol: '฿', name: 'Тайский бат' },
+  VND: { symbol: '₫', name: 'Вьетнамский донг' },
+  KRW: { symbol: '₩', name: 'Корейская вона' },
+  HKD: { symbol: 'HK$', name: 'Гонконгский доллар' },
+  SGD: { symbol: 'S$', name: 'Сингапурский доллар' },
+  MYR: { symbol: 'RM', name: 'Малайзийский ринггит' },
+  PHP: { symbol: '₱', name: 'Филиппинское песо' },
+  ILS: { symbol: '₪', name: 'Шекель' },
+  EGP: { symbol: 'E£', name: 'Египетский фунт' },
+  // Европа / прочее
+  PLN: { symbol: 'zł', name: 'Злотый' },
+  CZK: { symbol: 'Kč', name: 'Чешская крона' },
+  RSD: { symbol: 'дин', name: 'Сербский динар' },
+  CAD: { symbol: 'C$', name: 'Канадский доллар' },
+  AUD: { symbol: 'A$', name: 'Австралийский доллар' },
 };
 
 const LOCALE = { ru: 'ru-RU', en: 'en-US' };
