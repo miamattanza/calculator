@@ -6,7 +6,7 @@ import { t } from '../i18n.js';
 import { el, clear, sheet, field, segmented, toast, confirmDialog, catIcon } from '../dom.js';
 import { money, signedMoney, formatDate, dateISO, CURRENCIES, roundRate, locale } from '../format.js';
 import { openSearch } from './search.js';
-import { openCategoryEditor } from './settings.js';
+import { openCategoryEditor, openConverter } from './settings.js';
 
 // ---- Форма операции (переиспользуемая) ----
 
@@ -76,7 +76,7 @@ export function openTransactionForm(existing) {
           catGrid.querySelectorAll('.cat-chip').forEach((x) => x.classList.remove('active'));
           chip.classList.add('active');
         },
-      }, [el('.cat-emoji', { text: c.icon }), el('.cat-name', { text: store.categoryName(c) })]);
+      }, [catIcon(c), el('.cat-name', { text: store.categoryName(c) })]);
       catGrid.appendChild(chip);
     }
   }
@@ -286,6 +286,32 @@ function budgetRingSvg(ratio, muted) {
   return svg;
 }
 
+// Долгое нажатие (hold) на кнопку: короткий тап → onTap, удержание → onHold.
+// Порог 350 мс; сдвиг пальца отменяет. Используется на клавише «.» (конвертер).
+function attachHold(btn, onTap, onHold) {
+  let timer = null, held = false, sx = 0, sy = 0, moved = false;
+  const begin = (x, y) => {
+    sx = x; sy = y; moved = false; held = false;
+    timer = setTimeout(() => {
+      held = true;
+      if (navigator.vibrate) { try { navigator.vibrate(10); } catch (e) {} }
+      onHold();
+    }, 350);
+  };
+  const track = (x, y) => { if (!moved && (Math.abs(x - sx) > 10 || Math.abs(y - sy) > 10)) { moved = true; clearTimeout(timer); } };
+  const finish = () => { clearTimeout(timer); if (!held && !moved) onTap(); };
+  btn.addEventListener('touchstart', (e) => { const p = e.changedTouches[0]; begin(p.clientX, p.clientY); }, { passive: true });
+  btn.addEventListener('touchmove', (e) => { const p = e.changedTouches[0]; track(p.clientX, p.clientY); }, { passive: true });
+  btn.addEventListener('touchend', finish, { passive: true });
+  btn.addEventListener('touchcancel', () => clearTimeout(timer), { passive: true });
+  btn.addEventListener('mousedown', (e) => {
+    begin(e.clientX, e.clientY);
+    const mm = (ev) => track(ev.clientX, ev.clientY);
+    const mu = () => { finish(); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
+    window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);
+  });
+}
+
 export function renderHome(root) {
   clear(root);
   root.classList.remove('fit-mode');
@@ -306,6 +332,9 @@ export function renderHome(root) {
       el('.hb-label', { text: t('balance') }),
       el('.hb-value', { text: money(Math.round(store.currentBalance()), base) }),
     );
+    // Тап по балансу → «Аналитика» (быстрый доступ к статистике из шапки).
+    headBalance.classList.add('tappable');
+    headBalance.onclick = () => document.dispatchEvent(new CustomEvent('go-section', { detail: 'analytics' }));
   }
 
   // Сигнал лимита: круг-индикатор между меткой окна и балансом. Оранжевый ≥80%,
@@ -364,7 +393,12 @@ export function renderHome(root) {
   const del = () => { entryDigits = entryDigits.slice(0, -1); renderAmount(); };
   ['1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach((n) =>
     keypad.appendChild(el('button.key', { type: 'button', text: n, onClick: () => pressDigit(n) })));
-  keypad.appendChild(el('button.key.key-dot', { type: 'button', text: '.', onClick: pressDot }));
+  // Клавиша «.»: короткий тап — десятичная точка; долгое нажатие — конвертер
+  // валют. Значок ⇄ в углу подсказывает, что у кнопки есть второе действие.
+  const dotKey = el('button.key.key-dot', { type: 'button', text: '.', 'aria-label': '.' });
+  dotKey.appendChild(el('.key-dot-badge', { text: '⇄', 'aria-hidden': 'true' }));
+  attachHold(dotKey, pressDot, () => openConverter());
+  keypad.appendChild(dotKey);
   keypad.appendChild(el('button.key.key-zero', { type: 'button', text: '0', onClick: () => pressDigit('0') }));
   keypad.appendChild(el('button.key.key-del', { type: 'button', text: '⌫', 'aria-label': t('delete'), onClick: del }));
 
@@ -400,6 +434,14 @@ export function renderHome(root) {
   // тащим на место другой — они меняются местами). Пока карточка «взята»,
   // карусель категорий не листается (dragActive). Короткий тап — запись.
   let dragActive = false;
+  // Визуальное сопровождение режима перемещения: затемнение экрана (кроме самих
+  // категорий) + лёгкая «дрожь» остальных плиток, как в режиме редактирования
+  // домашнего экрана iOS. Вибро — при старте (работает на Android; на iOS
+  // Vibration API недоступен).
+  const reorderDim = el('.reorder-dim');
+  pager.appendChild(reorderDim);
+  const enterReorder = () => { document.body.classList.add('reordering'); requestAnimationFrame(() => reorderDim.classList.add('on')); };
+  const exitReorder = () => { document.body.classList.remove('reordering'); reorderDim.classList.remove('on'); };
   const attachChipDrag = (chip, cat) => {
     chip.dataset.catId = cat.id;
     let timer = null, sx = 0, sy = 0, moved = false, dragging = false, longFired = false;
@@ -409,7 +451,7 @@ export function renderHome(root) {
       const c = e && e.closest && e.closest('.cat-chip');
       return (c && c !== chip && !c.classList.contains('cat-add') && c.dataset.catId) ? c : null;
     };
-    const startDrag = () => { dragging = true; dragActive = true; longFired = true; chip.classList.add('dragging'); if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} } };
+    const startDrag = () => { dragging = true; dragActive = true; longFired = true; chip.classList.add('dragging'); enterReorder(); if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} } };
     const down = (x, y) => { sx = x; sy = y; moved = false; dragging = false; longFired = false; timer = setTimeout(startDrag, 350); };
     const move = (x, y, e) => {
       if (!dragging) { if (Math.abs(x - sx) > 10 || Math.abs(y - sy) > 10) { moved = true; clearTimeout(timer); } return; }
@@ -422,6 +464,7 @@ export function renderHome(root) {
       if (dragging) {
         const tg = targetAt(x, y);
         chip.classList.remove('dragging'); chip.style.transform = ''; clearTargets();
+        exitReorder();
         dragging = false; setTimeout(() => { dragActive = false; }, 60);
         if (tg) store.reorderCategorySwap(homeMode, cat.id, tg.dataset.catId);
         return;

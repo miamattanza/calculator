@@ -616,7 +616,7 @@ function openRateDialog(code, onDone) {
   setTimeout(() => input.focus(), 250);
 }
 
-function openConverter() {
+export function openConverter() {
   const base = store.baseCurrency();
   const codes = Object.keys(CURRENCIES);
   const rates = () => { const r = { ...(store.getState().settings.rates || {}) }; r[base] = 1; return r; };

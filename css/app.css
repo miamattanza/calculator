@@ -139,6 +139,8 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 }
 .hb-label { font-size: 9px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.3px; }
 .hb-value { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+#head-balance.tappable { cursor: pointer; }
+#head-balance.tappable:active { background: var(--fill); transform: scale(0.97); }
 #header #mode-label { text-transform: uppercase; }
 #settings-btn { width: 38px; height: 38px; border-radius: 10px; background: var(--fill); display: flex; align-items: center; justify-content: center; font-size: 18px; }
 #settings-btn:active { background: var(--fill-2); }
@@ -166,7 +168,10 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
   transition: background .1s, transform .08s;
 }
 .entry-keypad .key:active { background: var(--fill-2); transform: scale(0.96); }
-.entry-keypad .key-dot { font-weight: 700; }
+.entry-keypad .key-dot { font-weight: 700; position: relative; }
+/* Значок второго действия («⇄» → конвертер по долгому нажатию): мелкий, в углу,
+   приглушённый — подсказывает мультиактивность, не мешая точке по центру. */
+.key-dot-badge { position: absolute; top: 7px; inset-inline-end: 11px; font-size: 12px; font-weight: 600; opacity: 0.4; line-height: 1; pointer-events: none; }
 .entry-keypad .key-del { background: transparent; font-size: 22px; }
 
 .cat-pager { margin-top: 14px; }
@@ -415,7 +420,20 @@ select.select { appearance: none; -webkit-appearance: none; }
 .cat-chip.disabled { opacity: 0.35; }
 /* Перетаскивание порядка иконок */
 .cat-chip.dragging { z-index: 30; transition: none !important; box-shadow: 0 8px 24px rgba(0,0,0,0.28); opacity: 0.96; pointer-events: none; }
-.cat-chip.drop-target { box-shadow: inset 0 0 0 2px var(--accent); background: var(--fill-2); }
+.cat-chip.drop-target .cat-emoji { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--accent); }
+
+/* ---- Режим перемещения категорий (долгое нажатие) ---- */
+/* Затемнение экрана поверх остального; сами категории поднимаем над ним, чтобы
+   они оставались в фокусе и «дрожали». */
+.reorder-dim { position: fixed; inset: 0; background: rgba(0,0,0,0.22); z-index: 40; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.reorder-dim.on { opacity: 1; }
+body.reordering .cat-pager { position: relative; z-index: 45; }
+/* Лёгкая «дрожь» соседних плиток (два противофазных набора — органичнее). */
+@keyframes chip-jiggle-a { 0%,100% { transform: rotate(-1.6deg); } 50% { transform: rotate(1.4deg); } }
+@keyframes chip-jiggle-b { 0%,100% { transform: rotate(1.5deg); } 50% { transform: rotate(-1.5deg); } }
+body.reordering .cat-page .cat-chip:not(.dragging):not(.cat-add) { animation: chip-jiggle-a .3s ease-in-out infinite; }
+body.reordering .cat-page .cat-chip:nth-child(odd):not(.dragging):not(.cat-add) { animation: chip-jiggle-b .34s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { body.reordering .cat-page .cat-chip { animation: none !important; } }
 .cat-emoji { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 19px; background: color-mix(in srgb, var(--chip, #726B65) 32%, transparent); overflow: hidden; }
 /* Иконка-плитка категории: цветной квадрат + белая иконка из SVG-спрайта.
    Плитка встречается в разных местах (чип, строка истории, менеджер, превью,
