@@ -1,7 +1,7 @@
 // service-worker.js — офлайн-кэш «оболочки приложения».
 // При обновлении кода увеличивайте CACHE_VERSION, чтобы обновить кэш.
 
-const CACHE_VERSION = 'fintracker-v29';
+const CACHE_VERSION = 'fintracker-v30';
 const APP_SHELL = [
   './',
   './index.html',
@@ -27,16 +27,6 @@ const APP_SHELL = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png',
-  // Иконки стандартных категорий расходов — чтобы «Обзор» работал офлайн.
-  './icons/categories/groceries.png',
-  './icons/categories/cafe-restaurants.png',
-  './icons/categories/public-transport.png',
-  './icons/categories/rent-mortgage.png',
-  './icons/categories/doctors-diagnostics.png',
-  './icons/categories/cinema-theatre-concerts.png',
-  './icons/categories/clothing-shoes.png',
-  './icons/categories/internet-tv.png',
-  './icons/categories/miscellaneous.png',
 ];
 
 self.addEventListener('install', (event) => {

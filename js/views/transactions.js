@@ -4,7 +4,7 @@
 import * as store from '../store.js';
 import { t } from '../i18n.js';
 import { el, clear, sheet, field, segmented, toast, confirmDialog, catIcon } from '../dom.js';
-import { money, signedMoney, formatDate, dateISO, CURRENCIES, roundRate } from '../format.js';
+import { money, signedMoney, formatDate, dateISO, CURRENCIES, roundRate, locale } from '../format.js';
 import { openSearch } from './search.js';
 import { openCategoryEditor } from './settings.js';
 
@@ -330,23 +330,45 @@ export function renderHome(root) {
   // --- Табло суммы ---
   const amountEl = el('.entry-amount');
   const entryCur = store.currentCurrency(); // ввод — в текущей («ходовой») валюте
+  const curSym = (CURRENCIES[entryCur] && CURRENCIES[entryCur].symbol) || entryCur;
+  const decSep = () => (1.1).toLocaleString(locale()).replace(/[0-9]/g, '') || '.';
   const renderAmount = () => {
-    const v = entryDigits ? parseInt(entryDigits, 10) : 0;
-    amountEl.textContent = money(v, entryCur);
-    amountEl.classList.toggle('zero', v <= 0);
+    let disp;
+    if (!entryDigits) {
+      disp = '0';
+    } else {
+      const [ip, fp] = entryDigits.split('.');
+      const s = (parseInt(ip || '0', 10) || 0).toLocaleString(locale());
+      disp = entryDigits.indexOf('.') >= 0 ? s + decSep() + (fp || '') : s;
+    }
+    amountEl.textContent = disp + ' ' + curSym;
+    amountEl.classList.toggle('zero', (parseFloat(entryDigits) || 0) <= 0);
   };
 
-  // --- Клавиатура (без подтверждения — запись по тапу на категорию) ---
+  // --- Клавиатура (без подтверждения — запись по тапу на категорию).
+  // Точка «.» слева от нуля — для дробных сумм (до 2 знаков после точки). ---
   const keypad = el('.entry-keypad');
-  const pressDigit = (d) => { if (entryDigits.length < 12) { entryDigits = (entryDigits === '0' ? '' : entryDigits) + d; renderAmount(); } };
+  const pressDigit = (d) => {
+    const dot = entryDigits.indexOf('.');
+    if (dot >= 0 && entryDigits.length - dot - 1 >= 2) return;   // максимум 2 знака после точки
+    if (entryDigits.replace('.', '').length >= 12) return;
+    entryDigits = (entryDigits === '0' ? '' : entryDigits) + d;
+    renderAmount();
+  };
+  const pressDot = () => {
+    if (entryDigits.indexOf('.') >= 0) return;
+    entryDigits = (entryDigits === '' ? '0' : entryDigits) + '.';
+    renderAmount();
+  };
   const del = () => { entryDigits = entryDigits.slice(0, -1); renderAmount(); };
   ['1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach((n) =>
     keypad.appendChild(el('button.key', { type: 'button', text: n, onClick: () => pressDigit(n) })));
+  keypad.appendChild(el('button.key.key-dot', { type: 'button', text: '.', onClick: pressDot }));
   keypad.appendChild(el('button.key.key-zero', { type: 'button', text: '0', onClick: () => pressDigit('0') }));
   keypad.appendChild(el('button.key.key-del', { type: 'button', text: '⌫', 'aria-label': t('delete'), onClick: del }));
 
   const commit = async (categoryId) => {
-    const v = entryDigits ? parseInt(entryDigits, 10) : 0;
+    const v = entryDigits ? (parseFloat(entryDigits) || 0) : 0;
     if (v <= 0) { amountEl.classList.add('shake'); setTimeout(() => amountEl.classList.remove('shake'), 400); return; }
     entryDigits = '';
     const cat = store.categoryById(categoryId);

@@ -1,6 +1,6 @@
 // models.js — фабрики сущностей и данные по умолчанию.
 
-export const APP_VERSION = '1.30';
+export const APP_VERSION = '1.31';
 
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -10,32 +10,17 @@ export function uid() {
 // icon — эмодзи (нативно рендерится на iOS), color — акцент.
 // key — стабильный идентификатор для перевода имени (см. i18n «cat_<key>»).
 // У пользовательских категорий key отсутствует — показывается их имя как есть.
-// Соответствие стандартных категорий расходов новым встроенным иконкам
-// (файлы icons/categories/<icon>.png). Доходы пока на эмодзи.
-export const DEFAULT_ICON_MAP = {
-  groceries: 'groceries',
-  cafe: 'cafe-restaurants',
-  transport: 'public-transport',
-  housing: 'rent-mortgage',
-  health: 'doctors-diagnostics',
-  entertainment: 'cinema-theatre-concerts',
-  shopping: 'clothing-shoes',
-  communication: 'internet-tv',
-  other: 'miscellaneous',
-};
-const catImg = (iconKey) => 'icons/categories/' + iconKey + '.png';
-
 export const DEFAULT_CATEGORIES = [
-  // Расходы (иконки — из нового набора)
-  { key: 'groceries',     name: 'Продукты',    type: 'expense', icon: '🛒', color: '#34C759', image: catImg('groceries') },
-  { key: 'cafe',          name: 'Кафе',        type: 'expense', icon: '☕️', color: '#FF9500', image: catImg('cafe-restaurants') },
-  { key: 'transport',     name: 'Транспорт',   type: 'expense', icon: '🚕', color: '#5AC8FA', image: catImg('public-transport') },
-  { key: 'housing',       name: 'Жильё',       type: 'expense', icon: '🏠', color: '#AF52DE', image: catImg('rent-mortgage') },
-  { key: 'health',        name: 'Здоровье',    type: 'expense', icon: '💊', color: '#FF2D55', image: catImg('doctors-diagnostics') },
-  { key: 'entertainment', name: 'Развлечения', type: 'expense', icon: '🎬', color: '#FF375F', image: catImg('cinema-theatre-concerts') },
-  { key: 'shopping',      name: 'Покупки',     type: 'expense', icon: '🛍', color: '#BF5AF2', image: catImg('clothing-shoes') },
-  { key: 'communication', name: 'Связь',       type: 'expense', icon: '📱', color: '#64D2FF', image: catImg('internet-tv') },
-  { key: 'other',         name: 'Прочее',      type: 'expense', icon: '🔖', color: '#8E8E93', image: catImg('miscellaneous') },
+  // Расходы (эмодзи)
+  { key: 'groceries',     name: 'Продукты',    type: 'expense', icon: '🛒', color: '#34C759' },
+  { key: 'cafe',          name: 'Кафе',        type: 'expense', icon: '☕️', color: '#FF9500' },
+  { key: 'transport',     name: 'Транспорт',   type: 'expense', icon: '🚕', color: '#5AC8FA' },
+  { key: 'housing',       name: 'Жильё',       type: 'expense', icon: '🏠', color: '#AF52DE' },
+  { key: 'health',        name: 'Здоровье',    type: 'expense', icon: '💊', color: '#FF2D55' },
+  { key: 'entertainment', name: 'Развлечения', type: 'expense', icon: '🎬', color: '#FF375F' },
+  { key: 'shopping',      name: 'Покупки',     type: 'expense', icon: '🛍', color: '#BF5AF2' },
+  { key: 'communication', name: 'Связь',       type: 'expense', icon: '📱', color: '#64D2FF' },
+  { key: 'other',         name: 'Прочее',      type: 'expense', icon: '🔖', color: '#8E8E93' },
   // Доходы
   { key: 'salary',        name: 'Зарплата',    type: 'income',  icon: '💼', color: '#34C759' },
   { key: 'sidejob',       name: 'Подработка',  type: 'income',  icon: '🧾', color: '#30D158' },

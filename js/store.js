@@ -7,10 +7,10 @@ import { db } from './db.js';
 import { setLang, t } from './i18n.js';
 import { dateISO, monthKey, addDays, daysBetween, CURRENCIES } from './format.js';
 import {
-  DEFAULT_CATEGORIES, DEFAULT_SETTINGS, DEFAULT_ICON_MAP, makeCategory,
+  DEFAULT_CATEGORIES, DEFAULT_SETTINGS, makeCategory,
   makeTransaction, makePlanned, makeBudget, makeGoal,
 } from './models.js';
-import { categoryIconPath, isBuiltinIcon } from './icons.js';
+import { isBuiltinIcon } from './icons.js';
 
 const state = {
   transactions: [],
@@ -67,20 +67,16 @@ export async function init() {
   }
   if (migrated.length) await db.bulkPut('categories', migrated);
 
-  // Миграция иконок (один раз): у стандартных категорий расходов проставляем
-  // новые встроенные иконки. Не трогаем те, где пользователь загрузил свою
-  // картинку.
-  if (!state.settings.iconsV1) {
+  // Откат новых иконок: убираем встроенные картинки у категорий, чтобы снова
+  // показывались эмодзи. Загруженные пользователем картинки (dataURL) не
+  // трогаем. Выполняется один раз.
+  if (!state.settings.iconsReverted) {
     const changed = [];
     for (const c of state.categories) {
-      const iconKey = c.key && DEFAULT_ICON_MAP[c.key];
-      if (!iconKey) continue;
-      if (c.image && !isBuiltinIcon(c.image)) continue;
-      const path = categoryIconPath(iconKey);
-      if (c.image !== path) { c.image = path; changed.push(c); }
+      if (isBuiltinIcon(c.image)) { delete c.image; changed.push(c); }
     }
     if (changed.length) await db.bulkPut('categories', changed);
-    await setSetting('iconsV1', true);
+    await setSetting('iconsReverted', true);
   }
 
   setLang(state.settings.language);

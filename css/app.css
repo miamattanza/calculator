@@ -161,7 +161,7 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
   transition: background .1s, transform .08s;
 }
 .entry-keypad .key:active { background: var(--fill-2); transform: scale(0.96); }
-.entry-keypad .key-zero { grid-column: span 2; }
+.entry-keypad .key-dot { font-weight: 700; }
 .entry-keypad .key-del { background: transparent; font-size: 22px; }
 
 .cat-pager { margin-top: 14px; }
