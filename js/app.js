@@ -27,7 +27,7 @@ const content = document.getElementById('content');
 const menuBtn = document.getElementById('menu-btn');
 const modeLabel = document.getElementById('mode-label');
 const headBalance = document.getElementById('head-balance');
-const analyticsBtn = document.getElementById('analytics-btn');
+const settingsBtn = document.getElementById('settings-btn');
 const budgetRing = document.getElementById('budget-ring');
 
 export function goSection(id) { activeSection = id; renderSection(); }
@@ -43,7 +43,7 @@ function renderSection() {
     if (headBalance) { headBalance.textContent = ''; headBalance.style.display = 'none'; }
     if (budgetRing) { clear(budgetRing); budgetRing.style.display = 'none'; }
   }
-  if (analyticsBtn) analyticsBtn.style.display = onHome ? '' : 'none';
+  if (settingsBtn) settingsBtn.style.display = onHome ? '' : 'none';
   const section = SECTIONS.find((x) => x.id === activeSection);
   section.render(content);
   if (onHome) maybeBackupBanner();
@@ -159,7 +159,7 @@ async function main() {
   applyBackground();
 
   menuBtn.addEventListener('click', openMenu);
-  if (analyticsBtn) analyticsBtn.addEventListener('click', () => { activeSection = 'analytics'; renderSection(); });
+  if (settingsBtn) settingsBtn.addEventListener('click', () => { activeSection = 'settings'; renderSection(); });
   document.addEventListener('go-section', (e) => goSection(e.detail));
 
   // Перерисовка при изменении данных (только активный раздел).

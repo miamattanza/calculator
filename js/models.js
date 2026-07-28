@@ -1,6 +1,6 @@
 // models.js — фабрики сущностей и данные по умолчанию.
 
-export const APP_VERSION = '1.32';
+export const APP_VERSION = '1.33';
 
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -104,14 +104,14 @@ export const DEFAULT_SETTINGS = {
   convertAll: false,      // false — сценарий 1 (у каждой операции своя валюта);
                           // true — сценарий 2 (вся история в текущей валюте)
   language: 'ru',
-  theme: 'system',      // system | light | dark
+  theme: 'system',      // 'system' — служебное значение первого запуска: store
+                        // приведёт его к light/dark по системной теме. Далее — только light | dark.
   splitHistory: true,   // раздельная история по типу в окнах Расходы/Доходы
   fitHistory: true,     // подгонять число строк истории под размер экрана (v1.4)
   maxRows: 10,          // лимит строк истории, когда fitHistory выключен
   langChosen: false,    // выбран ли язык при первом запуске
   background: 'none',   // фоновый паттерн ('none' | id | 'custom')
   bgCustom: null,       // свой фон (dataURL)
-  themeColor: '#15171C',// базовый цвет ручной темы (N06 из палитры)
   budgetTotal: 0,       // общий месячный лимит (0 = не задан)
   budgetDetailed: false,// детализировать лимиты по категориям
   budgetMutedMonth: '', // месяц (YYYY-MM), в котором уведомление о лимите отключено

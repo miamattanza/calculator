@@ -94,6 +94,14 @@ export async function init() {
     await setSetting('tilesV1', true);
   }
 
+  // Тема — только светлая/тёмная. Наследие ('system'/'manual') и первый запуск
+  // приводим к конкретной теме один раз, ориентируясь на системную настройку.
+  if (state.settings.theme !== 'light' && state.settings.theme !== 'dark') {
+    const prefersDark = typeof window !== 'undefined' && window.matchMedia
+      && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    await setSetting('theme', prefersDark ? 'dark' : 'light');
+  }
+
   setLang(state.settings.language);
   emit();
 }

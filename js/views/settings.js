@@ -54,24 +54,21 @@ export function renderSettings(root, rerenderApp) {
     rerenderApp();
   });
 
-  // Тема (+ ручной цвет)
+  // Тема — только светлая/тёмная.
+  const curTheme = s.theme === 'dark' ? 'dark' : 'light';
   const themeSelect = el('select.row-control', {}, [
-    ['system', t('theme_system')], ['light', t('theme_light')], ['dark', t('theme_dark')], ['manual', t('theme_manual')],
-  ].map(([v, l]) => el('option', { value: v, selected: v === s.theme }, l)));
+    ['light', t('theme_light')], ['dark', t('theme_dark')],
+  ].map(([v, l]) => el('option', { value: v, selected: v === curTheme }, l)));
   themeSelect.addEventListener('change', async () => {
     await store.setSetting('theme', themeSelect.value);
     applyTheme(themeSelect.value);
     rerenderApp();
-    if (themeSelect.value === 'manual') openThemeColorPicker(rerenderApp);
   });
 
   const themeGroup = el('.settings-group', {}, [
     settingRow(t('language'), langSelect),
     settingRow(t('theme'), themeSelect),
   ]);
-  if (s.theme === 'manual') {
-    themeGroup.appendChild(navRow('🎨', t('theme_color'), () => openThemeColorPicker(rerenderApp)));
-  }
   root.appendChild(themeGroup);
 
   // Валюты: основная + текущая + сценарий отображения.
@@ -722,85 +719,9 @@ function openConverter() {
 
 // ---- Тема ----
 
-const MANUAL_VARS = ['--bg', '--bg-elev', '--card', '--text', '--text-2', '--text-3', '--sep', '--sep-strong', '--fill', '--fill-2'];
-
+// Только светлая/тёмная. Любое иное значение (наследие: system/manual) трактуем
+// как светлую — при инициализации store оно уже приводится к конкретной теме.
 export function applyTheme(theme) {
   const root = document.documentElement;
-  MANUAL_VARS.forEach((v) => root.style.removeProperty(v));
-  if (theme === 'light' || theme === 'dark') root.setAttribute('data-theme', theme);
-  else if (theme === 'manual') { root.setAttribute('data-theme', 'dark'); applyManualColor(store.getState().settings.themeColor); }
-  else root.removeAttribute('data-theme');
-}
-
-function hexToRgb(hex) {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
-  if (!m) return null;
-  const n = parseInt(m[1], 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-function rgbToHex(r, g, b) {
-  const h = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
-  return `#${h(r)}${h(g)}${h(b)}`;
-}
-
-// Строим палитру интерфейса из одного базового цвета фона.
-function applyManualColor(hex) {
-  const rgb = hexToRgb(hex);
-  if (!rgb) return;
-  const [r, g, b] = rgb;
-  const root = document.documentElement;
-  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  const dark = lum < 0.5;
-  const mix = (amt) => rgbToHex(r + amt, g + amt, b + amt);
-  root.style.setProperty('--bg', hex);
-  root.style.setProperty('--bg-elev', mix(dark ? 20 : -14));
-  root.style.setProperty('--card', mix(dark ? 20 : -14));
-  // Текст/разделители — нейтральные из палитры (N09/N04), читаемы на любом фоне.
-  root.style.setProperty('--text', dark ? '#F1F1F3' : '#1C1E22');
-  root.style.setProperty('--text-2', dark ? 'rgba(241,241,243,.80)' : 'rgba(28,30,34,.70)');
-  root.style.setProperty('--text-3', dark ? 'rgba(241,241,243,.55)' : 'rgba(28,30,34,.45)');
-  root.style.setProperty('--sep', dark ? 'rgba(255,255,255,.13)' : 'rgba(0,0,0,.11)');
-  root.style.setProperty('--sep-strong', dark ? 'rgba(255,255,255,.28)' : 'rgba(0,0,0,.24)');
-  root.style.setProperty('--fill', dark ? 'rgba(255,255,255,.09)' : 'rgba(0,0,0,.06)');
-  root.style.setProperty('--fill-2', dark ? 'rgba(255,255,255,.16)' : 'rgba(0,0,0,.12)');
-}
-
-// Пикер цвета фона для ручной темы: пресеты + RGB + яркость.
-function openThemeColorPicker(rerenderApp) {
-  const s = store.getState().settings;
-  const base = hexToRgb(s.themeColor) || [42, 32, 24];
-  let bright = 100;
-  const body = el('.form');
-  const preview = el('.theme-preview');
-
-  // Пресеты — тёмные варианты цветов палитры (нейтральный, поверхность, навигация,
-  // тил, зелёный, фиолетовый, коричневый) + нейтральный тёмно-серый.
-  const presets = ['#15171C', '#1E2127', '#161A31', '#19464D', '#1B5540', '#38244C', '#603B1A', '#232323'];
-  const presetRow = el('.bg-grid');
-  presets.forEach((hex) => presetRow.appendChild(el('button.bg-swatch', {
-    type: 'button', style: { background: hex }, onClick: () => { const c = hexToRgb(hex); base[0] = c[0]; base[1] = c[1]; base[2] = c[2]; bright = 100; syncInputs(); apply(); },
-  })));
-
-  const curHex = () => { const f = bright / 100; return rgbToHex(base[0] * f, base[1] * f, base[2] * f); };
-  const apply = () => { const hex = curHex(); preview.style.background = hex; applyManualColor(hex); };
-
-  const mk = (label, min, max, get, set) => {
-    const inp = el('input.range', { type: 'range', min, max, value: get() });
-    inp.addEventListener('input', () => { set(+inp.value); apply(); });
-    return { row: field(label, inp).row, inp };
-  };
-  const rS = mk('R', 0, 255, () => base[0], (v) => base[0] = v);
-  const gS = mk('G', 0, 255, () => base[1], (v) => base[1] = v);
-  const bS = mk('B', 0, 255, () => base[2], (v) => base[2] = v);
-  const brS = mk(t('brightness'), 50, 150, () => bright, (v) => bright = v);
-  const syncInputs = () => { rS.inp.value = base[0]; gS.inp.value = base[1]; bS.inp.value = base[2]; brS.inp.value = bright; };
-
-  const saveBtn = el('button.btn-primary', {
-    type: 'button', text: t('save'),
-    onClick: async () => { await store.setSetting('themeColor', curHex()); await store.setSetting('theme', 'manual'); modal.close(); rerenderApp(); },
-  });
-
-  body.append(preview, presetRow, rS.row, gS.row, bS.row, brS.row, saveBtn);
-  apply();
-  const modal = sheet(t('theme_color'), body);
+  root.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
 }
