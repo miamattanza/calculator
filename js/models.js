@@ -1,6 +1,6 @@
 // models.js — фабрики сущностей и данные по умолчанию.
 
-export const APP_VERSION = '1.31.1';
+export const APP_VERSION = '1.32';
 
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -10,29 +10,51 @@ export function uid() {
 // icon — эмодзи (нативно рендерится на iOS), color — акцент.
 // key — стабильный идентификатор для перевода имени (см. i18n «cat_<key>»).
 // У пользовательских категорий key отсутствует — показывается их имя как есть.
+// Соответствие стандартных категорий новым иконкам-плиткам (iconKey) и цвету
+// группы из палитры. Доходы пока на эмодзи (иконки доходов будут позже), но с
+// цветами из палитры.
+export const DEFAULT_TILE_MAP = {
+  groceries:     { iconKey: 'groceries',                color: '#993229' },
+  cafe:          { iconKey: 'cafe-restaurants',         color: '#993229' },
+  transport:     { iconKey: 'public-transport',         color: '#305A88' },
+  housing:       { iconKey: 'rent-mortgage',            color: '#84542A' },
+  health:        { iconKey: 'doctors-diagnostics',      color: '#2C775C' },
+  entertainment: { iconKey: 'cinema-theatre-concerts',  color: '#96782C' },
+  shopping:      { iconKey: 'clothing-shoes',           color: '#8A3865' },
+  communication: { iconKey: 'internet-tv',              color: '#84542A' },
+  other:         { iconKey: 'miscellaneous',            color: '#726B65' },
+  // Доходы — только цвет (эмодзи оставляем)
+  salary:        { color: '#2E8A5F' },
+  sidejob:       { color: '#2E8A5F' },
+  gift:          { color: '#3F7836' },
+  investments:   { color: '#2A2F51' },
+  other_income:  { color: '#726B65' },
+};
+
 export const DEFAULT_CATEGORIES = [
-  // Расходы (эмодзи)
-  { key: 'groceries',     name: 'Продукты',    type: 'expense', icon: '🛒', color: '#34C759' },
-  { key: 'cafe',          name: 'Кафе',        type: 'expense', icon: '☕️', color: '#FF9500' },
-  { key: 'transport',     name: 'Транспорт',   type: 'expense', icon: '🚕', color: '#5AC8FA' },
-  { key: 'housing',       name: 'Жильё',       type: 'expense', icon: '🏠', color: '#AF52DE' },
-  { key: 'health',        name: 'Здоровье',    type: 'expense', icon: '💊', color: '#FF2D55' },
-  { key: 'entertainment', name: 'Развлечения', type: 'expense', icon: '🎬', color: '#FF375F' },
-  { key: 'shopping',      name: 'Покупки',     type: 'expense', icon: '🛍', color: '#BF5AF2' },
-  { key: 'communication', name: 'Связь',       type: 'expense', icon: '📱', color: '#64D2FF' },
-  { key: 'other',         name: 'Прочее',      type: 'expense', icon: '🔖', color: '#8E8E93' },
-  // Доходы
-  { key: 'salary',        name: 'Зарплата',    type: 'income',  icon: '💼', color: '#34C759' },
-  { key: 'sidejob',       name: 'Подработка',  type: 'income',  icon: '🧾', color: '#30D158' },
-  { key: 'gift',          name: 'Подарок',     type: 'income',  icon: '🎁', color: '#FF9F0A' },
-  { key: 'investments',   name: 'Инвестиции',  type: 'income',  icon: '📈', color: '#0A84FF' },
-  { key: 'other_income',  name: 'Прочее',      type: 'income',  icon: '💰', color: '#8E8E93' },
+  // Расходы (иконки-плитки)
+  { key: 'groceries',     name: 'Продукты',    type: 'expense', icon: '🛒', color: '#993229', iconKey: 'groceries' },
+  { key: 'cafe',          name: 'Кафе',        type: 'expense', icon: '☕️', color: '#993229', iconKey: 'cafe-restaurants' },
+  { key: 'transport',     name: 'Транспорт',   type: 'expense', icon: '🚕', color: '#305A88', iconKey: 'public-transport' },
+  { key: 'housing',       name: 'Жильё',       type: 'expense', icon: '🏠', color: '#84542A', iconKey: 'rent-mortgage' },
+  { key: 'health',        name: 'Здоровье',    type: 'expense', icon: '💊', color: '#2C775C', iconKey: 'doctors-diagnostics' },
+  { key: 'entertainment', name: 'Развлечения', type: 'expense', icon: '🎬', color: '#96782C', iconKey: 'cinema-theatre-concerts' },
+  { key: 'shopping',      name: 'Покупки',     type: 'expense', icon: '🛍', color: '#8A3865', iconKey: 'clothing-shoes' },
+  { key: 'communication', name: 'Связь',       type: 'expense', icon: '📱', color: '#84542A', iconKey: 'internet-tv' },
+  { key: 'other',         name: 'Прочее',      type: 'expense', icon: '🔖', color: '#726B65', iconKey: 'miscellaneous' },
+  // Доходы (эмодзи, цвета из палитры)
+  { key: 'salary',        name: 'Зарплата',    type: 'income',  icon: '💼', color: '#2E8A5F' },
+  { key: 'sidejob',       name: 'Подработка',  type: 'income',  icon: '🧾', color: '#2E8A5F' },
+  { key: 'gift',          name: 'Подарок',     type: 'income',  icon: '🎁', color: '#3F7836' },
+  { key: 'investments',   name: 'Инвестиции',  type: 'income',  icon: '📈', color: '#2A2F51' },
+  { key: 'other_income',  name: 'Прочее',      type: 'income',  icon: '💰', color: '#726B65' },
 ];
 
-export function makeCategory({ name, type, icon, color, order, key, image, currency }) {
-  const c = { id: uid(), name, type, icon: icon || '🔖', color: color || '#8E8E93', order: order || 0 };
+export function makeCategory({ name, type, icon, color, order, key, image, currency, iconKey }) {
+  const c = { id: uid(), name, type, icon: icon || '🔖', color: color || '#726B65', order: order || 0 };
   if (key) c.key = key;
   if (image) c.image = image;
+  if (iconKey) c.iconKey = iconKey;
   if (currency) c.currency = currency;
   return c;
 }
@@ -89,7 +111,7 @@ export const DEFAULT_SETTINGS = {
   langChosen: false,    // выбран ли язык при первом запуске
   background: 'none',   // фоновый паттерн ('none' | id | 'custom')
   bgCustom: null,       // свой фон (dataURL)
-  themeColor: '#241C15',// базовый цвет ручной темы
+  themeColor: '#15171C',// базовый цвет ручной темы (N06 из палитры)
   budgetTotal: 0,       // общий месячный лимит (0 = не задан)
   budgetDetailed: false,// детализировать лимиты по категориям
   budgetMutedMonth: '', // месяц (YYYY-MM), в котором уведомление о лимите отключено

@@ -260,7 +260,8 @@ function budgetRingSvg(ratio, muted) {
   const clamped = Math.max(0, Math.min(1, ratio));
   let color = 'var(--text-3)';
   if (muted) color = 'var(--text-3)';
-  else if (ratio >= 1) color = '#8B1A1A'; else if (ratio >= 0.9) color = 'var(--red)'; else if (ratio >= 0.8) color = '#FF9500';
+  // Цвета из палитры: перерасход — тёмный вариант красного S04, 80% — предупреждение S03.
+  else if (ratio >= 1) color = '#8E2224'; else if (ratio >= 0.9) color = 'var(--red)'; else if (ratio >= 0.8) color = 'var(--warning)';
   const svg = document.createElementNS(NS, 'svg');
   svg.setAttribute('viewBox', `0 0 ${size} ${size}`); svg.setAttribute('width', size); svg.setAttribute('height', size);
   svg.setAttribute('class', 'budget-ring-svg' + (muted ? ' muted' : (ratio >= 1 ? ' over' : '')));

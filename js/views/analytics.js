@@ -52,7 +52,7 @@ export function renderAnalytics(root) {
     const data = breakdown.map((b) => ({
       label: b.category ? store.categoryName(b.category) : '—',
       amount: b.amount,
-      color: b.category ? b.category.color : '#8E8E93',
+      color: b.category ? b.category.color : '#726B65',
     }));
     card.appendChild(donut(data, {
       centerTop: money(total, base),
@@ -63,7 +63,7 @@ export function renderAnalytics(root) {
     for (const b of breakdown) {
       const pct = total > 0 ? Math.round(b.amount / total * 100) : 0;
       legend.appendChild(el('.legend-row', {}, [
-        el('.legend-dot', { style: { background: b.category ? b.category.color : '#8E8E93' } }),
+        el('.legend-dot', { style: { background: b.category ? b.category.color : '#726B65' } }),
         el('.legend-name', { text: b.category ? `${b.category.icon} ${store.categoryName(b.category)}` : '—' }),
         el('.legend-pct', { text: pct + '%' }),
         el('.legend-amount', { text: money(b.amount, base) }),

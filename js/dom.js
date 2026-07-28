@@ -2,7 +2,7 @@
 // (модальные листы в стиле iOS, тосты, диалог подтверждения).
 
 import { t } from './i18n.js';
-import { isBuiltinIcon } from './icons.js';
+import { isBuiltinIcon, iconByKey } from './icons.js';
 
 // el('div.class#id', {attrs}, [children | 'text'])
 export function el(tag, attrs = {}, children = []) {
@@ -40,10 +40,21 @@ export function clear(node) { while (node.firstChild) node.removeChild(node.firs
 
 // Иконка категории: загруженное изображение (если есть) либо эмодзи.
 export function catIcon(cat, cls) {
-  const box = el('.' + (cls || 'cat-emoji'), { style: { '--chip': cat ? cat.color : '#8E8E93' } });
-  if (cat && cat.image) {
-    // Встроенные иконки (тёмный контур) показываем на светлой подложке, чтобы
-    // они были видны и в тёмной теме.
+  const box = el('.' + (cls || 'cat-emoji'), { style: { '--chip': cat ? cat.color : '#726B65' } });
+  const tile = cat && cat.iconKey ? iconByKey(cat.iconKey) : null;
+  if (tile) {
+    // Плитка: цветной квадрат + белая иконка (с запечённой тенью) из спрайта.
+    box.classList.add('cat-tile');
+    box.style.setProperty('--tile-color', cat.color || tile.color);
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 100 100');
+    svg.setAttribute('class', 'cat-tile-art');
+    const use = document.createElementNS(NS, 'use');
+    use.setAttribute('href', '#' + tile.symbol);
+    svg.appendChild(use);
+    box.appendChild(svg);
+  } else if (cat && cat.image) {
     if (isBuiltinIcon(cat.image)) box.classList.add('builtin-icon');
     box.appendChild(el('img.cat-img', { src: cat.image, alt: '' }));
   } else {

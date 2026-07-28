@@ -6,6 +6,7 @@ import { t, availableLangs, LANG_NAMES } from '../i18n.js';
 import { el, clear, sheet, field, toast, confirmDialog, toggle, catIcon, rowCols, swipeDeleteRow } from '../dom.js';
 import { CURRENCIES, roundRate } from '../format.js';
 import { APP_VERSION } from '../models.js';
+import { CATEGORY_ICONS } from '../icons.js';
 
 
 export function renderSettings(root, rerenderApp) {
@@ -205,8 +206,11 @@ function importJSON() {
 
 // ---- Управление категориями ----
 
-const EMOJI_CHOICES = ['🛒','☕️','🚕','🏠','💊','🎬','🛍','📱','💼','🧾','🎁','📈','💰','⛽️','✈️','🎓','🐾','👕','🍔','🏋️','🎵','💡','🔖','❤️'];
-const COLOR_CHOICES = ['#34C759','#FF9500','#5AC8FA','#AF52DE','#FF2D55','#FF375F','#BF5AF2','#64D2FF','#0A84FF','#30D158','#FF9F0A','#8E8E93'];
+// Эмодзи-запас для дохода и как запасной вариант (у плиток-иконок все категории
+// — расходные; для дохода эмодзи остаются уместны).
+const EMOJI_CHOICES = ['💼','💰','🎁','📈','🧾','💵','🏦','💸','🪙','📊','🤝','⭐️','🎯','❤️'];
+// Цвета — 14 групп из палитры проекта (G01–G14). Только они и их оттенки.
+const COLOR_CHOICES = ['#84542A','#993229','#305A88','#2C775C','#8A3865','#43368C','#96782C','#3F7836','#2A2F51','#646D2C','#296670','#52396A','#726B65','#7A297A'];
 
 function openCategoriesManager() {
   const body = el('.form');
@@ -249,7 +253,7 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType) {
   const autoColor = COLOR_CHOICES[store.getState().categories.length % COLOR_CHOICES.length];
   const model = existing
     ? { ...existing, name: store.categoryName(existing) }
-    : { name: '', type: presetType || 'expense', icon: '🔖', color: autoColor, image: null };
+    : { name: '', type: presetType || 'expense', icon: '🔖', color: autoColor, image: null, iconKey: null };
   const body = el('.form');
 
   const nameInput = el('input.select', { type: 'text', placeholder: t('category_name'), value: model.name });
@@ -272,37 +276,64 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType) {
   const error = el('.form-error');
 
   const iconPreview = el('.icon-preview');
-  const updatePreview = () => { clear(iconPreview); iconPreview.appendChild(catIcon({ icon: model.icon, color: model.color, image: model.image }, 'trx-icon')); };
-
-  // Иконки-эмодзи. Занятые другими категориями — в группе «уже используются»
-  // (заблокированы, нельзя две одинаковые). Своя текущая иконка всегда доступна.
-  const usedIcons = new Set(
-    store.getState().categories
-      .filter((c) => !existing || c.id !== existing.id)
-      .map((c) => c.icon).filter(Boolean)
-  );
-  if (existing && existing.icon) usedIcons.delete(existing.icon);
-  const emojiGrid = el('.emoji-grid');
-  const usedGrid = el('.emoji-grid');
-  const markIcon = (b) => {
-    [emojiGrid, usedGrid].forEach((g) => g.querySelectorAll('.emoji-pick').forEach((x) => x.classList.remove('active')));
-    if (b) b.classList.add('active');
+  const updatePreview = () => {
+    clear(iconPreview);
+    iconPreview.appendChild(catIcon(
+      { icon: model.icon, color: model.color, image: model.image, iconKey: model.image ? null : model.iconKey },
+      'trx-icon'));
   };
-  const makePick = (em, disabled) => el('button.emoji-pick', {
+
+  const tileBank = el('.tile-bank');
+  const emojiGrid = el('.emoji-grid');
+  const clearActive = () => {
+    tileBank.querySelectorAll('.tile-pick.active').forEach((x) => x.classList.remove('active'));
+    emojiGrid.querySelectorAll('.emoji-pick.active').forEach((x) => x.classList.remove('active'));
+  };
+
+  // Банк плиток: 50 иконок, сгруппированных по группам палитры. Выбор плитки
+  // задаёт и иконку, и цвет группы — новые категории выглядят так же, как
+  // встроенные, а весь дизайн остаётся единым.
+  const groups = [];
+  const gmap = new Map();
+  for (const ic of CATEGORY_ICONS) {
+    let g = gmap.get(ic.group);
+    if (!g) { g = { label: ic.groupLabel, items: [] }; gmap.set(ic.group, g); groups.push(g); }
+    g.items.push(ic);
+  }
+  for (const g of groups) {
+    const grid = el('.tile-grid');
+    for (const ic of g.items) {
+      const btn = el('button.tile-pick', {
+        type: 'button',
+        class: (!model.image && model.iconKey === ic.key) ? 'active' : '',
+        'aria-label': ic.label,
+        onClick: function () {
+          model.iconKey = ic.key; model.color = ic.color; model.image = null;
+          clearActive(); this.classList.add('active'); updatePreview();
+        },
+      }, [catIcon({ iconKey: ic.key, color: ic.color }, 'tile-pick-art')]);
+      grid.appendChild(btn);
+    }
+    tileBank.appendChild(el('.tile-group', {}, [
+      el('.tile-group-label', { text: g.label }),
+      grid,
+    ]));
+  }
+
+  // Эмодзи — запасной вариант (для доходов, у которых нет плиток-иконок).
+  const makeEmoji = (em) => el('button.emoji-pick', {
     type: 'button',
-    class: ((!model.image && em === model.icon) ? 'active' : '') + (disabled ? ' disabled' : ''),
+    class: (!model.image && !model.iconKey && em === model.icon) ? 'active' : '',
     text: em,
     onClick: function () {
-      if (disabled) { toast(t('icon_used_already')); return; }
-      model.icon = em; model.image = null; markIcon(this); updatePreview();
+      model.icon = em; model.iconKey = null; model.image = null;
+      clearActive(); this.classList.add('active'); updatePreview();
     },
   });
-  EMOJI_CHOICES.filter((em) => !usedIcons.has(em)).forEach((em) => emojiGrid.appendChild(makePick(em, false)));
-  const usedList = EMOJI_CHOICES.filter((em) => usedIcons.has(em));
-  usedList.forEach((em) => usedGrid.appendChild(makePick(em, true)));
-  const usedBlock = usedList.length
-    ? el('.emoji-used-block', {}, [el('.emoji-used-caption', { text: t('icons_used') }), usedGrid])
-    : null;
+  EMOJI_CHOICES.forEach((em) => emojiGrid.appendChild(makeEmoji(em)));
+  const emojiBlock = el('.emoji-alt-block', {}, [
+    el('.emoji-used-caption', { text: t('or_emoji') }), emojiGrid,
+  ]);
 
   // Загрузка своей иконки из галереи. Безопасно: принимаем только изображение,
   // проверяем формат и размер, затем обрезаем и уменьшаем до 64×64 через canvas
@@ -313,7 +344,7 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType) {
     uploadInput.value = '';
     if (!file) return;
     processIconFile(file,
-      (dataUrl) => { model.image = dataUrl; error.textContent = ''; markIcon(null); updatePreview(); },
+      (dataUrl) => { model.image = dataUrl; model.iconKey = null; error.textContent = ''; clearActive(); updatePreview(); },
       () => { error.textContent = t('icon_rules'); });
   });
   const uploadBtn = el('button.btn-upload', { type: 'button', text: '📷 ' + t('upload_icon'), onClick: () => uploadInput.click() });
@@ -336,7 +367,7 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType) {
   body.append(
     field(t('category_name'), nameInput).row,
     field(t('type'), typeSeg).row,
-    field(t('icon'), el('.icon-field', {}, [iconPreview, emojiGrid, usedBlock, uploadBtn, uploadInput])).row,
+    field(t('icon'), el('.icon-field', {}, [iconPreview, tileBank, emojiBlock, uploadBtn, uploadInput])).row,
     el('.icon-rules', { text: t('icon_rules') }),
     ...(currencyBtn ? [currencyBtn] : []),
     error, saveBtn,
@@ -356,7 +387,7 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType) {
 
   saveBtn.addEventListener('click', async () => {
     if (!model.name.trim()) { error.textContent = t('required'); return; }
-    await store.saveCategory({ id: existing ? existing.id : undefined, name: model.name.trim(), type: model.type, icon: model.icon, color: model.color, image: model.image || null, currency: catCurrency });
+    await store.saveCategory({ id: existing ? existing.id : undefined, name: model.name.trim(), type: model.type, icon: model.icon, color: model.color, image: model.image || null, currency: catCurrency, iconKey: model.image ? null : (model.iconKey || null) });
     modal.close(); onDone();
   });
 }
@@ -724,13 +755,14 @@ function applyManualColor(hex) {
   root.style.setProperty('--bg', hex);
   root.style.setProperty('--bg-elev', mix(dark ? 20 : -14));
   root.style.setProperty('--card', mix(dark ? 20 : -14));
-  root.style.setProperty('--text', dark ? '#F2ECE3' : '#1A1A1A');
-  root.style.setProperty('--text-2', dark ? 'rgba(242,236,227,.82)' : 'rgba(0,0,0,.72)');
-  root.style.setProperty('--text-3', dark ? 'rgba(242,236,227,.55)' : 'rgba(0,0,0,.45)');
-  root.style.setProperty('--sep', dark ? 'rgba(255,240,220,.14)' : 'rgba(0,0,0,.12)');
-  root.style.setProperty('--sep-strong', dark ? 'rgba(255,240,220,.30)' : 'rgba(0,0,0,.26)');
-  root.style.setProperty('--fill', dark ? 'rgba(255,240,220,.10)' : 'rgba(0,0,0,.06)');
-  root.style.setProperty('--fill-2', dark ? 'rgba(255,240,220,.18)' : 'rgba(0,0,0,.12)');
+  // Текст/разделители — нейтральные из палитры (N09/N04), читаемы на любом фоне.
+  root.style.setProperty('--text', dark ? '#F1F1F3' : '#1C1E22');
+  root.style.setProperty('--text-2', dark ? 'rgba(241,241,243,.80)' : 'rgba(28,30,34,.70)');
+  root.style.setProperty('--text-3', dark ? 'rgba(241,241,243,.55)' : 'rgba(28,30,34,.45)');
+  root.style.setProperty('--sep', dark ? 'rgba(255,255,255,.13)' : 'rgba(0,0,0,.11)');
+  root.style.setProperty('--sep-strong', dark ? 'rgba(255,255,255,.28)' : 'rgba(0,0,0,.24)');
+  root.style.setProperty('--fill', dark ? 'rgba(255,255,255,.09)' : 'rgba(0,0,0,.06)');
+  root.style.setProperty('--fill-2', dark ? 'rgba(255,255,255,.16)' : 'rgba(0,0,0,.12)');
 }
 
 // Пикер цвета фона для ручной темы: пресеты + RGB + яркость.
@@ -741,7 +773,9 @@ function openThemeColorPicker(rerenderApp) {
   const body = el('.form');
   const preview = el('.theme-preview');
 
-  const presets = ['#241C15', '#2A2018', '#2B2A20', '#20242A', '#2A1F26', '#1E2622', '#302A24', '#232323'];
+  // Пресеты — тёмные варианты цветов палитры (нейтральный, поверхность, навигация,
+  // тил, зелёный, фиолетовый, коричневый) + нейтральный тёмно-серый.
+  const presets = ['#15171C', '#1E2127', '#161A31', '#19464D', '#1B5540', '#38244C', '#603B1A', '#232323'];
   const presetRow = el('.bg-grid');
   presets.forEach((hex) => presetRow.appendChild(el('button.bg-swatch', {
     type: 'button', style: { background: hex }, onClick: () => { const c = hexToRgb(hex); base[0] = c[0]; base[1] = c[1]; base[2] = c[2]; bright = 100; syncInputs(); apply(); },

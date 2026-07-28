@@ -137,8 +137,24 @@ function openLanguageOnboarding(onDone) {
   document.body.classList.add('modal-open');
 }
 
+// Встраиваем SVG-спрайт иконок категорий в документ, чтобы <use href="#..">
+// работал как ссылка внутри документа (надёжно на всех браузерах, в т.ч. iOS).
+async function injectIconSprite() {
+  if (document.getElementById('cat-icon-sprite')) return;
+  try {
+    const txt = await fetch('icons/ui-icons.svg').then((r) => r.text());
+    const holder = document.createElement('div');
+    holder.id = 'cat-icon-sprite';
+    holder.setAttribute('aria-hidden', 'true');
+    holder.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
+    holder.innerHTML = txt;
+    document.body.insertBefore(holder, document.body.firstChild);
+  } catch (e) { /* офлайн без кэша — иконки появятся при следующей загрузке */ }
+}
+
 async function main() {
   await store.init();
+  await injectIconSprite();
   applyTheme(store.getState().settings.theme);
   applyBackground();
 

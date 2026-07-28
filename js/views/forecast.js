@@ -4,7 +4,7 @@
 
 import * as store from '../store.js';
 import { t } from '../i18n.js';
-import { el, clear, sheet, field, segmented, toast, confirmDialog } from '../dom.js';
+import { el, clear, sheet, field, segmented, toast, confirmDialog, catIcon } from '../dom.js';
 import { money, formatDate, dateISO, addDays, CURRENCIES } from '../format.js';
 
 // целевая дата по умолчанию — конец текущего месяца
@@ -78,7 +78,8 @@ export function renderForecast(root) {
     for (const p of [...planned].sort((a, b) => (a.startDate < b.startDate ? -1 : 1))) {
       const cat = store.categoryById(p.categoryId);
       list.appendChild(el('.trx-row', { onClick: () => openPlannedForm(p, root) }, [
-        el('.trx-icon', { style: { '--chip': cat ? cat.color : '#8E8E93' }, text: cat ? cat.icon : (p.type === 'income' ? '💰' : '🧾') }),
+        cat ? catIcon(cat, 'trx-icon')
+            : el('.trx-icon', { style: { '--chip': '#726B65' }, text: (p.type === 'income' ? '💰' : '🧾') }),
         el('.trx-main', {}, [
           el('.trx-title', { text: p.note || (cat ? store.categoryName(cat) : (p.type === 'income' ? t('income') : t('expense'))) }),
           el('.trx-note', { text: `${recLabel[p.recurrence]} · ${t('start_date')}: ${formatDate(p.startDate, { day: 'numeric', month: 'short' })}` }),

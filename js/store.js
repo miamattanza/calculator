@@ -7,7 +7,7 @@ import { db } from './db.js';
 import { setLang, t } from './i18n.js';
 import { dateISO, monthKey, addDays, daysBetween, CURRENCIES } from './format.js';
 import {
-  DEFAULT_CATEGORIES, DEFAULT_SETTINGS, makeCategory,
+  DEFAULT_CATEGORIES, DEFAULT_SETTINGS, DEFAULT_TILE_MAP, makeCategory,
   makeTransaction, makePlanned, makeBudget, makeGoal,
 } from './models.js';
 import { isBuiltinIcon } from './icons.js';
@@ -67,9 +67,7 @@ export async function init() {
   }
   if (migrated.length) await db.bulkPut('categories', migrated);
 
-  // Откат новых иконок: убираем встроенные картинки у категорий, чтобы снова
-  // показывались эмодзи. Загруженные пользователем картинки (dataURL) не
-  // трогаем. Выполняется один раз.
+  // Убираем старые PNG-картинки категорий (наследие v1.30), если остались.
   if (!state.settings.iconsReverted) {
     const changed = [];
     for (const c of state.categories) {
@@ -77,6 +75,23 @@ export async function init() {
     }
     if (changed.length) await db.bulkPut('categories', changed);
     await setSetting('iconsReverted', true);
+  }
+
+  // Новые иконки-плитки + цвета палитры для стандартных категорий (один раз).
+  // Не трогаем категории с загруженной пользователем картинкой.
+  if (!state.settings.tilesV1) {
+    const changed = [];
+    for (const c of state.categories) {
+      const m = c.key && DEFAULT_TILE_MAP[c.key];
+      if (!m) continue;
+      if (c.image) continue; // своя картинка — оставляем
+      let upd = false;
+      if (m.iconKey && c.iconKey !== m.iconKey) { c.iconKey = m.iconKey; upd = true; }
+      if (m.color && c.color !== m.color) { c.color = m.color; upd = true; }
+      if (upd) changed.push(c);
+    }
+    if (changed.length) await db.bulkPut('categories', changed);
+    await setSetting('tilesV1', true);
   }
 
   setLang(state.settings.language);
