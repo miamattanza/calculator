@@ -169,9 +169,10 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 }
 .entry-keypad .key:active { background: var(--fill-2); transform: scale(0.96); }
 .entry-keypad .key-dot { font-weight: 700; position: relative; }
-/* Значок второго действия («⇄» → конвертер по долгому нажатию): мелкий, в углу,
-   приглушённый — подсказывает мультиактивность, не мешая точке по центру. */
-.key-dot-badge { position: absolute; top: 7px; inset-inline-end: 11px; font-size: 12px; font-weight: 600; opacity: 0.4; line-height: 1; pointer-events: none; }
+/* Значок второго действия ($⇄€ → конвертер по долгому нажатию): в верхнем-левом
+   углу, цвет из темы (var(--text-2)) — заметно, но приглушённее точки в центре. */
+.key-dot-badge { position: absolute; top: 6px; inset-inline-start: 9px; width: 25px; color: var(--text-2); pointer-events: none; }
+.key-dot-badge svg { display: block; width: 100%; height: auto; }
 .entry-keypad .key-del { background: transparent; font-size: 22px; }
 
 .cat-pager { margin-top: 14px; }
@@ -419,7 +420,7 @@ select.select { appearance: none; -webkit-appearance: none; }
 .cat-chip.active .cat-emoji { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--chip, var(--accent)); }
 .cat-chip.disabled { opacity: 0.35; }
 /* Перетаскивание порядка иконок */
-.cat-chip.dragging { z-index: 30; transition: none !important; box-shadow: 0 8px 24px rgba(0,0,0,0.28); opacity: 0.96; pointer-events: none; }
+.cat-chip.dragging { z-index: 30; box-shadow: 0 8px 24px rgba(0,0,0,0.28); opacity: 0.96; pointer-events: none; }
 .cat-chip.drop-target .cat-emoji { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--accent); }
 
 /* ---- Режим перемещения категорий (долгое нажатие) ---- */

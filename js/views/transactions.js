@@ -396,7 +396,14 @@ export function renderHome(root) {
   // Клавиша «.»: короткий тап — десятичная точка; долгое нажатие — конвертер
   // валют. Значок ⇄ в углу подсказывает, что у кнопки есть второе действие.
   const dotKey = el('button.key.key-dot', { type: 'button', text: '.', 'aria-label': '.' });
-  dotKey.appendChild(el('.key-dot-badge', { text: '⇄', 'aria-hidden': 'true' }));
+  dotKey.appendChild(el('.key-dot-badge', { 'aria-hidden': 'true', html:
+    '<svg viewBox="0 0 44 24" fill="none" aria-hidden="true">' +
+    '<text x="0" y="18" font-size="15" font-weight="700" fill="currentColor" font-family="-apple-system,system-ui,sans-serif">$</text>' +
+    '<text x="32" y="18" font-size="15" font-weight="700" fill="currentColor" font-family="-apple-system,system-ui,sans-serif">€</text>' +
+    '<g stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" fill="none">' +
+    '<path d="M16 8 q6.5 -5 13 0"/><path d="M26 6 L29 8 L26 10"/>' +
+    '<path d="M29 16 q-6.5 5 -13 0"/><path d="M19 14 L16 16 L19 18"/>' +
+    '</g></svg>' }));
   attachHold(dotKey, pressDot, () => openConverter());
   keypad.appendChild(dotKey);
   keypad.appendChild(el('button.key.key-zero', { type: 'button', text: '0', onClick: () => pressDigit('0') }));
@@ -445,25 +452,69 @@ export function renderHome(root) {
   const attachChipDrag = (chip, cat) => {
     chip.dataset.catId = cat.id;
     let timer = null, sx = 0, sy = 0, moved = false, dragging = false, longFired = false;
+    let startPage = 0, lastX = 0, lastY = 0, edgeDir = 0, edgeTimer = null;
     const clearTargets = () => catViewport.querySelectorAll('.cat-chip.drop-target').forEach((x) => x.classList.remove('drop-target'));
     const targetAt = (x, y) => {
       const e = document.elementFromPoint(x, y);
       const c = e && e.closest && e.closest('.cat-chip');
       return (c && c !== chip && !c.classList.contains('cat-add') && c.dataset.catId) ? c : null;
     };
-    const startDrag = () => { dragging = true; dragActive = true; longFired = true; chip.classList.add('dragging'); enterReorder(); if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} } };
-    const down = (x, y) => { sx = x; sy = y; moved = false; dragging = false; longFired = false; timer = setTimeout(startDrag, 350); };
+    // Позиция «взятой» плитки. Смещение (catPage-startPage)*w компенсирует
+    // прокрутку карусели при автолистании, чтобы плитка оставалась под пальцем.
+    const setPos = (anim) => {
+      const w = catViewport.offsetWidth || 1;
+      chip.style.transition = anim ? 'transform .26s cubic-bezier(.32,.72,0,1)' : 'none';
+      chip.style.transform = `translate(${(lastX - sx) + (catPage - startPage) * w}px, ${lastY - sy}px) scale(1.12)`;
+    };
+    const clearEdge = () => { clearTimeout(edgeTimer); edgeTimer = null; edgeDir = 0; };
+    // Насколько плитка «скрылась» за краем зоны категорий (>20% ширины → лист).
+    const checkEdge = () => {
+      const vp = catViewport.getBoundingClientRect();
+      const r = chip.getBoundingClientRect();
+      const thr = r.width * 0.2;
+      if (vp.left - r.left > thr) return -1;   // за левым краем → предыдущая страница
+      if (r.right - vp.right > thr) return 1;   // за правым краем → следующая
+      return 0;
+    };
+    const fireEdge = () => {
+      const dir = edgeDir; edgeTimer = null;
+      const target = catPage + dir;
+      if (dir === 0 || target < 0 || target >= pages) { edgeDir = 0; return; }
+      catPage = target;
+      applyTrack(true);
+      setPos(true);   // синхронно с лентой — плитка визуально «стоит» под пальцем
+      clearTargets(); const tg = targetAt(lastX, lastY); if (tg) tg.classList.add('drop-target');
+      // Пока палец удерживается у края и есть куда листать — продолжаем.
+      if (checkEdge() === dir && catPage + dir >= 0 && catPage + dir < pages) {
+        edgeTimer = setTimeout(fireEdge, 450);
+      } else { edgeDir = 0; }
+    };
+    const armEdge = () => {
+      const e = pages > 1 ? checkEdge() : 0;
+      if (e === edgeDir) return;
+      clearTimeout(edgeTimer); edgeTimer = null; edgeDir = e;
+      if (e !== 0) edgeTimer = setTimeout(fireEdge, 350);
+    };
+    const startDrag = () => {
+      dragging = true; dragActive = true; longFired = true; startPage = catPage;
+      chip.classList.add('dragging'); enterReorder();
+      if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} }
+      setPos(false);
+    };
+    const down = (x, y) => { sx = x; sy = y; lastX = x; lastY = y; moved = false; dragging = false; longFired = false; timer = setTimeout(startDrag, 350); };
     const move = (x, y, e) => {
       if (!dragging) { if (Math.abs(x - sx) > 10 || Math.abs(y - sy) > 10) { moved = true; clearTimeout(timer); } return; }
       if (e && e.cancelable) e.preventDefault();
-      chip.style.transform = `translate(${x - sx}px, ${y - sy}px) scale(1.12)`;
+      lastX = x; lastY = y;
+      setPos(false);
       clearTargets(); const tg = targetAt(x, y); if (tg) tg.classList.add('drop-target');
+      armEdge();
     };
     const up = (x, y) => {
-      clearTimeout(timer);
+      clearTimeout(timer); clearEdge();
       if (dragging) {
         const tg = targetAt(x, y);
-        chip.classList.remove('dragging'); chip.style.transform = ''; clearTargets();
+        chip.classList.remove('dragging'); chip.style.transition = ''; chip.style.transform = ''; clearTargets();
         exitReorder();
         dragging = false; setTimeout(() => { dragActive = false; }, 60);
         if (tg) store.reorderCategorySwap(homeMode, cat.id, tg.dataset.catId);
