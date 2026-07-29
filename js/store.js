@@ -233,6 +233,19 @@ export async function reorderCategorySwap(type, idA, idB) {
   emit();
 }
 
+// Перемещение категории в конец списка своего типа (перетаскивание на пустую
+// ячейку): нормализуем порядок, вынимаем категорию и ставим её последней.
+export async function moveCategoryToEnd(type, id) {
+  const list = categoriesByType(type);
+  const idx = list.findIndex((c) => c.id === id);
+  if (idx < 0 || idx === list.length - 1) return;
+  const [cat] = list.splice(idx, 1);
+  list.push(cat);
+  list.forEach((c, i) => { c.order = i; });
+  await db.bulkPut('categories', list);
+  emit();
+}
+
 export function categoryInUse(id) {
   return state.transactions.some((t) => t.categoryId === id) ||
          state.planned.some((p) => p.categoryId === id) ||

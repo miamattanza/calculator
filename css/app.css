@@ -172,7 +172,7 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 /* Значок второго действия ($ / стрелки / € → конвертер по долгому нажатию):
    в верхнем-левом углу, вертикальный, цвет var(--text-3) — заметно крупный, но
    заметно тусклее точки в центре. Адаптируется к теме через currentColor. */
-.key-dot-badge { position: absolute; top: 5px; inset-inline-start: 7px; width: 18px; color: var(--text-3); pointer-events: none; }
+.key-dot-badge { position: absolute; top: 5px; inset-inline-start: 8px; width: 21px; color: var(--text-3); pointer-events: none; }
 .key-dot-badge svg { display: block; width: 100%; height: auto; }
 .entry-keypad .key-del { background: transparent; font-size: 22px; }
 
@@ -419,13 +419,24 @@ select.select { appearance: none; -webkit-appearance: none; }
   border-radius: 14px; background: transparent; transition: transform .1s; position: relative;
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
 }
-.cat-chip .cat-emoji { width: 100%; height: auto; aspect-ratio: 1; border-radius: 22%; font-size: 30px; }
+.cat-chip .cat-emoji { width: 100%; height: auto; aspect-ratio: 1; border-radius: 22%; font-size: 30px; transition: transform .08s ease, filter .08s ease, box-shadow .08s ease; }
 .cat-chip.active { background: transparent; box-shadow: none; }
 .cat-chip.active .cat-emoji { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--chip, var(--accent)); }
 .cat-chip.disabled { opacity: 0.35; }
+/* Реакция на нажатие: плитка «продавливается» — темнеет, слегка уменьшается,
+   с внутренней тенью (как в примерах кнопок). Во время перетаскивания — не применяем. */
+.cat-chip:active:not(.dragging) .cat-emoji,
+.tile-pick:active .tile-pick-art {
+  filter: brightness(0.84);
+  transform: scale(0.95);
+  box-shadow: inset 0 3px 7px rgba(0,0,0,0.42);
+}
+.tile-pick-art { transition: transform .08s ease, filter .08s ease, box-shadow .08s ease; }
 /* Перетаскивание порядка иконок */
 .cat-chip.dragging { z-index: 30; box-shadow: 0 8px 24px rgba(0,0,0,0.28); opacity: 0.96; pointer-events: none; }
 .cat-chip.drop-target .cat-emoji { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--accent); }
+/* Подсветка пустой ячейки как цели переноса (в конец списка). */
+.cat-add.drop-target .cat-add-plus { box-shadow: inset 0 0 0 2px var(--accent); color: var(--accent); }
 
 /* ---- Режим перемещения категорий (долгое нажатие) ---- */
 /* Затемнение экрана поверх остального; сами категории поднимаем над ним, чтобы
@@ -439,6 +450,45 @@ body.reordering .cat-pager { position: relative; z-index: 45; }
 body.reordering .cat-page .cat-chip:not(.dragging):not(.cat-add) { animation: chip-jiggle-a .3s ease-in-out infinite; }
 body.reordering .cat-page .cat-chip:nth-child(odd):not(.dragging):not(.cat-add) { animation: chip-jiggle-b .34s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { body.reordering .cat-page .cat-chip { animation: none !important; } }
+
+/* ---- Корзина в режиме перемещения (перетащить плитку → удалить) ---- */
+.reorder-trash {
+  position: fixed; left: 50%; bottom: calc(20px + var(--safe-bottom)); transform: translateX(-50%);
+  z-index: 46; opacity: 0; transition: opacity .2s; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+body.reordering .reorder-trash { opacity: 1; }
+.reorder-trash svg { width: 60px; height: 63px; overflow: visible; display: block; transition: transform .18s ease; }
+.reorder-trash-label { font-size: 11px; font-weight: 700; letter-spacing: .3px; color: var(--text); opacity: .75; transition: color .18s; }
+.reorder-trash .rt-rim { fill: none; stroke: var(--text); stroke-width: 7px; vector-effect: non-scaling-stroke; transform-origin: 100px 70px; transform: rotate(0deg) scale(1); }
+.reorder-trash .segment { stroke: var(--text); stroke-width: 6px; stroke-linecap: round; fill: none; vector-effect: non-scaling-stroke; transform: scaleY(0); }
+.reorder-trash .seg-0 { transform-origin: 100px 76px; }
+.reorder-trash .seg-1 { transform-origin: 100px 94px; }
+.reorder-trash .seg-2 { transform-origin: 100px 112px; }
+.reorder-trash .seg-3 { transform-origin: 100px 130px; }
+.reorder-trash .seg-4 { transform-origin: 100px 148px; }
+.reorder-trash .grid-lines { stroke: var(--text); stroke-width: 4.2px; vector-effect: non-scaling-stroke; opacity: .8; transform: scaleY(0); transform-origin: 100px 76px; }
+/* «Сборка» корзины из «0» при входе в режим */
+.reorder-trash.play .rt-rim { animation: rtWindRotate .2s cubic-bezier(.36,.07,.19,.97) forwards, rtWindScale .18s cubic-bezier(.34,1.4,.64,1) forwards; animation-delay: 0s, .2s; }
+.reorder-trash.play .seg-0 { animation: rtSegPop .136s cubic-bezier(.34,1.4,.64,1) .30s forwards; }
+.reorder-trash.play .seg-1 { animation: rtSegPop .136s cubic-bezier(.34,1.4,.64,1) .35s forwards; }
+.reorder-trash.play .seg-2 { animation: rtSegPop .136s cubic-bezier(.34,1.4,.64,1) .40s forwards; }
+.reorder-trash.play .seg-3 { animation: rtSegPop .136s cubic-bezier(.34,1.4,.64,1) .45s forwards; }
+.reorder-trash.play .seg-4 { animation: rtSegPop .136s cubic-bezier(.34,1.4,.64,1) .50s forwards; }
+.reorder-trash.play .grid-lines { animation: rtGridPop .34s ease-out .30s forwards; }
+@keyframes rtWindRotate { 0% { transform: rotate(0deg); } 28% { transform: rotate(-13deg); } 100% { transform: rotate(90deg); } }
+@keyframes rtWindScale { 0% { transform: rotate(90deg) scale(1); } 30% { transform: rotate(90deg) scale(.87); } 100% { transform: rotate(90deg) scale(3); } }
+@keyframes rtSegPop { 0% { transform: scaleY(0); } 65% { transform: scaleY(1.12); } 100% { transform: scaleY(1); } }
+@keyframes rtGridPop { 0% { transform: scaleY(0); } 100% { transform: scaleY(1); } }
+/* Наведение плитки на корзину → растёт и краснеет */
+.reorder-trash.over svg { transform: scale(1.16); }
+.reorder-trash.over .rt-rim, .reorder-trash.over .segment, .reorder-trash.over .grid-lines { stroke: var(--red); }
+.reorder-trash.over .reorder-trash-label { color: var(--red); opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .reorder-trash.play .rt-rim, .reorder-trash.play .segment, .reorder-trash.play .grid-lines { animation: none !important; }
+  .reorder-trash.play .rt-rim { transform: rotate(90deg) scale(3); }
+  .reorder-trash.play .segment, .reorder-trash.play .grid-lines { transform: scaleY(1); }
+}
 .cat-emoji { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 19px; background: color-mix(in srgb, var(--chip, #726B65) 32%, transparent); overflow: hidden; }
 /* Иконка-плитка категории: цветной квадрат + белая иконка из SVG-спрайта.
    Плитка встречается в разных местах (чип, строка истории, менеджер, превью,

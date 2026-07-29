@@ -286,6 +286,10 @@ function budgetRingSvg(ratio, muted) {
   return svg;
 }
 
+// SVG «корзины» (адаптировано из примера zero-to-trash): собирается из «0»
+// при входе в режим перемещения; при наведении плитки — краснеет и растёт.
+const TRASH_SVG = `<svg viewBox="0 0 200 210"><defs><clipPath id="rt-bodyClip"><path d="M 52.0,76.0 L 56.0,94.0 L 60.0,112.0 L 64.0,130.0 L 68.0,148.0 L 72.0,166.0 Q 100.0,177.0 128.0,166.0 L 132.0,148.0 L 136.0,130.0 L 140.0,112.0 L 144.0,94.0 L 148.0,76.0 Z"/></clipPath></defs><g class="grid-lines" clip-path="url(#rt-bodyClip)"><line x1="138.0" y1="72.0" x2="155.0" y2="89.0"/><line x1="121.0" y1="72.0" x2="155.0" y2="106.0"/><line x1="104.0" y1="72.0" x2="155.0" y2="123.0"/><line x1="87.0" y1="72.0" x2="155.0" y2="140.0"/><line x1="70.0" y1="72.0" x2="155.0" y2="157.0"/><line x1="53.0" y1="72.0" x2="155.0" y2="174.0"/><line x1="45.0" y1="81.0" x2="145.0" y2="181.0"/><line x1="45.0" y1="98.0" x2="128.0" y2="181.0"/><line x1="45.0" y1="115.0" x2="111.0" y2="181.0"/><line x1="45.0" y1="132.0" x2="94.0" y2="181.0"/><line x1="45.0" y1="149.0" x2="77.0" y2="181.0"/><line x1="45.0" y1="166.0" x2="60.0" y2="181.0"/><line x1="45.0" y1="89.0" x2="62.0" y2="72.0"/><line x1="45.0" y1="106.0" x2="79.0" y2="72.0"/><line x1="45.0" y1="123.0" x2="96.0" y2="72.0"/><line x1="45.0" y1="140.0" x2="113.0" y2="72.0"/><line x1="45.0" y1="157.0" x2="130.0" y2="72.0"/><line x1="45.0" y1="174.0" x2="147.0" y2="72.0"/><line x1="55.0" y1="181.0" x2="155.0" y2="81.0"/><line x1="72.0" y1="181.0" x2="155.0" y2="98.0"/><line x1="89.0" y1="181.0" x2="155.0" y2="115.0"/><line x1="106.0" y1="181.0" x2="155.0" y2="132.0"/><line x1="123.0" y1="181.0" x2="155.0" y2="149.0"/><line x1="140.0" y1="181.0" x2="155.0" y2="166.0"/></g><line class="segment seg-0" x1="52.0" y1="76.0" x2="56.0" y2="94.0"></line><line class="segment seg-0" x1="148.0" y1="76.0" x2="144.0" y2="94.0"></line><line class="segment seg-1" x1="56.0" y1="94.0" x2="60.0" y2="112.0"></line><line class="segment seg-1" x1="144.0" y1="94.0" x2="140.0" y2="112.0"></line><line class="segment seg-2" x1="60.0" y1="112.0" x2="64.0" y2="130.0"></line><line class="segment seg-2" x1="140.0" y1="112.0" x2="136.0" y2="130.0"></line><line class="segment seg-3" x1="64.0" y1="130.0" x2="68.0" y2="148.0"></line><line class="segment seg-3" x1="136.0" y1="130.0" x2="132.0" y2="148.0"></line><line class="segment seg-4" x1="68.0" y1="148.0" x2="72.0" y2="166.0"></line><line class="segment seg-4" x1="132.0" y1="148.0" x2="128.0" y2="166.0"></line><path class="segment seg-4" d="M 72.0,166.0 Q 100.0,177.0 128.0,166.0" fill="none"></path><ellipse class="rt-rim" cx="100" cy="70" rx="7" ry="16"></ellipse></svg>`;
+
 // Долгое нажатие (hold) на кнопку: короткий тап → onTap, удержание → onHold.
 // Порог 350 мс; сдвиг пальца отменяет. Используется на клавише «.» (конвертер).
 function attachHold(btn, onTap, onHold) {
@@ -396,16 +400,17 @@ export function renderHome(root) {
   // Клавиша «.»: короткий тап — десятичная точка; долгое нажатие — конвертер
   // валют. Значок ⇄ в углу подсказывает, что у кнопки есть второе действие.
   const dotKey = el('button.key.key-dot', { type: 'button', text: '.', 'aria-label': '.' });
-  // Вертикальный значок конвертера: $ вверху-слева, € внизу-слева, между ними
-  // две закруглённые стрелки (вниз $→€ и вверх €→$).
+  // Вертикальный значок конвертера, одной колонкой: $ сверху, под ним две
+  // закруглённые стрелки (вниз $→€ и вверх €→$), € снизу. Крупный, но тусклее точки.
   dotKey.appendChild(el('.key-dot-badge', { 'aria-hidden': 'true', html:
-    '<svg viewBox="0 0 28 40" fill="none" aria-hidden="true">' +
-    '<text x="0" y="14" font-size="15" font-weight="700" fill="currentColor" font-family="-apple-system,system-ui,sans-serif">$</text>' +
-    '<text x="0" y="39" font-size="15" font-weight="700" fill="currentColor" font-family="-apple-system,system-ui,sans-serif">€</text>' +
-    '<g stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none">' +
-    '<path d="M16 15 V27"/><path d="M13 24 L16 27 L19 24"/>' +
-    '<path d="M24 27 V15"/><path d="M21 18 L24 15 L27 18"/>' +
-    '</g></svg>' }));
+    '<svg viewBox="0 0 26 48" fill="none" aria-hidden="true">' +
+    '<text x="13" y="15" text-anchor="middle" font-size="17" font-weight="700" fill="currentColor" font-family="-apple-system,system-ui,sans-serif">$</text>' +
+    '<g stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none">' +
+    '<path d="M10 20 V30"/><path d="M7.4 27.4 L10 30 L12.6 27.4"/>' +
+    '<path d="M16 30 V20"/><path d="M13.4 22.6 L16 20 L18.6 22.6"/>' +
+    '</g>' +
+    '<text x="13" y="45" text-anchor="middle" font-size="17" font-weight="700" fill="currentColor" font-family="-apple-system,system-ui,sans-serif">€</text>' +
+    '</svg>' }));
   attachHold(dotKey, pressDot, () => openConverter());
   keypad.appendChild(dotKey);
   keypad.appendChild(el('button.key.key-zero', { type: 'button', text: '0', onClick: () => pressDigit('0') }));
@@ -449,17 +454,63 @@ export function renderHome(root) {
   // Vibration API недоступен).
   const reorderDim = el('.reorder-dim');
   pager.appendChild(reorderDim);
-  const enterReorder = () => { document.body.classList.add('reordering'); requestAnimationFrame(() => reorderDim.classList.add('on')); };
-  const exitReorder = () => { document.body.classList.remove('reordering'); reorderDim.classList.remove('on'); };
+  // Корзина: появляется в режиме перемещения (собирается из «0»); перетаскивание
+  // плитки в неё удаляет категорию (с подтверждением; занятые в операциях — нельзя).
+  const reorderTrash = el('.reorder-trash', { 'aria-hidden': 'true',
+    html: TRASH_SVG + '<div class="reorder-trash-label">' + t('delete') + '</div>' });
+  pager.appendChild(reorderTrash);
+  const enterReorder = () => {
+    document.body.classList.add('reordering');
+    reorderTrash.classList.remove('play', 'over');
+    requestAnimationFrame(() => {
+      reorderDim.classList.add('on');
+      void reorderTrash.offsetWidth;     // сброс, чтобы анимация «сборки» проигралась заново
+      reorderTrash.classList.add('play');
+    });
+  };
+  const exitReorder = () => {
+    document.body.classList.remove('reordering');
+    reorderDim.classList.remove('on');
+    reorderTrash.classList.remove('play', 'over');
+  };
+  const overTrash = (x, y) => {
+    if (!document.body.classList.contains('reordering')) return false;
+    const r = reorderTrash.getBoundingClientRect();
+    const pad = 16;
+    return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad;
+  };
+  // Удаление категории через корзину: занятые в операциях не удаляем.
+  const handleTrash = async (c) => {
+    if (store.categoryInUse(c.id)) { toast(t('category_in_use')); return; }
+    if (await confirmDialog(t('delete_category_q', { name: store.categoryName(c) }))) {
+      await store.deleteCategory(c.id);
+    }
+  };
   const attachChipDrag = (chip, cat) => {
     chip.dataset.catId = cat.id;
     let timer = null, sx = 0, sy = 0, moved = false, dragging = false, longFired = false;
     let startPage = 0, lastX = 0, lastY = 0, edgeDir = 0, edgeTimer = null;
-    const clearTargets = () => catViewport.querySelectorAll('.cat-chip.drop-target').forEach((x) => x.classList.remove('drop-target'));
-    const targetAt = (x, y) => {
+    const clearTargets = () => {
+      catViewport.querySelectorAll('.cat-chip.drop-target').forEach((x) => x.classList.remove('drop-target'));
+      reorderTrash.classList.remove('over');
+    };
+    // Что под пальцем: корзина / другая плитка (обмен) / пустая ячейка (в конец).
+    const resolveDrop = (x, y) => {
+      if (overTrash(x, y)) return { kind: 'trash' };
       const e = document.elementFromPoint(x, y);
       const c = e && e.closest && e.closest('.cat-chip');
-      return (c && c !== chip && !c.classList.contains('cat-add') && c.dataset.catId) ? c : null;
+      if (!c || c === chip) return null;
+      if (c.classList.contains('cat-add')) return { kind: 'empty', el: c };
+      if (c.dataset.catId) return { kind: 'chip', el: c };
+      return null;
+    };
+    const highlight = (x, y) => {
+      clearTargets();
+      const d = resolveDrop(x, y);
+      if (!d) return null;
+      if (d.kind === 'trash') reorderTrash.classList.add('over');
+      else d.el.classList.add('drop-target');
+      return d;
     };
     // Позиция «взятой» плитки. Смещение (catPage-startPage)*w компенсирует
     // прокрутку карусели при автолистании, чтобы плитка оставалась под пальцем.
@@ -485,7 +536,7 @@ export function renderHome(root) {
       catPage = target;
       applyTrack(true);
       setPos(true);   // синхронно с лентой — плитка визуально «стоит» под пальцем
-      clearTargets(); const tg = targetAt(lastX, lastY); if (tg) tg.classList.add('drop-target');
+      highlight(lastX, lastY);
       // Пока палец удерживается у края и есть куда листать — продолжаем.
       if (checkEdge() === dir && catPage + dir >= 0 && catPage + dir < pages) {
         edgeTimer = setTimeout(fireEdge, 450);
@@ -509,17 +560,19 @@ export function renderHome(root) {
       if (e && e.cancelable) e.preventDefault();
       lastX = x; lastY = y;
       setPos(false);
-      clearTargets(); const tg = targetAt(x, y); if (tg) tg.classList.add('drop-target');
-      armEdge();
+      const d = highlight(x, y);
+      if (d && d.kind === 'trash') clearEdge(); else armEdge();
     };
     const up = (x, y) => {
       clearTimeout(timer); clearEdge();
       if (dragging) {
-        const tg = targetAt(x, y);
+        const d = resolveDrop(x, y);
         chip.classList.remove('dragging'); chip.style.transition = ''; chip.style.transform = ''; clearTargets();
         exitReorder();
         dragging = false; setTimeout(() => { dragActive = false; }, 60);
-        if (tg) store.reorderCategorySwap(homeMode, cat.id, tg.dataset.catId);
+        if (d && d.kind === 'trash') handleTrash(cat);
+        else if (d && d.kind === 'chip') store.reorderCategorySwap(homeMode, cat.id, d.el.dataset.catId);
+        else if (d && d.kind === 'empty') store.moveCategoryToEnd(homeMode, cat.id);
         return;
       }
       if (!moved && !longFired) commit(cat.id);
