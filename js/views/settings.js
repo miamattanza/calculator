@@ -6,7 +6,7 @@ import { t, availableLangs, LANG_NAMES } from '../i18n.js';
 import { el, clear, sheet, field, toast, confirmDialog, toggle, catIcon, rowCols, swipeDeleteRow } from '../dom.js';
 import { CURRENCIES, roundRate } from '../format.js';
 import { APP_VERSION } from '../models.js';
-import { CATEGORY_ICONS } from '../icons.js';
+import { iconByKey, iconsByType } from '../icons.js';
 
 
 export function renderSettings(root, rerenderApp) {
@@ -263,9 +263,15 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType) {
     return el('button.seg', {
       type: 'button', class: model.type === v ? 'active' : '', text: label,
       onClick: (e) => {
+        if (model.type === v) return;
         model.type = v;
         typeSeg.querySelectorAll('.seg').forEach((b) => b.classList.remove('active'));
         e.target.classList.add('active');
+        // Плитки бывают своего типа: сброс выбора, если он из другого набора.
+        const chosen = model.iconKey ? iconByKey(model.iconKey) : null;
+        if (chosen && chosen.kind !== v) model.iconKey = null;
+        renderTileBank();
+        updatePreview();
       },
     });
   }
@@ -287,35 +293,40 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType) {
     emojiGrid.querySelectorAll('.emoji-pick.active').forEach((x) => x.classList.remove('active'));
   };
 
-  // Банк плиток: 50 иконок, сгруппированных по группам палитры. Выбор плитки
-  // задаёт и иконку, и цвет группы — новые категории выглядят так же, как
-  // встроенные, а весь дизайн остаётся единым.
-  const groups = [];
-  const gmap = new Map();
-  for (const ic of CATEGORY_ICONS) {
-    let g = gmap.get(ic.group);
-    if (!g) { g = { label: ic.groupLabel, items: [] }; gmap.set(ic.group, g); groups.push(g); }
-    g.items.push(ic);
-  }
-  for (const g of groups) {
-    const grid = el('.tile-grid');
-    for (const ic of g.items) {
-      const btn = el('button.tile-pick', {
-        type: 'button',
-        class: (!model.image && model.iconKey === ic.key) ? 'active' : '',
-        'aria-label': ic.label,
-        onClick: function () {
-          model.iconKey = ic.key; model.color = ic.color; model.image = null;
-          clearActive(); this.classList.add('active'); updatePreview();
-        },
-      }, [catIcon({ iconKey: ic.key, color: ic.color }, 'tile-pick-art')]);
-      grid.appendChild(btn);
+  // Банк плиток по типу: расходы — 50 иконок, доходы — 34, сгруппированы по
+  // своим рубрикам. Выбор плитки задаёт и иконку, и цвет группы, поэтому новые
+  // категории выглядят так же, как встроенные, а дизайн остаётся единым.
+  // Перестраивается при переключении «Расходы»/«Доходы».
+  const renderTileBank = () => {
+    clear(tileBank);
+    const groups = [];
+    const gmap = new Map();
+    for (const ic of iconsByType(model.type)) {
+      let g = gmap.get(ic.group);
+      if (!g) { g = { label: ic.groupLabel, items: [] }; gmap.set(ic.group, g); groups.push(g); }
+      g.items.push(ic);
     }
-    tileBank.appendChild(el('.tile-group', {}, [
-      el('.tile-group-label', { text: g.label }),
-      grid,
-    ]));
-  }
+    for (const g of groups) {
+      const grid = el('.tile-grid');
+      for (const ic of g.items) {
+        const btn = el('button.tile-pick', {
+          type: 'button',
+          class: (!model.image && model.iconKey === ic.key) ? 'active' : '',
+          'aria-label': ic.label,
+          onClick: function () {
+            model.iconKey = ic.key; model.color = ic.color; model.image = null;
+            clearActive(); this.classList.add('active'); updatePreview();
+          },
+        }, [catIcon({ iconKey: ic.key, color: ic.color }, 'tile-pick-art')]);
+        grid.appendChild(btn);
+      }
+      tileBank.appendChild(el('.tile-group', {}, [
+        el('.tile-group-label', { text: g.label }),
+        grid,
+      ]));
+    }
+  };
+  renderTileBank();
 
   // Эмодзи — запасной вариант (для доходов, у которых нет плиток-иконок).
   const makeEmoji = (em) => el('button.emoji-pick', {

@@ -396,13 +396,15 @@ export function renderHome(root) {
   // Клавиша «.»: короткий тап — десятичная точка; долгое нажатие — конвертер
   // валют. Значок ⇄ в углу подсказывает, что у кнопки есть второе действие.
   const dotKey = el('button.key.key-dot', { type: 'button', text: '.', 'aria-label': '.' });
+  // Вертикальный значок конвертера: $ вверху-слева, € внизу-слева, между ними
+  // две закруглённые стрелки (вниз $→€ и вверх €→$).
   dotKey.appendChild(el('.key-dot-badge', { 'aria-hidden': 'true', html:
-    '<svg viewBox="0 0 44 24" fill="none" aria-hidden="true">' +
-    '<text x="0" y="18" font-size="15" font-weight="700" fill="currentColor" font-family="-apple-system,system-ui,sans-serif">$</text>' +
-    '<text x="32" y="18" font-size="15" font-weight="700" fill="currentColor" font-family="-apple-system,system-ui,sans-serif">€</text>' +
-    '<g stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" fill="none">' +
-    '<path d="M16 8 q6.5 -5 13 0"/><path d="M26 6 L29 8 L26 10"/>' +
-    '<path d="M29 16 q-6.5 5 -13 0"/><path d="M19 14 L16 16 L19 18"/>' +
+    '<svg viewBox="0 0 28 40" fill="none" aria-hidden="true">' +
+    '<text x="0" y="14" font-size="15" font-weight="700" fill="currentColor" font-family="-apple-system,system-ui,sans-serif">$</text>' +
+    '<text x="0" y="39" font-size="15" font-weight="700" fill="currentColor" font-family="-apple-system,system-ui,sans-serif">€</text>' +
+    '<g stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none">' +
+    '<path d="M16 15 V27"/><path d="M13 24 L16 27 L19 24"/>' +
+    '<path d="M24 27 V15"/><path d="M21 18 L24 15 L27 18"/>' +
     '</g></svg>' }));
   attachHold(dotKey, pressDot, () => openConverter());
   keypad.appendChild(dotKey);
