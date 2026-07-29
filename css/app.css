@@ -443,7 +443,9 @@ select.select { appearance: none; -webkit-appearance: none; }
    они оставались в фокусе и «дрожали». */
 .reorder-dim { position: fixed; inset: 0; background: rgba(0,0,0,0.22); z-index: 40; opacity: 0; transition: opacity .2s; pointer-events: none; }
 .reorder-dim.on { opacity: 1; }
-body.reordering .cat-pager { position: relative; z-index: 45; }
+/* z-index 48 — выше клавиши-корзины (47), чтобы перетаскиваемая плитка была
+   ПОВЕРХ корзины, когда её подносят на выброс. */
+body.reordering .cat-pager { position: relative; z-index: 48; }
 /* Лёгкая «дрожь» соседних плиток (два противофазных набора — органичнее). */
 @keyframes chip-jiggle-a { 0%,100% { transform: rotate(-1.6deg); } 50% { transform: rotate(1.4deg); } }
 @keyframes chip-jiggle-b { 0%,100% { transform: rotate(1.5deg); } 50% { transform: rotate(-1.5deg); } }
@@ -459,14 +461,16 @@ body.reordering .cat-page .cat-chip:nth-child(odd):not(.dragging):not(.cat-add) 
 .key0-front, .key0-back { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; border-radius: 12px; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
 .key0-front { font-size: 25px; font-weight: 500; }
 .key0-back { transform: rotateY(180deg); color: var(--text); }
-.key0-back .trashcan { width: 30px; height: 32px; overflow: visible; }
+.key0-back .trashcan { width: 33px; height: 35px; overflow: visible; transform: translate(-2px, -3px); }
 .key0-back .trash-lid { transform-origin: 13px 19px; transition: transform .2s ease; }
 body.reordering .key-zero { z-index: 47; }
 body.reordering .key-zero .key0-inner { transform: rotateY(180deg); }
-/* Плитку подносят к корзине → крышка открывается, корзина краснеет. */
+/* Крышка открывается сразу после переворота «0»→корзина (с микропаузой ~0.48с
+   после начала разворота), не дожидаясь поднесения плитки. */
+body.reordering .key-zero .trash-lid { transform: rotate(-42deg); transition-delay: .48s; }
+/* Плитку подносят к корзине → корзина краснеет (крышка уже открыта). */
 .key-zero.trash-over { z-index: 47; }
 .key-zero.trash-over .key0-back { color: var(--red); }
-.key-zero.trash-over .trash-lid { transform: rotate(-42deg); }
 @media (prefers-reduced-motion: reduce) {
   .key0-inner, .key0-back .trash-lid { transition: none; }
 }
