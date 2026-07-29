@@ -753,6 +753,15 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 
 /* ---- Категории на «Обзоре»: карусель + пустые ячейки ---- */
 .cat-viewport { overflow: hidden; }
+/* В режиме перемещения плитку можно поднять выше зоны категорий (к корзине на
+   клавише «0»). overflow:hidden режет её сверху; overflow нельзя обрезать только
+   по горизонтали, поэтому на время режима переключаемся на clip-path: соседние
+   страницы карусели прячутся по бокам, а вертикаль остаётся видимой. */
+body.reordering .cat-viewport {
+  overflow: visible;
+  -webkit-clip-path: inset(-100vh 0 -100vh 0);
+  clip-path: inset(-100vh 0 -100vh 0);
+}
 .cat-track { display: flex; }
 .cat-track > .cat-page { flex: 0 0 100%; }
 /* Одинаковый размер всех ячеек категорий (включая пустые «+»). */
