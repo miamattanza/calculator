@@ -286,9 +286,9 @@ function budgetRingSvg(ratio, muted) {
   return svg;
 }
 
-// SVG «корзины» (адаптировано из примера zero-to-trash): собирается из «0»
-// при входе в режим перемещения; при наведении плитки — краснеет и растёт.
-const TRASH_SVG = `<svg viewBox="0 0 200 210"><defs><clipPath id="rt-bodyClip"><path d="M 52.0,76.0 L 56.0,94.0 L 60.0,112.0 L 64.0,130.0 L 68.0,148.0 L 72.0,166.0 Q 100.0,177.0 128.0,166.0 L 132.0,148.0 L 136.0,130.0 L 140.0,112.0 L 144.0,94.0 L 148.0,76.0 Z"/></clipPath></defs><g class="grid-lines" clip-path="url(#rt-bodyClip)"><line x1="138.0" y1="72.0" x2="155.0" y2="89.0"/><line x1="121.0" y1="72.0" x2="155.0" y2="106.0"/><line x1="104.0" y1="72.0" x2="155.0" y2="123.0"/><line x1="87.0" y1="72.0" x2="155.0" y2="140.0"/><line x1="70.0" y1="72.0" x2="155.0" y2="157.0"/><line x1="53.0" y1="72.0" x2="155.0" y2="174.0"/><line x1="45.0" y1="81.0" x2="145.0" y2="181.0"/><line x1="45.0" y1="98.0" x2="128.0" y2="181.0"/><line x1="45.0" y1="115.0" x2="111.0" y2="181.0"/><line x1="45.0" y1="132.0" x2="94.0" y2="181.0"/><line x1="45.0" y1="149.0" x2="77.0" y2="181.0"/><line x1="45.0" y1="166.0" x2="60.0" y2="181.0"/><line x1="45.0" y1="89.0" x2="62.0" y2="72.0"/><line x1="45.0" y1="106.0" x2="79.0" y2="72.0"/><line x1="45.0" y1="123.0" x2="96.0" y2="72.0"/><line x1="45.0" y1="140.0" x2="113.0" y2="72.0"/><line x1="45.0" y1="157.0" x2="130.0" y2="72.0"/><line x1="45.0" y1="174.0" x2="147.0" y2="72.0"/><line x1="55.0" y1="181.0" x2="155.0" y2="81.0"/><line x1="72.0" y1="181.0" x2="155.0" y2="98.0"/><line x1="89.0" y1="181.0" x2="155.0" y2="115.0"/><line x1="106.0" y1="181.0" x2="155.0" y2="132.0"/><line x1="123.0" y1="181.0" x2="155.0" y2="149.0"/><line x1="140.0" y1="181.0" x2="155.0" y2="166.0"/></g><line class="segment seg-0" x1="52.0" y1="76.0" x2="56.0" y2="94.0"></line><line class="segment seg-0" x1="148.0" y1="76.0" x2="144.0" y2="94.0"></line><line class="segment seg-1" x1="56.0" y1="94.0" x2="60.0" y2="112.0"></line><line class="segment seg-1" x1="144.0" y1="94.0" x2="140.0" y2="112.0"></line><line class="segment seg-2" x1="60.0" y1="112.0" x2="64.0" y2="130.0"></line><line class="segment seg-2" x1="140.0" y1="112.0" x2="136.0" y2="130.0"></line><line class="segment seg-3" x1="64.0" y1="130.0" x2="68.0" y2="148.0"></line><line class="segment seg-3" x1="136.0" y1="130.0" x2="132.0" y2="148.0"></line><line class="segment seg-4" x1="68.0" y1="148.0" x2="72.0" y2="166.0"></line><line class="segment seg-4" x1="132.0" y1="148.0" x2="128.0" y2="166.0"></line><path class="segment seg-4" d="M 72.0,166.0 Q 100.0,177.0 128.0,166.0" fill="none"></path><ellipse class="rt-rim" cx="100" cy="70" rx="7" ry="16"></ellipse></svg>`;
+// SVG мусорной корзины с крышкой на «тыльной» стороне клавиши «0». Крышка
+// (.trash-lid) открывается, когда плитку подносят к корзине (класс .trash-over).
+const TRASH_CAN_SVG = `<svg class="trashcan" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 19 L16.5 38 Q16.7 40.5 19.2 40.5 L28.8 40.5 Q31.3 40.5 31.5 38 L33 19"/><path d="M21 24 V35" stroke-width="2"/><path d="M27 24 V35" stroke-width="2"/><g class="trash-lid"><path d="M12.5 19 H35.5"/><path d="M20.5 19 L21.5 15.5 H26.5 L27.5 19"/></g></svg>`;
 
 // Долгое нажатие (hold) на кнопку: короткий тап → onTap, удержание → onHold.
 // Порог 350 мс; сдвиг пальца отменяет. Используется на клавише «.» (конвертер).
@@ -413,7 +413,15 @@ export function renderHome(root) {
     '</svg>' }));
   attachHold(dotKey, pressDot, () => openConverter());
   keypad.appendChild(dotKey);
-  keypad.appendChild(el('button.key.key-zero', { type: 'button', text: '0', onClick: () => pressDigit('0') }));
+  // Клавиша «0»: в режиме перемещения переворачивается на тыльную сторону —
+  // мусорную корзину с крышкой (перетаскивание категории сюда её удаляет).
+  const zeroKey = el('button.key.key-zero', { type: 'button', 'aria-label': '0', onClick: () => pressDigit('0') }, [
+    el('.key0-inner', {}, [
+      el('.key0-front', { text: '0' }),
+      el('.key0-back', { 'aria-hidden': 'true', html: TRASH_CAN_SVG }),
+    ]),
+  ]);
+  keypad.appendChild(zeroKey);
   keypad.appendChild(el('button.key.key-del', { type: 'button', text: '⌫', 'aria-label': t('delete'), onClick: del }));
 
   const commit = async (categoryId) => {
@@ -431,15 +439,18 @@ export function renderHome(root) {
     // saveTransaction → подписка → renderHome (табло сбрасывается, история обновляется)
   };
 
-  // --- Категории: всегда 2 ряда по 4 (8 на страницу). Пустые ячейки — «+»,
-  // открывают добавление новой категории. Страницы листаются свайпом-каруселью.
-  // Порядок — пользовательский (можно менять перетаскиванием), без авто-
-  // сортировки по частоте. ---
+  // --- Категории: 2 ряда по 4 (8 на страницу). Позиции АБСОЛЮТНЫЕ (по slot =
+  // order): каждая категория стоит на своём месте, пустые ячейки — «+». Перенос/
+  // удаление оставляют пустые места, ничего автоматически не сдвигая. ---
   const cats = store.categoriesByType(homeMode);
-  // +1 — чтобы всегда была хотя бы одна пустая ячейка «+» для добавления.
-  const pages = Math.max(1, Math.ceil((cats.length + 1) / CATS_PER_PAGE));
+  const bySlot = new Map();
+  let maxSlot = -1;
+  for (const c of cats) { const s = c.order || 0; bySlot.set(s, c); if (s > maxSlot) maxSlot = s; }
+  // +1 — чтобы после последней занятой всегда была хотя бы одна пустая ячейка «+».
+  const pages = Math.max(1, Math.ceil((maxSlot + 2) / CATS_PER_PAGE));
   if (catPage >= pages) catPage = 0;
-  const openAdd = () => openCategoryEditor(null, () => {}, homeMode);
+  // Добавление новой категории в конкретную (нажатую) свободную ячейку.
+  const openAdd = (slot) => openCategoryEditor(null, () => {}, homeMode, slot);
 
   const catViewport = el('.cat-viewport');
   const catTrack = el('.cat-track');
@@ -454,29 +465,23 @@ export function renderHome(root) {
   // Vibration API недоступен).
   const reorderDim = el('.reorder-dim');
   pager.appendChild(reorderDim);
-  // Корзина: появляется в режиме перемещения (собирается из «0»); перетаскивание
-  // плитки в неё удаляет категорию (с подтверждением; занятые в операциях — нельзя).
-  const reorderTrash = el('.reorder-trash', { 'aria-hidden': 'true',
-    html: TRASH_SVG + '<div class="reorder-trash-label">' + t('delete') + '</div>' });
-  pager.appendChild(reorderTrash);
+  // Корзина живёт на «тыльной» стороне клавиши «0»: при входе в режим клавиша
+  // переворачивается (CSS по body.reordering), при наведении плитки крышка
+  // открывается (.trash-over), при выходе — крышка захлопывается и клавиша
+  // разворачивается обратно.
   const enterReorder = () => {
     document.body.classList.add('reordering');
-    reorderTrash.classList.remove('play', 'over');
-    requestAnimationFrame(() => {
-      reorderDim.classList.add('on');
-      void reorderTrash.offsetWidth;     // сброс, чтобы анимация «сборки» проигралась заново
-      reorderTrash.classList.add('play');
-    });
+    requestAnimationFrame(() => reorderDim.classList.add('on'));
   };
   const exitReorder = () => {
     document.body.classList.remove('reordering');
     reorderDim.classList.remove('on');
-    reorderTrash.classList.remove('play', 'over');
+    zeroKey.classList.remove('trash-over');
   };
   const overTrash = (x, y) => {
     if (!document.body.classList.contains('reordering')) return false;
-    const r = reorderTrash.getBoundingClientRect();
-    const pad = 16;
+    const r = zeroKey.getBoundingClientRect();
+    const pad = 12;
     return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad;
   };
   // Удаление категории через корзину: занятые в операциях не удаляем.
@@ -492,7 +497,7 @@ export function renderHome(root) {
     let startPage = 0, lastX = 0, lastY = 0, edgeDir = 0, edgeTimer = null;
     const clearTargets = () => {
       catViewport.querySelectorAll('.cat-chip.drop-target').forEach((x) => x.classList.remove('drop-target'));
-      reorderTrash.classList.remove('over');
+      zeroKey.classList.remove('trash-over');
     };
     // Что под пальцем: корзина / другая плитка (обмен) / пустая ячейка (в конец).
     const resolveDrop = (x, y) => {
@@ -508,7 +513,7 @@ export function renderHome(root) {
       clearTargets();
       const d = resolveDrop(x, y);
       if (!d) return null;
-      if (d.kind === 'trash') reorderTrash.classList.add('over');
+      if (d.kind === 'trash') zeroKey.classList.add('trash-over');
       else d.el.classList.add('drop-target');
       return d;
     };
@@ -572,7 +577,7 @@ export function renderHome(root) {
         dragging = false; setTimeout(() => { dragActive = false; }, 60);
         if (d && d.kind === 'trash') handleTrash(cat);
         else if (d && d.kind === 'chip') store.reorderCategorySwap(homeMode, cat.id, d.el.dataset.catId);
-        else if (d && d.kind === 'empty') store.moveCategoryToEnd(homeMode, cat.id);
+        else if (d && d.kind === 'empty') store.moveCategoryToSlot(homeMode, cat.id, parseInt(d.el.dataset.slot, 10) || 0);
         return;
       }
       if (!moved && !longFired) commit(cat.id);
@@ -590,18 +595,19 @@ export function renderHome(root) {
   for (let p = 0; p < pages; p++) {
     const grid = el('.cat-page');
     for (let i = 0; i < CATS_PER_PAGE; i++) {
-      const c = cats[p * CATS_PER_PAGE + i];
+      const slot = p * CATS_PER_PAGE + i;
+      const c = bySlot.get(slot);
       if (c) {
         const badge = (c.currency && c.currency !== base)
           ? el('.cat-cur', { text: (CURRENCIES[c.currency] && CURRENCIES[c.currency].symbol) || c.currency }) : null;
         const chip = el('button.cat-chip', { type: 'button', style: { '--chip': c.color } },
           [catIcon(c), el('.cat-name', { text: store.categoryName(c) }), badge]);
-        // Тап — записать операцию; долгое нажатие — перетащить (сменить порядок).
+        // Тап — записать операцию; долгое нажатие — перетащить (сменить место).
         // Редактирование категорий — через меню «Категории».
         attachChipDrag(chip, c);
         grid.appendChild(chip);
       } else {
-        grid.appendChild(el('button.cat-chip.cat-add', { type: 'button', 'aria-label': t('add_category'), onClick: openAdd }, [el('.cat-add-plus', { text: '+' })]));
+        grid.appendChild(el('button.cat-chip.cat-add', { type: 'button', 'aria-label': t('add_category'), dataset: { slot: String(slot) }, onClick: () => openAdd(slot) }, [el('.cat-add-plus', { text: '+' })]));
       }
     }
     catTrack.appendChild(grid);

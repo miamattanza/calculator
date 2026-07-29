@@ -245,7 +245,7 @@ function openCategoriesManager() {
   sheet(t('manage_categories'), body);
 }
 
-export function openCategoryEditor(existing, onDone = () => {}, presetType) {
+export function openCategoryEditor(existing, onDone = () => {}, presetType, presetSlot) {
   // Цвет назначается автоматически (выбор цвета из редактора убран).
   const autoColor = COLOR_CHOICES[store.getState().categories.length % COLOR_CHOICES.length];
   const model = existing
@@ -395,7 +395,9 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType) {
 
   saveBtn.addEventListener('click', async () => {
     if (!model.name.trim()) { error.textContent = t('required'); return; }
-    await store.saveCategory({ id: existing ? existing.id : undefined, name: model.name.trim(), type: model.type, icon: model.icon, color: model.color, image: model.image || null, currency: catCurrency, iconKey: model.image ? null : (model.iconKey || null) });
+    const payload = { id: existing ? existing.id : undefined, name: model.name.trim(), type: model.type, icon: model.icon, color: model.color, image: model.image || null, currency: catCurrency, iconKey: model.image ? null : (model.iconKey || null) };
+    if (!existing && presetSlot != null) payload.order = presetSlot;  // добавление в конкретную ячейку
+    await store.saveCategory(payload);
     modal.close(); onDone();
   });
 }

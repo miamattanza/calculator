@@ -94,6 +94,18 @@ export async function init() {
     await setSetting('tilesV1', true);
   }
 
+  // Позиции категорий: приводим к чистым (без «дыр» и коллизий) 0..N-1 внутри
+  // каждого типа — ровно то, что пользователь сейчас видит. Дальше позиции
+  // абсолютные: перенос/удаление оставляют пустые ячейки, ничего не сдвигая.
+  if (!state.settings.slotsV1) {
+    const changed = [];
+    for (const type of ['expense', 'income']) {
+      categoriesByType(type).forEach((c, i) => { if ((c.order || 0) !== i) { c.order = i; changed.push(c); } });
+    }
+    if (changed.length) await db.bulkPut('categories', changed);
+    await setSetting('slotsV1', true);
+  }
+
   // Тема — только светлая/тёмная. Наследие ('system'/'manual') и первый запуск
   // приводим к конкретной теме один раз, ориентируясь на системную настройку.
   if (state.settings.theme !== 'light' && state.settings.theme !== 'dark') {
@@ -205,8 +217,17 @@ export function categoryName(cat) {
   return cat ? cat.name : '';
 }
 
+// Первая свободная позиция (slot) среди категорий данного типа. Позиции —
+// абсолютные (с «дырами»): при удалении/переносе места не «схлопываются».
+export function firstFreeSlot(type) {
+  const used = new Set(state.categories.filter((c) => c.type === type).map((c) => c.order || 0));
+  let i = 0; while (used.has(i)) i++; return i;
+}
+
 export async function saveCategory(data) {
   const existing = data.id ? categoryById(data.id) : null;
+  // Новой категории без явной позиции даём первую свободную ячейку своего типа.
+  if (!existing && data.order == null) data = { ...data, order: firstFreeSlot(data.type) };
   const cat = existing ? { ...existing, ...data } : makeCategory(data);
   // Если пользователь переименовал дефолтную категорию (имя отличается от
   // локализованного), снимаем key — дальше показываем его собственное имя.
@@ -220,29 +241,28 @@ export async function saveCategory(data) {
   return cat;
 }
 
-// Смена порядка категорий перетаскиванием: нормализуем порядок по текущему
-// виду и меняем местами две категории (A встаёт на место B и наоборот).
+// Обмен местами двух категорий: меняем их позиции (order) без сдвига остальных.
 export async function reorderCategorySwap(type, idA, idB) {
   if (idA === idB) return;
-  const list = categoriesByType(type);
-  list.forEach((c, i) => { c.order = i; });
-  const a = list.find((c) => c.id === idA);
-  const b = list.find((c) => c.id === idB);
-  if (a && b) { const tmp = a.order; a.order = b.order; b.order = tmp; }
-  await db.bulkPut('categories', list);
+  const a = categoryById(idA);
+  const b = categoryById(idB);
+  if (!a || !b) return;
+  const tmp = a.order || 0; a.order = b.order || 0; b.order = tmp;
+  await db.bulkPut('categories', [a, b]);
   emit();
 }
 
-// Перемещение категории в конец списка своего типа (перетаскивание на пустую
-// ячейку): нормализуем порядок, вынимаем категорию и ставим её последней.
-export async function moveCategoryToEnd(type, id) {
-  const list = categoriesByType(type);
-  const idx = list.findIndex((c) => c.id === id);
-  if (idx < 0 || idx === list.length - 1) return;
-  const [cat] = list.splice(idx, 1);
-  list.push(cat);
-  list.forEach((c, i) => { c.order = i; });
-  await db.bulkPut('categories', list);
+// Перенос категории на конкретную позицию (перетаскивание на свободную ячейку).
+// Позиции абсолютные: прежняя ячейка остаётся пустой, остальные НЕ сдвигаются.
+// Если целевая ячейка вдруг занята — меняемся с занявшим (защита от гонок).
+export async function moveCategoryToSlot(type, id, slot) {
+  const cat = categoryById(id);
+  if (!cat || (cat.order || 0) === slot) return;
+  const changed = [cat];
+  const occupant = state.categories.find((c) => c.type === type && c.id !== id && (c.order || 0) === slot);
+  if (occupant) { occupant.order = cat.order || 0; changed.push(occupant); }
+  cat.order = slot;
+  await db.bulkPut('categories', changed);
   emit();
 }
 
