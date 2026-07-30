@@ -566,13 +566,23 @@ body.reordering .key-zero .trash-lid { transform: rotate(-42deg); transition-del
 }
 .sheet-backdrop.open { opacity: 1; }
 .sheet {
-  width: 100%; max-height: 92vh; background: var(--bg-elev);
+  width: 100%; background: var(--bg-elev);
+  /* Ограничиваем высоту видимой областью с учётом «чёлки»/строки статуса
+     (safe-top) и панели браузера (dvh), чтобы шапка листа никогда не уходила
+     за верхнюю границу экрана. vh — запасной вариант для старых браузеров. */
+  max-height: 92vh;
+  max-height: calc(92dvh - var(--safe-top));
   border-radius: 16px 16px 0 0; display: flex; flex-direction: column;
   transform: translateY(100%); transition: transform .28s cubic-bezier(.32,.72,0,1);
   padding-bottom: var(--safe-bottom);
 }
 .sheet-backdrop.open .sheet { transform: translateY(0); }
-.sheet.sheet-full { height: 94vh; height: 94dvh; max-height: 94vh; }
+.sheet.sheet-full {
+  height: 94vh;
+  height: calc(100dvh - var(--safe-top) - 8px);
+  max-height: 94vh;
+  max-height: calc(100dvh - var(--safe-top) - 8px);
+}
 .sheet.sheet-full .sheet-body { flex: 1; }
 .sheet-grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--sep-strong); margin: 8px auto 0; }
 .sheet-header { display: flex; align-items: center; padding: 8px 16px; }
