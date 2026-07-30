@@ -198,7 +198,7 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .entry-keypad .key-del { background: transparent; font-size: 22px; }
 
 .cat-pager { margin-top: 14px; }
-.cat-page { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; align-items: start; }
+.cat-page { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; align-items: start; position: relative; }
 .cat-dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px; min-height: 8px; }
 .cat-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sep-strong); transition: all .2s; }
 .cat-dot.active { background: var(--accent); width: 16px; border-radius: 3px; }
@@ -813,6 +813,11 @@ body.reordering .cat-viewport {
 .cat-chip.cat-add { justify-content: flex-start; background: transparent; box-shadow: none; }
 .cat-chip.cat-add .cat-add-plus { width: 100%; aspect-ratio: 1; border-radius: 22%; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1.5px var(--sep-strong); }
 .cat-add-plus { font-size: 30px; color: var(--text-3); font-weight: 300; }
+/* «Призрак» пустой ячейки на месте, откуда «взята» плитка: контур с плюсиком
+   проявляется тем сильнее, чем дальше плитка уведена от своего места (opacity
+   задаётся из JS пропорционально смещению; 100% — когда плитка полностью
+   покинула ячейку). Лежит под самой «взятой» плиткой. */
+.cat-add-ghost { position: absolute; opacity: 0; pointer-events: none; z-index: 0; transition: opacity .1s linear; }
 /* Бейдж валюты категории (после долгого нажатия). */
 .cat-cur { position: absolute; top: 4px; inset-inline-end: 4px; font-size: 11px; font-weight: 700; color: var(--green); background: var(--bg-elev); border-radius: 6px; padding: 0 4px; line-height: 1.4; }
 

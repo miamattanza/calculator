@@ -537,6 +537,21 @@ export function renderHome(root) {
     chip.dataset.catId = cat.id;
     let timer = null, sx = 0, sy = 0, moved = false, dragging = false, longFired = false;
     let startPage = 0, lastX = 0, lastY = 0, edgeDir = 0, edgeTimer = null;
+    // «Призрак» пустой ячейки с плюсиком на месте, откуда «взята» плитка.
+    let ghost = null;
+    const removeGhost = () => { if (ghost) { ghost.remove(); ghost = null; } };
+    // Прозрачность контура растёт пропорционально смещению плитки от её ячейки:
+    // 1% пути = 1% видимости, 100% — когда плитка полностью покинула ячейку
+    // (сместилась на свою ширину по горизонтали или высоту по вертикали).
+    const updateGhost = () => {
+      if (!ghost) return;
+      const w = catViewport.offsetWidth || 1;
+      const dx = (lastX - sx) + (catPage - startPage) * w;
+      const dy = lastY - sy;
+      const cw = chip.offsetWidth || 1, ch = chip.offsetHeight || 1;
+      const frac = Math.min(1, Math.max(Math.abs(dx) / cw, Math.abs(dy) / ch));
+      ghost.style.opacity = String(frac);
+    };
     const clearTargets = () => {
       catViewport.querySelectorAll('.cat-chip.drop-target').forEach((x) => x.classList.remove('drop-target'));
       zeroKey.classList.remove('trash-over');
@@ -565,6 +580,7 @@ export function renderHome(root) {
       const w = catViewport.offsetWidth || 1;
       chip.style.transition = anim ? 'transform .26s cubic-bezier(.32,.72,0,1)' : 'none';
       chip.style.transform = `translate(${(lastX - sx) + (catPage - startPage) * w}px, ${lastY - sy}px) scale(1.12)`;
+      updateGhost();
     };
     const clearEdge = () => { clearTimeout(edgeTimer); edgeTimer = null; edgeDir = 0; };
     // Насколько плитка «скрылась» за краем зоны категорий (>20% ширины → лист).
@@ -599,6 +615,16 @@ export function renderHome(root) {
       dragging = true; dragActive = true; longFired = true; startPage = catPage;
       chip.classList.add('dragging'); enterReorder();
       if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} }
+      // Контур «+» на освобождаемой ячейке (под самой плиткой). Координаты —
+      // относительно .cat-page (у неё position: relative), трансформы плитки
+      // на offsetLeft/Top не влияют, поэтому это её «родная» позиция.
+      removeGhost();
+      ghost = el('.cat-chip.cat-add.cat-add-ghost', {}, [el('.cat-add-plus', { text: '+' })]);
+      ghost.style.left = chip.offsetLeft + 'px';
+      ghost.style.top = chip.offsetTop + 'px';
+      ghost.style.width = chip.offsetWidth + 'px';
+      ghost.style.height = chip.offsetHeight + 'px';
+      chip.parentElement.appendChild(ghost);
       setPos(false);
     };
     const down = (x, y) => { sx = x; sy = y; lastX = x; lastY = y; moved = false; dragging = false; longFired = false; timer = setTimeout(startDrag, 350); };
@@ -615,6 +641,7 @@ export function renderHome(root) {
       if (dragging) {
         const d = resolveDrop(x, y);
         chip.classList.remove('dragging'); chip.style.transition = ''; chip.style.transform = ''; clearTargets();
+        removeGhost();
         exitReorder();
         dragging = false; setTimeout(() => { dragActive = false; }, 60);
         if (d && d.kind === 'trash') handleTrash(cat);
