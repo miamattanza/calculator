@@ -90,12 +90,18 @@ export function renderSettings(root, rerenderApp) {
   const fitToggle = toggle(s.fitHistory !== false, async (checked) => {
     await store.setSetting('fitHistory', checked);
   });
+  const plusLeftToggle = toggle(!!s.sumPlusLeft, async (checked) => {
+    await store.setSetting('sumPlusLeft', checked);
+    rerenderApp();
+  });
 
   const displayGroup = el('.settings-group', {}, [
     settingRow(t('split_history'), splitToggle),
     el('.setting-hint', { text: t('split_history_hint') }),
     settingRow(t('fit_history'), fitToggle),
     el('.setting-hint', { text: t('fit_history_hint') }),
+    settingRow(t('sum_plus_left'), plusLeftToggle),
+    el('.setting-hint', { text: t('sum_plus_hint') }),
   ]);
 
   // Поле «Максимум строк» — только когда подгонка под экран выключена.

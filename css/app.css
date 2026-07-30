@@ -155,6 +155,26 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
   text-align: center; font-size: 42px; font-weight: 700; letter-spacing: -1px;
   padding: 6px 0 14px; font-variant-numeric: tabular-nums;
 }
+/* «Лента» слагаемых кнопки «+» — чуть выше цифр. */
+.entry-tape {
+  text-align: center; font-size: 15px; font-weight: 600; color: var(--text-3);
+  font-variant-numeric: tabular-nums; min-height: 18px; line-height: 18px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  opacity: 0; transition: opacity .15s;
+}
+.entry-tape.show { opacity: 1; }
+/* Кнопка «+» в табло суммы — над «3» (справа) или над «1» (слева, настройка). */
+.entry-amount-row { position: relative; }
+.entry-plus {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; font-weight: 300; line-height: 1;
+  background: var(--fill); color: var(--accent);
+}
+.entry-plus:active { background: var(--fill-2); transform: translateY(-50%) scale(0.92); }
+.entry-plus.right { right: calc(16.666% - 22px); }
+.entry-plus.left  { left: calc(16.666% - 22px); }
 /* Цвет вводимой суммы — по типу окна (включая дефолтный 0). */
 .home-pager.expense-mode .entry-amount { color: var(--accent); }
 .home-pager.income-mode .entry-amount { color: var(--green); }
@@ -433,7 +453,11 @@ select.select { appearance: none; -webkit-appearance: none; }
 }
 .tile-pick-art { transition: transform .08s ease, filter .08s ease, box-shadow .08s ease; }
 /* Перетаскивание порядка иконок */
-.cat-chip.dragging { z-index: 30; box-shadow: 0 8px 24px rgba(0,0,0,0.28); opacity: 0.96; pointer-events: none; }
+/* «Взятая» плитка: без подписи и без подложки, только сама плитка с мягкой
+   тенью ~12–15px, падающей на юго-запад (влево-вниз). */
+.cat-chip.dragging { z-index: 30; box-shadow: none; opacity: 1; pointer-events: none; }
+.cat-chip.dragging .cat-name { visibility: hidden; }
+.cat-chip.dragging .cat-emoji { box-shadow: -9px 11px 13px rgba(0,0,0,0.34); }
 .cat-chip.drop-target .cat-emoji { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--accent); }
 /* Подсветка пустой ячейки как цели переноса (в конец списка). */
 .cat-add.drop-target .cat-add-plus { box-shadow: inset 0 0 0 2px var(--accent); color: var(--accent); }

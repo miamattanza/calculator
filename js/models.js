@@ -1,6 +1,6 @@
 // models.js — фабрики сущностей и данные по умолчанию.
 
-export const APP_VERSION = '1.40';
+export const APP_VERSION = '1.41';
 
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -109,6 +109,7 @@ export const DEFAULT_SETTINGS = {
   splitHistory: true,   // раздельная история по типу в окнах Расходы/Доходы
   fitHistory: true,     // подгонять число строк истории под размер экрана (v1.4)
   maxRows: 10,          // лимит строк истории, когда fitHistory выключен
+  sumPlusLeft: false,   // кнопка «+» (сложение сумм) слева (над «1») вместо справа (над «3»)
   langChosen: false,    // выбран ли язык при первом запуске
   background: 'none',   // фоновый паттерн ('none' | id | 'custom')
   bgCustom: null,       // свой фон (dataURL)

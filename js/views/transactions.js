@@ -148,6 +148,7 @@ export function openTransactionForm(existing) {
 
 let homeMode = 'expense'; // 'expense' | 'income'
 let entryDigits = '';     // набираемая сумма (целое, в основной валюте)
+let sumParts = [];        // слагаемые «калькулятора» (кнопка +): при записи суммируются
 let catPage = 0;          // текущая страница категорий
 const CATS_PER_PAGE = 8;
 
@@ -363,9 +364,20 @@ export function renderHome(root) {
 
   // --- Табло суммы ---
   const amountEl = el('.entry-amount');
+  const tapeEl = el('.entry-tape', { 'aria-hidden': 'true' });   // «лента» слагаемых (кнопка +)
   const entryCur = store.currentCurrency(); // ввод — в текущей («ходовой») валюте
   const curSym = (CURRENCIES[entryCur] && CURRENCIES[entryCur].symbol) || entryCur;
   const decSep = () => (1.1).toLocaleString(locale()).replace(/[0-9]/g, '') || '.';
+  const fmtNum = (n) => n.toLocaleString(locale(), { maximumFractionDigits: 2 });
+  const renderTape = () => {
+    if (sumParts.length) {
+      tapeEl.textContent = sumParts.map(fmtNum).join(' + ') + ' +';
+      tapeEl.classList.add('show');
+    } else {
+      tapeEl.textContent = '';
+      tapeEl.classList.remove('show');
+    }
+  };
   const renderAmount = () => {
     let disp;
     if (!entryDigits) {
@@ -376,7 +388,8 @@ export function renderHome(root) {
       disp = entryDigits.indexOf('.') >= 0 ? s + decSep() + (fp || '') : s;
     }
     amountEl.textContent = disp + ' ' + curSym;
-    amountEl.classList.toggle('zero', (parseFloat(entryDigits) || 0) <= 0);
+    amountEl.classList.toggle('zero', (parseFloat(entryDigits) || 0) <= 0 && !sumParts.length);
+    renderTape();
   };
 
   // --- Клавиатура (без подтверждения — запись по тапу на категорию).
@@ -394,7 +407,21 @@ export function renderHome(root) {
     entryDigits = (entryDigits === '' ? '0' : entryDigits) + '.';
     renderAmount();
   };
-  const del = () => { entryDigits = entryDigits.slice(0, -1); renderAmount(); };
+  // Кнопка «+»: складываем несколько сумм в одну операцию (покупки без чека).
+  // Текущее число уходит в «ленту» слагаемых, поле обнуляется под следующее.
+  const pressPlus = () => {
+    const v = parseFloat(entryDigits);
+    if (!(v > 0)) return;
+    sumParts.push(v);
+    entryDigits = '';
+    renderAmount();
+  };
+  // Backspace: сперва стираем цифры текущего числа, затем — последнее слагаемое.
+  const del = () => {
+    if (entryDigits) entryDigits = entryDigits.slice(0, -1);
+    else if (sumParts.length) sumParts.pop();
+    renderAmount();
+  };
   ['1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach((n) =>
     keypad.appendChild(el('button.key', { type: 'button', text: n, onClick: () => pressDigit(n) })));
   // Клавиша «.»: короткий тап — десятичная точка; долгое нажатие — конвертер
@@ -425,9 +452,10 @@ export function renderHome(root) {
   keypad.appendChild(el('button.key.key-del', { type: 'button', text: '⌫', 'aria-label': t('delete'), onClick: del }));
 
   const commit = async (categoryId) => {
-    const v = entryDigits ? (parseFloat(entryDigits) || 0) : 0;
+    const tail = entryDigits ? (parseFloat(entryDigits) || 0) : 0;
+    const v = sumParts.reduce((a, b) => a + b, 0) + tail;   // сумма «ленты» + текущее число
     if (v <= 0) { amountEl.classList.add('shake'); setTimeout(() => amountEl.classList.remove('shake'), 400); return; }
-    entryDigits = '';
+    entryDigits = ''; sumParts = [];
     const cat = store.categoryById(categoryId);
     // Валюта операции: своя у категории, иначе — текущая («ходовая»).
     let cur = (cat && cat.currency) || store.currentCurrency();
@@ -659,7 +687,11 @@ export function renderHome(root) {
     window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);
   });
 
-  pager.append(el('.entry-block', {}, [amountEl, keypad]), catPager);
+  // Кнопка «+» над «3» (по умолчанию, для правшей) либо над «1» (настройка).
+  const plusLeft = !!store.getState().settings.sumPlusLeft;
+  const plusBtn = el('button.entry-plus', { type: 'button', 'aria-label': '+', text: '+', class: plusLeft ? 'left' : 'right', onClick: pressPlus });
+  const amountRow = el('.entry-amount-row', {}, [amountEl, plusBtn]);
+  pager.append(el('.entry-block', {}, [tapeEl, amountRow, keypad]), catPager);
 
   // --- Мини-история. Число строк управляется настройкой «Подгонять историю
   // под экран»: ВКЛ — сколько помещается до низа экрана; ВЫКЛ — до «Максимум
