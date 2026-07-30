@@ -121,10 +121,6 @@ export function renderSettings(root, rerenderApp) {
   root.appendChild(el('.group-caption', { text: t('display') }));
   root.appendChild(displayGroup);
 
-  // Фон — ненавязчивые паттерны + свой рисунок.
-  root.appendChild(el('.group-caption', { text: t('background') }));
-  root.appendChild(el('.settings-group', {}, [el('.bg-picker-wrap', {}, [buildBackgroundPicker(s)])]));
-
   // Категории
   root.appendChild(el('.settings-group', {}, [
     navRow('🏷', t('categories_manage'), () => openCategoriesManager()),

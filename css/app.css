@@ -407,6 +407,12 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 
 /* ---- Настройки ---- */
 .settings-group { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); margin-bottom: 20px; }
+/* В тёмной теме карточки-«окна» рубрик почти сливались с фоном — делаем их
+   чуть светлее фона, чтобы границы были заметны. */
+:root[data-theme="dark"] .settings-group { background: #272B33; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .settings-group { background: #272B33; }
+}
 .group-caption { font-size: 13px; color: var(--text-3); margin: 4px 16px 6px; text-transform: uppercase; letter-spacing: 0.3px; }
 .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; border-bottom: 0.5px solid var(--sep); gap: 12px; }
 .setting-row:last-child { border-bottom: none; }
