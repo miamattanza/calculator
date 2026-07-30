@@ -901,9 +901,11 @@ body.reordering .cat-viewport {
 .conv-swap:active { background: var(--fill-2); transform: scale(0.9) rotate(180deg); }
 .conv-result { text-align: center; font-size: 18px; font-weight: 700; padding: 12px 0; font-variant-numeric: tabular-nums; }
 .conv-rate-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; min-height: 48px; box-sizing: border-box; }
-.conv-rate-cur { flex: 0 0 auto; font-size: 15px; font-weight: 600; }
+.conv-rate-cur { flex: 0 0 auto; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+/* Флаг валюты в списках конвертера. */
+.conv-flag { font-size: 18px; line-height: 1; flex: 0 0 auto; }
 .conv-rate-input { flex: 1; min-width: 0; text-align: end; background: var(--fill); border: none; border-radius: 8px; padding: 8px 12px; font-size: 15px; font-variant-numeric: tabular-nums; }
-.conv-add-row { display: block; width: 100%; text-align: start; padding: 13px 14px; font-size: 15px; background: var(--card); }
+.conv-add-row { display: flex; align-items: center; gap: 8px; width: 100%; text-align: start; padding: 13px 14px; font-size: 15px; background: var(--card); }
 .trx-group > .conv-add-row { border-bottom: 0.5px solid var(--sep); }
 .trx-group > .conv-add-row:last-child { border-bottom: none; }
 .conv-add-row:active { background: var(--fill); }

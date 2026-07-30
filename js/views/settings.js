@@ -4,7 +4,7 @@
 import * as store from '../store.js';
 import { t, availableLangs, LANG_NAMES } from '../i18n.js';
 import { el, clear, sheet, field, toast, confirmDialog, choiceDialog, toggle, catIcon, rowCols, swipeDeleteRow } from '../dom.js';
-import { CURRENCIES, roundRate } from '../format.js';
+import { CURRENCIES, roundRate, currencyFlag } from '../format.js';
 import { APP_VERSION } from '../models.js';
 import { iconByKey, iconsByType } from '../icons.js';
 
@@ -716,7 +716,10 @@ export function openConverter() {
         await store.setSetting('rates', next); calc();
       });
       const content = el('.conv-rate-row', {}, [
-        el('.conv-rate-cur', { text: `${c} · ${CURRENCIES[c].symbol}` }),
+        el('.conv-rate-cur', {}, [
+          el('span.conv-flag', { text: currencyFlag(c) }),
+          el('span', { text: `${c} · ${CURRENCIES[c].symbol}` }),
+        ]),
         inp,
       ]);
       ratesWrap.appendChild(swipeDeleteRow(content, async () => {
@@ -735,9 +738,12 @@ export function openConverter() {
     const listEl = el('.trx-group');
     for (const c of remaining) {
       listEl.appendChild(el('button.conv-add-row', {
-        type: 'button', text: `${c} · ${CURRENCIES[c].symbol} — ${CURRENCIES[c].name || ''}`.trim(),
+        type: 'button',
         onClick: async () => { await setList([...getList(), c]); redraw(); pickerModal.close(); },
-      }));
+      }, [
+        el('span.conv-flag', { text: currencyFlag(c) }),
+        el('span', { text: `${c} · ${CURRENCIES[c].symbol} — ${CURRENCIES[c].name || ''}`.trim() }),
+      ]));
     }
     const pickerModal = sheet(t('add_currency'), el('.form', {}, [listEl]));
   };

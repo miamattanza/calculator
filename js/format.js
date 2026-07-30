@@ -48,6 +48,15 @@ export const CURRENCIES = {
   AUD: { symbol: 'A$', name: 'Австралийский доллар' },
 };
 
+// Флаг-эмодзи валюты. У всех валют из списка первые 2 буквы кода совпадают с
+// кодом страны (USD→US, RUB→RU, EUR→EU и т.д.) — переводим их в «regional
+// indicator symbols», из которых складывается эмодзи флага.
+export function currencyFlag(code) {
+  const cc = (code || '').slice(0, 2).toUpperCase();
+  if (!/^[A-Z]{2}$/.test(cc)) return '';
+  return String.fromCodePoint(...[...cc].map((ch) => 0x1F1E6 + ch.charCodeAt(0) - 65));
+}
+
 const LOCALE = { ru: 'ru-RU', en: 'en-US', it: 'it-IT', id: 'id-ID', es: 'es-ES', ar: 'ar', fr: 'fr-FR' };
 
 export function locale() {
