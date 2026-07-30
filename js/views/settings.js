@@ -309,7 +309,14 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType, pres
     const gmap = new Map();
     for (const ic of iconsByType(model.type)) {
       let g = gmap.get(ic.group);
-      if (!g) { g = { label: ic.groupLabel, items: [] }; gmap.set(ic.group, g); groups.push(g); }
+      if (!g) {
+        // Заголовок рубрики — из перевода (catgrp_<group>), с откатом на
+        // русский groupLabel из icons.js, если перевод почему-то отсутствует.
+        const key = 'catgrp_' + ic.group;
+        const tl = t(key);
+        g = { label: tl && tl !== key ? tl : ic.groupLabel, items: [] };
+        gmap.set(ic.group, g); groups.push(g);
+      }
       g.items.push(ic);
     }
     for (const g of groups) {
