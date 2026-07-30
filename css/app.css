@@ -173,10 +173,9 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
   background: var(--fill); color: var(--accent);
 }
 .entry-plus:active { background: var(--fill-2); transform: translateY(-50%) scale(0.92); }
-/* Прижимаем к бортику телефона: контент имеет боковой отступ 16px, поэтому
-   right/left: -12px → ~4px от края экрана. */
-.entry-plus.right { right: -12px; }
-.entry-plus.left  { left: -12px; }
+/* Контент имеет боковой отступ 16px, поэтому right/left: -4px → 12px от края. */
+.entry-plus.right { right: -4px; }
+.entry-plus.left  { left: -4px; }
 /* Цвет вводимой суммы — по типу окна (включая дефолтный 0). */
 .home-pager.expense-mode .entry-amount { color: var(--accent); }
 .home-pager.income-mode .entry-amount { color: var(--green); }
@@ -301,6 +300,11 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
   display: flex; align-items: center; justify-content: center; font-size: 20px;
   background: color-mix(in srgb, var(--chip, #726B65) 32%, transparent);
 }
+/* Пометка «архивная категория» (удалена из меню, история сохранена) —
+   оранжевая точка на углу иконки в истории. */
+.trx-icon-wrap { position: relative; flex-shrink: 0; display: flex; }
+.trx-archived-dot { position: absolute; top: -2px; inset-inline-end: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--warning); box-shadow: 0 0 0 2px var(--card); }
+.trx-group.alt .trx-archived-dot { box-shadow: 0 0 0 2px color-mix(in srgb, var(--text) 5%, var(--card)); }
 .trx-main { flex: 1; min-width: 0; }
 .trx-title { font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .trx-note { font-size: 13px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -460,10 +464,10 @@ select.select { appearance: none; -webkit-appearance: none; }
 .cat-chip.dragging { z-index: 30; box-shadow: none; opacity: 1; pointer-events: none; }
 .cat-chip.dragging .cat-name { opacity: 0; }
 .cat-chip.dragging .cat-emoji { box-shadow: -9px 11px 9px rgba(0,0,0,0.34); }
-/* В тёмной теме тёмная тень не видна — даём светлую контурную подсветку
-   и мягкий светлый отсвет на юго-запад. */
+/* В тёмной теме тёмная тень не видна — даём светлую тень на юго-запад
+   (без контурной подсветки), чуть более чёткую (меньше размытие). */
 :root[data-theme="dark"] .cat-chip.dragging .cat-emoji {
-  box-shadow: 0 0 0 1.5px rgba(255,255,255,0.34), -8px 10px 11px rgba(255,255,255,0.10);
+  box-shadow: -8px 9px 6px rgba(255,255,255,0.30);
 }
 .cat-chip.drop-target .cat-emoji { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--accent); }
 /* Подсветка пустой ячейки как цели переноса (в конец списка). */

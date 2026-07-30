@@ -197,9 +197,11 @@ export async function changeBaseCurrency(newBase) {
 
 // ---- Категории -----------------------------------------------------------
 
+// Активные категории типа (без «архивных» — удалённых из меню, но оставшихся
+// ради истории). archived-категории видны только в истории/аналитике по id.
 export function categoriesByType(type) {
   return state.categories
-    .filter((c) => c.type === type)
+    .filter((c) => c.type === type && !c.archived)
     .sort((a, b) => (a.order || 0) - (b.order || 0));
 }
 
@@ -220,7 +222,7 @@ export function categoryName(cat) {
 // Первая свободная позиция (slot) среди категорий данного типа. Позиции —
 // абсолютные (с «дырами»): при удалении/переносе места не «схлопываются».
 export function firstFreeSlot(type) {
-  const used = new Set(state.categories.filter((c) => c.type === type).map((c) => c.order || 0));
+  const used = new Set(state.categories.filter((c) => c.type === type && !c.archived).map((c) => c.order || 0));
   let i = 0; while (used.has(i)) i++; return i;
 }
 
@@ -259,7 +261,7 @@ export async function moveCategoryToSlot(type, id, slot) {
   const cat = categoryById(id);
   if (!cat || (cat.order || 0) === slot) return;
   const changed = [cat];
-  const occupant = state.categories.find((c) => c.type === type && c.id !== id && (c.order || 0) === slot);
+  const occupant = state.categories.find((c) => c.type === type && c.id !== id && !c.archived && (c.order || 0) === slot);
   if (occupant) { occupant.order = cat.order || 0; changed.push(occupant); }
   cat.order = slot;
   await db.bulkPut('categories', changed);
@@ -272,8 +274,18 @@ export function categoryInUse(id) {
          state.budgets.some((b) => b.categoryId === id);
 }
 
-// Удаление категории с сохранением истории: операции остаются (становятся «без
-// категории», в истории показываются как «—»), удаляется только сама категория.
+// Удаление категории с сохранением истории: категория «архивируется» — убирается
+// из меню (categoriesByType её больше не отдаёт), но запись остаётся в базе,
+// поэтому в истории/аналитике по-прежнему видны её иконка и название (с пометкой).
+export async function archiveCategory(id) {
+  const cat = categoryById(id);
+  if (!cat) return;
+  cat.archived = true;
+  await db.put('categories', cat);
+  emit();
+}
+
+// Полное удаление категории (когда истории нет — можно убрать бесследно).
 export async function deleteCategory(id) {
   await db.remove('categories', id);
   state.categories = state.categories.filter((c) => c.id !== id);

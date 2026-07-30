@@ -65,6 +65,10 @@ export function openTransactionForm(existing) {
   function renderCategories() {
     clear(catGrid);
     const cats = store.categoriesByType(model.type);
+    // Если операция принадлежит архивной категории — добавляем её в список, чтобы
+    // при редактировании не потерять привязку (иначе её бы не было среди активных).
+    const curCat = model.categoryId ? store.categoryById(model.categoryId) : null;
+    if (curCat && curCat.type === model.type && !cats.some((c) => c.id === curCat.id)) cats.unshift(curCat);
     if (model.categoryId && !cats.some((c) => c.id === model.categoryId)) model.categoryId = null;
     for (const c of cats) {
       const chip = el('button.cat-chip', {
@@ -521,7 +525,7 @@ export function renderHome(root) {
         { label: t('delete_all'), value: 'all', danger: true },
         { label: t('cancel'), value: null },
       ]);
-      if (choice === 'keep') await store.deleteCategory(c.id);
+      if (choice === 'keep') await store.archiveCategory(c.id);
       else if (choice === 'all') await store.deleteCategoryWithData(c.id);
       return;
     }
@@ -789,8 +793,14 @@ export function trxAmountNode(trx) {
 
 function renderRow(trx, base) {
   const cat = store.categoryById(trx.categoryId);
+  // Архивная категория (удалена из меню, но история сохранена) — иконка и имя
+  // остаются, с маленькой оранжевой точкой-пометкой на углу иконки.
+  const archived = !!(cat && cat.archived);
+  const iconNode = archived
+    ? el('.trx-icon-wrap', {}, [catIcon(cat, 'trx-icon'), el('.trx-archived-dot', { 'aria-label': t('archived_category') })])
+    : catIcon(cat, 'trx-icon');
   const content = el('.trx-row', {}, [
-    catIcon(cat, 'trx-icon'),
+    iconNode,
     el('.trx-main', {}, [
       el('.trx-title', { text: cat ? store.categoryName(cat) : '—' }),
       trx.note ? el('.trx-note', { text: trx.note }) : null,

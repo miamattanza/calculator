@@ -397,7 +397,7 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType, pres
             { label: t('delete_all'), value: 'all', danger: true },
             { label: t('cancel'), value: null },
           ]);
-          if (choice === 'keep') { await store.deleteCategory(existing.id); modal.close(); onDone(); }
+          if (choice === 'keep') { await store.archiveCategory(existing.id); modal.close(); onDone(); }
           else if (choice === 'all') { await store.deleteCategoryWithData(existing.id); modal.close(); onDone(); }
           return;
         }
