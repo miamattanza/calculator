@@ -152,7 +152,8 @@ export function openTransactionForm(existing) {
 
 let homeMode = 'expense'; // 'expense' | 'income'
 let entryDigits = '';     // набираемая сумма (целое, в основной валюте)
-let sumParts = [];        // слагаемые «калькулятора» (кнопка +): при записи суммируются
+let sumParts = [];        // «лента» калькулятора: [{v, op}] — op ('+'/'×') связывает v со следующим числом
+let opMode = '+';         // текущий оператор кнопки: '+' или '×' (переключается долгим нажатием)
 let catPage = 0;          // текущая страница категорий
 const CATS_PER_PAGE = 8;
 
@@ -321,6 +322,19 @@ function attachHold(btn, onTap, onHold) {
   });
 }
 
+// Вычисление «ленты» калькулятора с учётом приоритета умножения над сложением.
+// parts: [{v, op}], tail — текущее набираемое число (последний операнд).
+function evalTape(parts, tail) {
+  const values = parts.map((p) => p.v).concat(tail);
+  const ops = parts.map((p) => p.op);
+  const nums = [values[0]];
+  for (let i = 0; i < ops.length; i++) {
+    if (ops[i] === '×') nums[nums.length - 1] *= values[i + 1];
+    else nums.push(values[i + 1]);
+  }
+  return nums.reduce((a, b) => a + b, 0);
+}
+
 export function renderHome(root) {
   clear(root);
   root.classList.remove('fit-mode');
@@ -375,7 +389,7 @@ export function renderHome(root) {
   const fmtNum = (n) => n.toLocaleString(locale(), { maximumFractionDigits: 2 });
   const renderTape = () => {
     if (sumParts.length) {
-      tapeEl.textContent = sumParts.map(fmtNum).join(' + ') + ' +';
+      tapeEl.textContent = sumParts.map((p) => `${fmtNum(p.v)} ${p.op}`).join(' ');
       tapeEl.classList.add('show');
     } else {
       tapeEl.textContent = '';
@@ -411,12 +425,13 @@ export function renderHome(root) {
     entryDigits = (entryDigits === '' ? '0' : entryDigits) + '.';
     renderAmount();
   };
-  // Кнопка «+»: складываем несколько сумм в одну операцию (покупки без чека).
-  // Текущее число уходит в «ленту» слагаемых, поле обнуляется под следующее.
-  const pressPlus = () => {
+  // Кнопка «+»/«×»: складываем/умножаем несколько сумм в одну операцию.
+  // Текущее число уходит в «ленту» с текущим оператором, поле обнуляется под
+  // следующее. Оператор («+» либо «×») переключается долгим нажатием кнопки.
+  const pressOp = () => {
     const v = parseFloat(entryDigits);
     if (!(v > 0)) return;
-    sumParts.push(v);
+    sumParts.push({ v, op: opMode });
     entryDigits = '';
     renderAmount();
   };
@@ -457,9 +472,9 @@ export function renderHome(root) {
 
   const commit = async (categoryId) => {
     const tail = entryDigits ? (parseFloat(entryDigits) || 0) : 0;
-    const v = sumParts.reduce((a, b) => a + b, 0) + tail;   // сумма «ленты» + текущее число
+    const v = evalTape(sumParts, tail);   // «лента» с учётом × перед +
     if (v <= 0) { amountEl.classList.add('shake'); setTimeout(() => amountEl.classList.remove('shake'), 400); return; }
-    entryDigits = ''; sumParts = [];
+    entryDigits = ''; sumParts = []; opMode = '+';
     const cat = store.categoryById(categoryId);
     // Валюта операции: своя у категории, иначе — текущая («ходовая»).
     let cur = (cat && cat.currency) || store.currentCurrency();
@@ -509,6 +524,7 @@ export function renderHome(root) {
     document.body.classList.remove('reordering');
     reorderDim.classList.remove('on');
     zeroKey.classList.remove('trash-over');
+    zeroKey.style.removeProperty('--trash-red');
   };
   const overTrash = (x, y) => {
     if (!document.body.classList.contains('reordering')) return false;
@@ -552,6 +568,18 @@ export function renderHome(root) {
       const frac = Math.min(1, Math.max(Math.abs(dx) / cw, Math.abs(dy) / ch));
       ghost.style.opacity = String(frac);
     };
+    // Плавное покраснение корзины по расстоянию между плиткой и корзиной:
+    // касание (зазор 0) = 100%, 10px → 90%, …, 100px и дальше → 0% (белая).
+    const updateTrash = () => {
+      if (!document.body.classList.contains('reordering')) return;
+      const tr = zeroKey.getBoundingClientRect();
+      const cr = chip.getBoundingClientRect();
+      const dx = Math.max(0, tr.left - cr.right, cr.left - tr.right);
+      const dy = Math.max(0, tr.top - cr.bottom, cr.top - tr.bottom);
+      const gap = Math.hypot(dx, dy);
+      const red = Math.max(0, Math.min(1, (100 - gap) / 100));
+      zeroKey.style.setProperty('--trash-red', String(red));
+    };
     const clearTargets = () => {
       catViewport.querySelectorAll('.cat-chip.drop-target').forEach((x) => x.classList.remove('drop-target'));
       zeroKey.classList.remove('trash-over');
@@ -581,6 +609,7 @@ export function renderHome(root) {
       chip.style.transition = anim ? 'transform .26s cubic-bezier(.32,.72,0,1)' : 'none';
       chip.style.transform = `translate(${(lastX - sx) + (catPage - startPage) * w}px, ${lastY - sy}px) scale(1.12)`;
       updateGhost();
+      updateTrash();
     };
     const clearEdge = () => { clearTimeout(edgeTimer); edgeTimer = null; edgeDir = 0; };
     // Насколько плитка «скрылась» за краем зоны категорий (>20% ширины → лист).
@@ -730,7 +759,15 @@ export function renderHome(root) {
 
   // Кнопка «+» над «3» (по умолчанию, для правшей) либо над «1» (настройка).
   const plusLeft = !!store.getState().settings.sumPlusLeft;
-  const plusBtn = el('button.entry-plus', { type: 'button', 'aria-label': '+', text: '+', class: plusLeft ? 'left' : 'right', onClick: pressPlus });
+  const plusBtn = el('button.entry-plus', { type: 'button', 'aria-label': '+', text: '+', class: plusLeft ? 'left' : 'right' });
+  // Короткий тап — применить текущий оператор; долгое нажатие — переключить
+  // «+» ⇄ «×» (визуально знак «+» поворачивается на 45° и становится «×»).
+  const applyOpMode = () => {
+    plusBtn.classList.toggle('is-mul', opMode === '×');
+    plusBtn.setAttribute('aria-label', opMode === '×' ? '×' : '+');
+  };
+  attachHold(plusBtn, pressOp, () => { opMode = opMode === '×' ? '+' : '×'; applyOpMode(); });
+  applyOpMode();
   const amountRow = el('.entry-amount-row', {}, [amountEl, plusBtn]);
   pager.append(el('.entry-block', {}, [tapeEl, amountRow, keypad]), catPager);
 

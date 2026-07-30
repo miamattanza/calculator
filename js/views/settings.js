@@ -665,6 +665,9 @@ export function openConverter() {
   amountInput.addEventListener('input', () => { amountInput.value = amountInput.value.replace(/[^\d.,]/g, ''); calc(); });
   const fromSel = el('select.select');
   const toSel = el('select.select');
+  // Последний выбор пары валют запоминается между открытиями конвертера.
+  const savedFrom = store.getState().settings.convFrom;
+  const savedTo = store.getState().settings.convTo;
   const result = el('.conv-result');
   const calc = () => {
     const a = parseFloat(amountInput.value.replace(',', '.')) || 0;
@@ -673,10 +676,23 @@ export function openConverter() {
     const out = a * rf / rt;
     result.textContent = `${a} ${fromSel.value} = ${out.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${toSel.value}`;
   };
-  fromSel.addEventListener('change', calc); toSel.addEventListener('change', calc);
+  fromSel.addEventListener('change', () => { store.setSetting('convFrom', fromSel.value); calc(); });
+  toSel.addEventListener('change', () => { store.setSetting('convTo', toSel.value); calc(); });
 
-  const fillOptions = (sel) => {
-    const prev = sel.value;
+  // Кнопка «⇄» между валютами: меняет местами выбранные валюты (и запоминает).
+  const swapBtn = el('button.conv-swap', {
+    type: 'button', 'aria-label': t('swap_currencies'), text: '⇄',
+    onClick: () => {
+      const a = fromSel.value, b = toSel.value;
+      fromSel.value = b; toSel.value = a;
+      store.setSetting('convFrom', fromSel.value);
+      store.setSetting('convTo', toSel.value);
+      calc();
+    },
+  });
+
+  const fillOptions = (sel, preferred) => {
+    const prev = sel.value || preferred;
     const opts = [base, ...getList()];
     clear(sel);
     for (const c of opts) sel.appendChild(el('option', { value: c }, `${c} · ${CURRENCIES[c].symbol}`));
@@ -710,7 +726,7 @@ export function openConverter() {
     }
   };
 
-  const redraw = () => { fillOptions(fromSel); fillOptions(toSel); drawRates(); calc(); };
+  const redraw = () => { fillOptions(fromSel, savedFrom); fillOptions(toSel, savedTo); drawRates(); calc(); };
 
   // Добавление валюты — выбор из ещё не добавленных.
   const openAdd = () => {
@@ -734,7 +750,7 @@ export function openConverter() {
 
   body.append(
     field(t('amount'), amountInput).row,
-    rowCols(field('', fromSel).row, field('', toSel).row),
+    el('.conv-pair', {}, [fromSel, swapBtn, toSel]),
     result,
     el('.group-caption', { text: t('base_currency') }),
     ratesWrap,

@@ -166,13 +166,17 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 /* Кнопка «+» в табло суммы — над «3» (справа) или над «1» (слева, настройка). */
 .entry-amount-row { position: relative; }
 .entry-plus {
-  position: absolute; top: 50%; transform: translateY(-50%);
+  position: absolute; top: 50%;
+  transform: translateY(-50%) rotate(var(--plus-rot, 0deg));
   width: 44px; height: 44px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 30px; font-weight: 300; line-height: 1;
   background: var(--fill); color: var(--accent);
+  transition: transform .18s ease, background .1s;
 }
-.entry-plus:active { background: var(--fill-2); transform: translateY(-50%) scale(0.92); }
+/* Режим умножения: «+» повёрнут на 45° → визуально «×». */
+.entry-plus.is-mul { --plus-rot: 45deg; }
+.entry-plus:active { background: var(--fill-2); transform: translateY(-50%) rotate(var(--plus-rot, 0deg)) scale(0.92); }
 /* Контент имеет боковой отступ 16px, поэтому right/left: -4px → 12px от края. */
 .entry-plus.right { right: -4px; }
 .entry-plus.left  { left: -4px; }
@@ -495,7 +499,9 @@ body.reordering .cat-page .cat-chip:nth-child(odd):not(.dragging):not(.cat-add) 
 .key0-inner { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .4s cubic-bezier(.4,.05,.2,1); }
 .key0-front, .key0-back { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; border-radius: 12px; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
 .key0-front { font-size: 25px; font-weight: 500; }
-.key0-back { transform: rotateY(180deg); color: var(--text); }
+/* Цвет корзины плавно перетекает из обычного в красный по мере поднесения
+   плитки: --trash-red (0..1) задаётся из JS по расстоянию (1 = касание). */
+.key0-back { transform: rotateY(180deg); color: color-mix(in srgb, var(--red) calc(var(--trash-red, 0) * 100%), var(--text)); }
 .key0-back .trashcan { width: 33px; height: 35px; overflow: visible; transform: translate(-2px, -3px); }
 .key0-back .trash-lid { transform-origin: 13px 19px; transition: transform .2s ease; }
 body.reordering .key-zero { z-index: 47; }
@@ -503,9 +509,9 @@ body.reordering .key-zero .key0-inner { transform: rotateY(180deg); }
 /* Крышка открывается сразу после переворота «0»→корзина (с микропаузой ~0.48с
    после начала разворота), не дожидаясь поднесения плитки. */
 body.reordering .key-zero .trash-lid { transform: rotate(-42deg); transition-delay: .48s; }
-/* Плитку подносят к корзине → корзина краснеет (крышка уже открыта). */
+/* Плитку подносят к корзине → корзина краснеет (крышка уже открыта).
+   Само покраснение — плавное, через --trash-red (см. .key0-back выше). */
 .key-zero.trash-over { z-index: 47; }
-.key-zero.trash-over .key0-back { color: var(--red); }
 @media (prefers-reduced-motion: reduce) {
   .key0-inner, .key0-back .trash-lid { transition: none; }
 }
@@ -883,6 +889,16 @@ body.reordering .cat-viewport {
 .swipe-note-input { flex: 1; min-width: 0; background: var(--fill); border: none; border-radius: 8px; padding: 8px 12px; font-size: 15px; }
 
 /* ---- Конвертер валют ---- */
+/* Пара валют «из ⇄ в» с кнопкой обмена по центру. */
+.conv-pair { display: flex; align-items: center; gap: 8px; }
+.conv-pair > .select { flex: 1; min-width: 0; }
+.conv-swap {
+  flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--fill); color: var(--accent); font-size: 20px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .12s ease, background .1s;
+}
+.conv-swap:active { background: var(--fill-2); transform: scale(0.9) rotate(180deg); }
 .conv-result { text-align: center; font-size: 18px; font-weight: 700; padding: 12px 0; font-variant-numeric: tabular-nums; }
 .conv-rate-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; min-height: 48px; box-sizing: border-box; }
 .conv-rate-cur { flex: 0 0 auto; font-size: 15px; font-weight: 600; }
