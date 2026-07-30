@@ -141,6 +141,26 @@ export function confirmDialog(message) {
   });
 }
 
+// Диалог с несколькими вариантами (кнопки в столбик). options: [{label, value,
+// danger?}]. Возвращает value выбранного варианта (или null, если закрыли фоном).
+export function choiceDialog(message, options) {
+  return new Promise((resolve) => {
+    const backdrop = el('.alert-backdrop');
+    const actions = el('.alert-actions.alert-actions-col', {}, options.map((o) =>
+      el('button.alert-btn' + (o.danger ? '.danger' : ''), { type: 'button', text: o.label, onClick: () => done(o.value) })));
+    const box = el('.alert', {}, [el('.alert-msg', { text: message }), actions]);
+    backdrop.appendChild(box);
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) done(null); });
+    document.body.appendChild(backdrop);
+    requestAnimationFrame(() => backdrop.classList.add('open'));
+    function done(v) {
+      backdrop.classList.remove('open');
+      setTimeout(() => backdrop.remove(), 200);
+      resolve(v);
+    }
+  });
+}
+
 // Обёртка «свайп влево → Удалить» (как в истории операций): магнитная
 // доводка + резинка по краям. onDelete вызывается после подтверждения.
 export function swipeDeleteRow(content, onDelete) {

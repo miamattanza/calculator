@@ -272,7 +272,23 @@ export function categoryInUse(id) {
          state.budgets.some((b) => b.categoryId === id);
 }
 
+// Удаление категории с сохранением истории: операции остаются (становятся «без
+// категории», в истории показываются как «—»), удаляется только сама категория.
 export async function deleteCategory(id) {
+  await db.remove('categories', id);
+  state.categories = state.categories.filter((c) => c.id !== id);
+  emit();
+}
+
+// Удаление категории вместе со всеми связанными данными: операции, плановые
+// платежи и лимиты этой категории тоже удаляются.
+export async function deleteCategoryWithData(id) {
+  for (const tx of state.transactions.filter((t) => t.categoryId === id)) await db.remove('transactions', tx.id);
+  state.transactions = state.transactions.filter((t) => t.categoryId !== id);
+  for (const p of state.planned.filter((p) => p.categoryId === id)) await db.remove('planned', p.id);
+  state.planned = state.planned.filter((p) => p.categoryId !== id);
+  for (const b of state.budgets.filter((b) => b.categoryId === id)) await db.remove('budgets', b.id);
+  state.budgets = state.budgets.filter((b) => b.categoryId !== id);
   await db.remove('categories', id);
   state.categories = state.categories.filter((c) => c.id !== id);
   emit();

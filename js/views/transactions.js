@@ -3,7 +3,7 @@
 
 import * as store from '../store.js';
 import { t } from '../i18n.js';
-import { el, clear, sheet, field, segmented, toast, confirmDialog, catIcon } from '../dom.js';
+import { el, clear, sheet, field, segmented, toast, confirmDialog, choiceDialog, catIcon } from '../dom.js';
 import { money, signedMoney, formatDate, dateISO, CURRENCIES, roundRate, locale } from '../format.js';
 import { openSearch } from './search.js';
 import { openCategoryEditor, openConverter } from './settings.js';
@@ -512,9 +512,19 @@ export function renderHome(root) {
     const pad = 12;
     return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad;
   };
-  // Удаление категории через корзину: занятые в операциях не удаляем.
+  // Удаление категории через корзину. Если она занята в операциях — предлагаем
+  // выбор: удалить только категорию (историю сохранить) или удалить всё.
   const handleTrash = async (c) => {
-    if (store.categoryInUse(c.id)) { toast(t('category_in_use')); return; }
+    if (store.categoryInUse(c.id)) {
+      const choice = await choiceDialog(t('category_in_use'), [
+        { label: t('delete_keep_history'), value: 'keep' },
+        { label: t('delete_all'), value: 'all', danger: true },
+        { label: t('cancel'), value: null },
+      ]);
+      if (choice === 'keep') await store.deleteCategory(c.id);
+      else if (choice === 'all') await store.deleteCategoryWithData(c.id);
+      return;
+    }
     if (await confirmDialog(t('delete_category_q', { name: store.categoryName(c) }))) {
       await store.deleteCategory(c.id);
     }

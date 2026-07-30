@@ -3,7 +3,7 @@
 
 import * as store from '../store.js';
 import { t, availableLangs, LANG_NAMES } from '../i18n.js';
-import { el, clear, sheet, field, toast, confirmDialog, toggle, catIcon, rowCols, swipeDeleteRow } from '../dom.js';
+import { el, clear, sheet, field, toast, confirmDialog, choiceDialog, toggle, catIcon, rowCols, swipeDeleteRow } from '../dom.js';
 import { CURRENCIES, roundRate } from '../format.js';
 import { APP_VERSION } from '../models.js';
 import { iconByKey, iconsByType } from '../icons.js';
@@ -391,7 +391,16 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType, pres
     body.appendChild(el('button.btn-danger', {
       type: 'button', text: t('delete'),
       onClick: async () => {
-        if (store.categoryInUse(existing.id)) { error.textContent = t('category_in_use'); return; }
+        if (store.categoryInUse(existing.id)) {
+          const choice = await choiceDialog(t('category_in_use'), [
+            { label: t('delete_keep_history'), value: 'keep' },
+            { label: t('delete_all'), value: 'all', danger: true },
+            { label: t('cancel'), value: null },
+          ]);
+          if (choice === 'keep') { await store.deleteCategory(existing.id); modal.close(); onDone(); }
+          else if (choice === 'all') { await store.deleteCategoryWithData(existing.id); modal.close(); onDone(); }
+          return;
+        }
         if (await confirmDialog(t('confirm_delete'))) { await store.deleteCategory(existing.id); modal.close(); onDone(); }
       },
     }));
