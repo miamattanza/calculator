@@ -464,10 +464,10 @@ select.select { appearance: none; -webkit-appearance: none; }
 .cat-chip.dragging { z-index: 30; box-shadow: none; opacity: 1; pointer-events: none; }
 .cat-chip.dragging .cat-name { opacity: 0; }
 .cat-chip.dragging .cat-emoji { box-shadow: -9px 11px 9px rgba(0,0,0,0.34); }
-/* В тёмной теме тёмная тень не видна — даём светлую тень на юго-запад
-   (без контурной подсветки), чуть более чёткую (меньше размытие). */
+/* В тёмной теме тёмная тень не видна — вместо направленной тени даём ровную
+   светлую подсветку по всему контуру плитки (~4–6px), без смещения. */
 :root[data-theme="dark"] .cat-chip.dragging .cat-emoji {
-  box-shadow: -8px 9px 6px rgba(255,255,255,0.30);
+  box-shadow: 0 0 5px 1px rgba(255,255,255,0.30);
 }
 .cat-chip.drop-target .cat-emoji { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--accent); }
 /* Подсветка пустой ячейки как цели переноса (в конец списка). */
