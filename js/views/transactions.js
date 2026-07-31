@@ -189,7 +189,10 @@ function setMode(root, mode, incomingFrom = null) {
 function attachPagerSwipe(pager, root) {
   let sx = 0, sy = 0, dir = null, dragging = false, skip = false, w = window.innerWidth;
   // Свайпы, начатые в зоне категорий или на строке истории, не переключают окно.
-  const inCat = (target) => !!(target && target.closest && target.closest('.cat-pager, .trx-row'));
+  // Свайпы, начатые в зоне категорий или на любой строке истории (вся плашка
+  // .swipe-wrap: сама строка, поле комментария и кнопка удаления), не
+  // переключают окно — там своя логика свайпа.
+  const inCat = (target) => !!(target && target.closest && target.closest('.cat-pager, .swipe-wrap'));
   const start = (x, y) => { sx = x; sy = y; dir = null; dragging = true; w = window.innerWidth || pager.offsetWidth; pager.style.transition = 'none'; };
   const move = (x, y, e) => {
     if (!dragging || skip) return;
@@ -932,12 +935,18 @@ export function wrapSwipeRow(content, trx) {
   };
 
   let sx = 0, sy = 0, dir = null, dragging = false, longFired = false, longTimer = null, startX = 0;
-  const begin = (x, y) => {
+  const begin = (x, y, target) => {
     measure();
     sx = x; sy = y; dir = null; dragging = true; longFired = false;
     startX = openState === -1 ? -DEL_W : openState === 1 ? COMMENT_W : 0;
     anim(false);
-    longTimer = setTimeout(() => { longFired = true; dragging = false; closeFn(); openTransactionForm(trx); }, 500);
+    // Долгое нажатие → редактирование только для закрытой строки. Когда открыт
+    // комментарий, касание поля ввода/кнопки не должно запускать таймер (чтобы
+    // можно было спокойно печатать), но обратный свайп по всей плашке — закрывал.
+    const interactive = !!(target && target.closest && target.closest('.swipe-note-input, .swipe-del'));
+    if (openState === 0 && !interactive) {
+      longTimer = setTimeout(() => { longFired = true; dragging = false; closeFn(); openTransactionForm(trx); }, 500);
+    }
   };
   const move = (x, y, e) => {
     if (!dragging) return;
@@ -967,11 +976,14 @@ export function wrapSwipeRow(content, trx) {
       if (moved < -COMMENT_W * 0.25) closeFn(); else openComment();
     }
   };
-  content.addEventListener('touchstart', (e) => { const p = e.changedTouches[0]; begin(p.clientX, p.clientY); }, { passive: true });
-  content.addEventListener('touchmove', (e) => { const p = e.changedTouches[0]; move(p.clientX, p.clientY, e); }, { passive: false });
-  content.addEventListener('touchend', (e) => { const p = e.changedTouches[0]; end(p.clientX); }, { passive: true });
-  content.addEventListener('mousedown', (e) => {
-    begin(e.clientX, e.clientY);
+  // Слушаем всю плашку (.swipe-wrap), а не только видимую строку: когда открыт
+  // комментарий, обратный свайп работает по всей его области, а не только «за
+  // иконку», и не «проваливается» в листание страницы.
+  wrap.addEventListener('touchstart', (e) => { const p = e.changedTouches[0]; begin(p.clientX, p.clientY, e.target); }, { passive: true });
+  wrap.addEventListener('touchmove', (e) => { const p = e.changedTouches[0]; move(p.clientX, p.clientY, e); }, { passive: false });
+  wrap.addEventListener('touchend', (e) => { const p = e.changedTouches[0]; end(p.clientX); }, { passive: true });
+  wrap.addEventListener('mousedown', (e) => {
+    begin(e.clientX, e.clientY, e.target);
     const mm = (ev) => move(ev.clientX, ev.clientY, ev);
     const mu = (ev) => { end(ev.clientX); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
     window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);

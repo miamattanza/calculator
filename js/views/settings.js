@@ -269,9 +269,8 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType, pres
         model.type = v;
         typeSeg.querySelectorAll('.seg').forEach((b) => b.classList.remove('active'));
         e.target.classList.add('active');
-        // Плитки бывают своего типа: сброс выбора, если он из другого набора.
-        const chosen = model.iconKey ? iconByKey(model.iconKey) : null;
-        if (chosen && chosen.kind !== v) model.iconKey = null;
+        // Переключение типа НЕ меняет выбранную иконку (иконка резолвится по
+        // ключу независимо от типа). Просто перестраиваем банк на нужный набор.
         renderTileBank();
         updatePreview();
       },
@@ -384,7 +383,7 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType, pres
   body.append(
     field(t('category_name'), nameInput).row,
     field(t('type'), typeSeg).row,
-    field(t('icon'), el('.icon-field', {}, [iconPreview, tileBank, emojiBlock, uploadBtn, uploadInput])).row,
+    field(t('used_icon'), el('.icon-field', {}, [iconPreview, tileBank, emojiBlock, uploadBtn, uploadInput])).row,
     el('.icon-rules', { text: t('icon_rules') }),
     ...(currencyBtn ? [currencyBtn] : []),
     error, saveBtn,
