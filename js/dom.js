@@ -43,9 +43,17 @@ export function catIcon(cat, cls) {
   const box = el('.' + (cls || 'cat-emoji'), { style: { '--chip': cat ? cat.color : '#726B65' } });
   const tile = cat && cat.iconKey ? iconByKey(cat.iconKey) : null;
   if (tile) {
-    // Плитка: цветной квадрат + белая иконка (с запечённой тенью) из спрайта.
+    // Плитка: цветной квадрат + иконка (с запечённой тенью) из спрайта.
+    // Настройки категории: цвет кнопки (--tile-color), цвет иконки (--ti),
+    // «без фона» (noBg) — прозрачная плитка без тени, видна только иконка.
     box.classList.add('cat-tile');
-    box.style.setProperty('--tile-color', cat.color || tile.color);
+    const noBg = !!cat.noBg;
+    box.style.setProperty('--tile-color', noBg ? 'transparent' : (cat.color || tile.color));
+    if (noBg) { box.style.setProperty('--shadow-long', '0'); box.classList.add('cat-tile-nobg'); }
+    // Цвет иконки: явный iconColor, иначе для «без фона» — цвет категории (чтобы
+    // была видна на фоне приложения), иначе белый (по умолчанию из спрайта).
+    if (cat.iconColor) box.style.setProperty('--ti', cat.iconColor);
+    else if (noBg) box.style.setProperty('--ti', cat.color || tile.color);
     const NS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(NS, 'svg');
     svg.setAttribute('viewBox', '0 0 100 100');

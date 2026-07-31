@@ -251,8 +251,8 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType, pres
   // Цвет назначается автоматически (выбор цвета из редактора убран).
   const autoColor = COLOR_CHOICES[store.getState().categories.length % COLOR_CHOICES.length];
   const model = existing
-    ? { ...existing, name: store.categoryName(existing) }
-    : { name: '', type: presetType || 'expense', icon: '🔖', color: autoColor, image: null, iconKey: null };
+    ? { ...existing, name: store.categoryName(existing), iconColor: existing.iconColor || null, noBg: !!existing.noBg }
+    : { name: '', type: presetType || 'expense', icon: '🔖', color: autoColor, image: null, iconKey: null, iconColor: null, noBg: false };
   const body = el('.form');
 
   const nameInput = el('input.select', { type: 'text', placeholder: t('category_name'), value: model.name });
@@ -283,8 +283,17 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType, pres
   const updatePreview = () => {
     clear(iconPreview);
     iconPreview.appendChild(catIcon(
-      { icon: model.icon, color: model.color, image: model.image, iconKey: model.image ? null : model.iconKey },
+      { icon: model.icon, color: model.color, image: model.image, iconKey: model.image ? null : model.iconKey,
+        iconColor: model.iconColor, noBg: model.noBg },
       'trx-icon'));
+  };
+  // Полноэкранный выбор иконок (плитки + эмодзи + загрузка) — открывается по «+».
+  let iconPickerModal = null;
+  let renderSwatches = null;   // задаётся ниже (панель цветов), вызывается из afterPick
+  const afterPick = () => {
+    updatePreview();
+    if (renderSwatches) renderSwatches();
+    if (iconPickerModal) { iconPickerModal.close(); iconPickerModal = null; }
   };
 
   const tileBank = el('.tile-bank');
@@ -323,7 +332,7 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType, pres
           'aria-label': ic.label,
           onClick: function () {
             model.iconKey = ic.key; model.color = ic.color; model.image = null;
-            clearActive(); this.classList.add('active'); updatePreview();
+            clearActive(); this.classList.add('active'); afterPick();
           },
         }, [catIcon({ iconKey: ic.key, color: ic.color }, 'tile-pick-art')]);
         grid.appendChild(btn);
@@ -343,7 +352,7 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType, pres
     text: em,
     onClick: function () {
       model.icon = em; model.iconKey = null; model.image = null;
-      clearActive(); this.classList.add('active'); updatePreview();
+      clearActive(); this.classList.add('active'); afterPick();
     },
   });
   EMOJI_CHOICES.forEach((em) => emojiGrid.appendChild(makeEmoji(em)));
@@ -360,12 +369,50 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType, pres
     uploadInput.value = '';
     if (!file) return;
     processIconFile(file,
-      (dataUrl) => { model.image = dataUrl; model.iconKey = null; error.textContent = ''; clearActive(); updatePreview(); },
+      (dataUrl) => { model.image = dataUrl; model.iconKey = null; error.textContent = ''; clearActive(); afterPick(); },
       () => { error.textContent = t('icon_rules'); });
   });
   const uploadBtn = el('button.btn-upload', { type: 'button', text: '📷 ' + t('upload_icon'), onClick: () => uploadInput.click() });
 
+  // Кнопка «+» открывает выбор иконок (плитки + эмодзи + загрузка) на всю
+  // страницу — вместо длинного списка прямо в форме.
+  const openPickerBtn = el('button.icon-picker-open', {
+    type: 'button', 'aria-label': t('choose_icon'),
+    onClick: () => {
+      renderTileBank();
+      const pbody = el('.form', {}, [tileBank, emojiBlock, uploadBtn, uploadInput, el('.icon-rules', { text: t('icon_rules') })]);
+      iconPickerModal = sheet(t('choose_icon'), pbody, { full: true });
+    },
+  }, [el('.icon-picker-plus', { text: '＋' }), el('span', { text: t('choose_icon') })]);
+
+  // --- Цвет кнопки (фон плитки) + «без фона»; цвет иконки ---
+  const BTN_COLORS = COLOR_CHOICES;
+  const ICON_COLORS = ['#FFFFFF', '#1E2127', ...COLOR_CHOICES];
+  const btnColorWrap = el('.swatch-row');
+  const iconColorWrap = el('.swatch-row');
+  const swatch = (col, active, onClick, extraCls) => el('button.swatch' + (extraCls || ''), {
+    type: 'button', class: active ? 'active' : '', style: col ? { background: col } : {}, onClick,
+  });
+  renderSwatches = () => {
+    clear(btnColorWrap); clear(iconColorWrap);
+    // Цвет кнопки: палитра + «без фона» (только иконка).
+    for (const col of BTN_COLORS) {
+      btnColorWrap.appendChild(swatch(col, !model.noBg && (model.color || '').toLowerCase() === col.toLowerCase(),
+        () => { model.noBg = false; model.color = col; renderSwatches(); updatePreview(); }));
+    }
+    btnColorWrap.appendChild(swatch(null, model.noBg,
+      () => { model.noBg = true; renderSwatches(); updatePreview(); }, '.swatch-none'));
+    // Цвет иконки: белый, тёмный и палитра. Активен явный iconColor, иначе —
+    // белый по умолчанию (или цвет категории в режиме «без фона»).
+    const effIcon = (model.iconColor || (model.noBg ? model.color : '#FFFFFF') || '').toLowerCase();
+    for (const col of ICON_COLORS) {
+      iconColorWrap.appendChild(swatch(col, effIcon === col.toLowerCase(),
+        () => { model.iconColor = col; renderSwatches(); updatePreview(); }));
+    }
+  };
+
   updatePreview();
+  renderSwatches();
 
   // Валюта категории (из прежней версии) — теперь её нельзя назначать, но
   // оставшуюся у некоторых категорий можно убрать.
@@ -383,8 +430,9 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType, pres
   body.append(
     field(t('category_name'), nameInput).row,
     field(t('type'), typeSeg).row,
-    field(t('used_icon'), el('.icon-field', {}, [iconPreview, tileBank, emojiBlock, uploadBtn, uploadInput])).row,
-    el('.icon-rules', { text: t('icon_rules') }),
+    field(t('used_icon'), el('.icon-field', {}, [iconPreview, openPickerBtn])).row,
+    field(t('button_color'), btnColorWrap).row,
+    field(t('icon_color'), iconColorWrap).row,
     ...(currencyBtn ? [currencyBtn] : []),
     error, saveBtn,
   );
@@ -412,7 +460,7 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType, pres
 
   saveBtn.addEventListener('click', async () => {
     if (!model.name.trim()) { error.textContent = t('required'); return; }
-    const payload = { id: existing ? existing.id : undefined, name: model.name.trim(), type: model.type, icon: model.icon, color: model.color, image: model.image || null, currency: catCurrency, iconKey: model.image ? null : (model.iconKey || null) };
+    const payload = { id: existing ? existing.id : undefined, name: model.name.trim(), type: model.type, icon: model.icon, color: model.color, image: model.image || null, currency: catCurrency, iconKey: model.image ? null : (model.iconKey || null), iconColor: model.iconColor || null, noBg: !!model.noBg };
     if (!existing && presetSlot != null) payload.order = presetSlot;  // добавление в конкретную ячейку
     await store.saveCategory(payload);
     modal.close(); onDone();
