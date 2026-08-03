@@ -160,118 +160,111 @@ const CATS_PER_PAGE = 8;
 // с шагом сетки .cat-page), чтобы промежуток на стыке страниц был как между
 // соседними кнопками. Шаг прокрутки карусели = ширина окна + этот зазор.
 const CAT_PAGE_GAP = 8;
+// Пока строим «встречную» страницу для живого свайпа Расходы/Доходы, шапку
+// (метка окна, баланс, кольцо лимита) не обновляем — она переключится по факту.
+let suppressHeader = false;
 
-// Кросс-слайд между окнами: новая страница въезжает одновременно с уходом
-// старой (без пустого пространства между ними). fromX — текущее смещение старой
-// страницы (после пальца). toIncome — переключаемся на «Доходы» (уезжаем влево).
+// Строит «встречную» страницу (для окна mode) в отдельном узле, не трогая шапку
+// и не очищая реальный #content. Возвращает готовый .pager (открепляем от tmp).
+function buildIncoming(mode) {
+  const tmp = document.createElement('div');
+  const savedMode = homeMode, savedPage = catPage;
+  suppressHeader = true;
+  homeMode = mode; catPage = 0;
+  try { renderHome(tmp); } finally { homeMode = savedMode; catPage = savedPage; suppressHeader = false; }
+  const p = tmp.querySelector('.pager');
+  if (p) p.remove();
+  return p;
+}
+
+// Живой свайп-карусель между окнами «Расходы»/«Доходы»: обе страницы лежат в
+// общей flex-ленте и едут за пальцем одновременно (встречная въезжает по мере
+// ухода текущей). Свайпы, начатые в зоне категорий/истории, пропускаются.
 let sliding = false;
-function slideSwitch(root, targetMode, toIncome, fromX) {
-  if (sliding) return;
-  sliding = true;
-  const oldPager = root.querySelector('.pager');
-  // Ширину берём по фактической странице (у #content есть боковые отступы,
-  // поэтому clientWidth не подходит — иначе страницы «раздувались»).
-  const w = oldPager ? oldPager.offsetWidth : (root.clientWidth || window.innerWidth);
-  if (oldPager) { oldPager.style.transition = 'none'; oldPager.style.transform = ''; oldPager.style.opacity = ''; oldPager.remove(); }
-  // Рендер новой страницы (renderHome очистит root — старая уже откреплена).
-  homeMode = targetMode; catPage = 0;
-  renderHome(root);
-  const newPager = root.querySelector('.pager');
-  newPager.remove();
-  // Обе страницы кладём в flex-ленту и двигаем её целиком — синхронный слайд без
-  // изменения размеров (страницы остаются нормальной ширины).
-  const slide = el('.pager-slide');
-  (toIncome ? [oldPager, newPager] : [newPager, oldPager]).forEach((p) => { if (p) slide.appendChild(p); });
-  const startT = toIncome ? fromX : (fromX - w);   // старая под пальцем — стыкуемся без прыжка
-  const endT = toIncome ? -w : 0;
-  slide.style.transition = 'none';
-  slide.style.transform = `translateX(${startT}px)`;
-  root.style.overflowX = 'hidden';
-  root.appendChild(slide);
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    slide.style.transition = 'transform .3s cubic-bezier(.32,.72,0,1)';
-    slide.style.transform = `translateX(${endT}px)`;
-  }));
-  setTimeout(() => {
-    newPager.remove();
-    slide.remove();
-    newPager.style.transform = ''; newPager.style.transition = '';
-    root.appendChild(newPager);
-    root.style.overflowX = '';
-    sliding = false;
-  }, 330);
-}
-
-// Переход к конкретному окну (без зацикливания: expense — левое, income —
-// правое; на краю страница просто возвращается на место).
-function setMode(root, mode, incomingFrom = null) {
-  if (mode === homeMode) {
-    const pager = root.querySelector('.pager');
-    if (pager) { pager.style.transition = 'transform .2s ease, opacity .2s ease'; pager.style.transform = 'translateX(0)'; pager.style.opacity = '1'; }
-    return;
-  }
-  homeMode = mode;
-  catPage = 0;
-  renderHome(root);
-  if (incomingFrom != null) {
-    const pager = root.querySelector('.pager');
-    if (pager) {
-      pager.style.transition = 'none';
-      pager.style.transform = `translateX(${incomingFrom}px)`;
-      pager.style.opacity = '0';
-      requestAnimationFrame(() => {
-        pager.style.transition = 'transform .26s ease, opacity .26s ease';
-        pager.style.transform = 'translateX(0)';
-        pager.style.opacity = '1';
-      });
-    }
-  }
-}
-
-// Перетаскивание страницы пальцем по всему экрану + плавный переход между
-// окнами «Расходы»/«Доходы». Свайпы, начатые в зоне категорий (.cat-pager),
-// пропускаются — там своя постраничная листалка.
 function attachPagerSwipe(pager, root) {
   let sx = 0, sy = 0, dir = null, dragging = false, skip = false, w = window.innerWidth;
-  // Свайпы, начатые в зоне категорий или на строке истории, не переключают окно.
-  // Свайпы, начатые в зоне категорий или на любой строке истории (вся плашка
-  // .swipe-wrap: сама строка, поле комментария и кнопка удаления), не
-  // переключают окно — там своя логика свайпа.
+  // Состояние ленты: slide — контейнер, incoming — встречная страница, base —
+  // смещение ленты, при котором видна текущая страница; toIncome — направление.
+  let slide = null, incoming = null, base = 0, toIncome = false, W = 0;
   const inCat = (target) => !!(target && target.closest && target.closest('.cat-pager, .swipe-wrap'));
-  const start = (x, y) => { sx = x; sy = y; dir = null; dragging = true; w = window.innerWidth || pager.offsetWidth; pager.style.transition = 'none'; };
+  const rubber = (over) => over * 0.3;   // сопротивление за пределами диапазона
+  const teardown = (keepCurrent) => {
+    // keepCurrent — вернуть текущую страницу в root (отмена свайпа).
+    if (!slide) return;
+    if (keepCurrent) {
+      incoming && incoming.remove();
+      pager.style.transform = ''; pager.style.transition = '';
+      slide.remove(); root.appendChild(pager);
+    }
+    root.style.overflowX = '';
+    slide = null; incoming = null;
+  };
+  const start = (x, y) => { if (sliding) { dragging = false; return; } sx = x; sy = y; dir = null; dragging = true; w = window.innerWidth || pager.offsetWidth; };
+  const buildSlide = (target) => {
+    W = pager.offsetWidth || w;
+    toIncome = target === 'income';
+    incoming = buildIncoming(target);
+    if (!incoming) return false;
+    slide = el('.pager-slide');
+    (toIncome ? [pager, incoming] : [incoming, pager]).forEach((p) => slide.appendChild(p));
+    base = toIncome ? 0 : -W;   // так, что видна текущая страница
+    slide.style.transition = 'none';
+    slide.style.transform = `translateX(${base}px)`;
+    pager.style.transform = ''; pager.style.transition = '';
+    root.style.overflowX = 'hidden';
+    root.appendChild(slide);
+    return true;
+  };
   const move = (x, y, e) => {
-    if (!dragging || skip) return;
+    if (!dragging || skip || sliding) return;
     const dx = x - sx, dy = y - sy;
     if (dir === null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) dir = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
-    if (dir === 'h') {
-      if (e && e.cancelable) e.preventDefault();
-      let d = dx;
-      const target = dx < 0 ? 'income' : 'expense'; // влево → доходы, вправо → расходы
-      if (target === homeMode) {
-        // В эту сторону страницы нет: тугая резинка со стопом на ~40% ширины,
-        // дальше листать нельзя.
-        const max = w * 0.4;
-        d = Math.sign(dx) * Math.min(Math.abs(dx) * 0.35, max);
-      }
-      pager.style.transform = `translateX(${d}px)`;
+    if (dir !== 'h') return;
+    if (e && e.cancelable) e.preventDefault();
+    const target = dx < 0 ? 'income' : 'expense'; // влево → доходы, вправо → расходы
+    if (target === homeMode && !slide) {
+      // В эту сторону страницы нет: тугая резинка (без встречной страницы).
+      pager.style.transition = 'none';
+      pager.style.transform = `translateX(${Math.sign(dx) * Math.min(Math.abs(dx) * 0.35, w * 0.4)}px)`;
+      return;
     }
+    if (!slide && !buildSlide(target)) return;
+    // Двигаем ленту за пальцем в диапазоне [base-W .. base] (текущая ↔ встречная),
+    // за пределами — сопротивление.
+    let t = base + dx;
+    const lo = -W, hi = 0;
+    if (t > hi) t = hi + rubber(t - hi);
+    else if (t < lo) t = lo + rubber(t - lo);
+    slide.style.transition = 'none';
+    slide.style.transform = `translateX(${t}px)`;
   };
-  const end = (x, y) => {
+  const finishSlide = (targetT, commit, targetMode) => {
+    sliding = true;
+    slide.style.transition = 'transform .28s cubic-bezier(.32,.72,0,1)';
+    slide.style.transform = `translateX(${targetT}px)`;
+    setTimeout(() => {
+      if (commit) {
+        homeMode = targetMode; catPage = 0;
+        renderHome(root);            // свежая страница (правильная шапка и слушатели); очистит ленту
+        root.style.overflowX = '';
+        slide = null; incoming = null;
+      } else {
+        teardown(true);
+      }
+      sliding = false;
+    }, 290);
+  };
+  const end = (x) => {
     if (!dragging) return;
     dragging = false;
     if (skip) return;
+    if (dir !== 'h') { pager.style.transform = ''; return; }
     const dx = x - sx;
-    if (dir !== 'h') { pager.style.transform = ''; pager.style.opacity = ''; return; }
-    const target = dx < 0 ? 'income' : 'expense'; // влево → доходы, вправо → расходы
-    if (Math.abs(dx) > w * 0.25 && target !== homeMode) {
-      // Кросс-слайд: новая страница въезжает одновременно с уходом старой.
-      slideSwitch(root, target, dx < 0, dx);
-    } else {
-      // край или недостаточный свайп — возвращаем страницу на место (без зацикливания)
-      pager.style.transition = 'transform .24s ease';
-      pager.style.transform = 'translateX(0)';
-      pager.style.opacity = '1';
-    }
+    if (!slide) { pager.style.transition = 'transform .24s ease'; pager.style.transform = 'translateX(0)'; return; }
+    const commit = toIncome ? (dx < -W * 0.25) : (dx > W * 0.25);
+    const targetMode = toIncome ? 'income' : 'expense';
+    if (commit) finishSlide(toIncome ? -W : 0, true, targetMode);
+    else finishSlide(base, false, null);
   };
   pager.addEventListener('touchstart', (e) => { skip = inCat(e.target); const p = e.changedTouches[0]; start(p.clientX, p.clientY); }, { passive: true });
   pager.addEventListener('touchmove', (e) => { const p = e.changedTouches[0]; move(p.clientX, p.clientY, e); }, { passive: false });
@@ -389,7 +382,9 @@ export function renderHome(root) {
   const split = settings.splitHistory !== false;
   const scope = split ? homeMode : null;
 
-  // Шапка: метка окна (цветом сектора) + компактный баланс.
+  // Шапка: метка окна (цветом сектора) + компактный баланс. При построении
+  // «встречной» страницы для свайпа шапку не трогаем (suppressHeader).
+  if (!suppressHeader) {
   const modeLabel = document.getElementById('mode-label');
   if (modeLabel) { modeLabel.textContent = isExpense ? t('expense') : t('income'); modeLabel.className = isExpense ? 'expense' : 'income'; }
   const headBalance = document.getElementById('head-balance');
@@ -422,6 +417,7 @@ export function renderHome(root) {
       ringHost.onclick = null;
     }
   }
+  } // /suppressHeader
 
   const pager = el('.pager.home-pager', { class: isExpense ? 'expense-mode' : 'income-mode' });
 
@@ -839,9 +835,11 @@ export function renderHome(root) {
   const group = el('.trx-group');
   histWrap.appendChild(group);
   let shown = 0;
-  if (fit) {
+  if (fit && !suppressHeader) {
     // Показываем сколько помещается, но не меньше 5 последних (если замер даёт
-    // мало из-за высокой клавиатуры — не оставляем пустое место).
+    // мало из-за высокой клавиатуры — не оставляем пустое место). При построении
+    // «встречной» страницы (suppressHeader) замер невозможен (узел вне DOM) —
+    // используем простой лимит из ветки ниже.
     const vpBottom = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     const limitY = vpBottom - 10;
     const minShow = Math.min(5, list.length);
