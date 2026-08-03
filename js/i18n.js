@@ -4,7 +4,7 @@
 const DICT = {
   ru: {
     app_name: 'Финансы',
-    tab_home: 'Обзор',
+    tab_home: 'Главная',
     tab_analytics: 'Аналитика',
     tab_forecast: 'Прогноз',
     tab_budgets: 'Бюджеты',
@@ -143,7 +143,7 @@ const DICT = {
 
   en: {
     app_name: 'Finance',
-    tab_home: 'Overview',
+    tab_home: 'Home',
     tab_analytics: 'Analytics',
     tab_forecast: 'Forecast',
     tab_budgets: 'Budgets',
@@ -281,7 +281,7 @@ const DICT = {
   },
 
   it: {
-    app_name: 'Finanze', tab_home: 'Panoramica', tab_analytics: 'Analisi', tab_forecast: 'Previsione', tab_budgets: 'Budget', tab_settings: 'Altro',
+    app_name: 'Finanze', tab_home: 'Home', tab_analytics: 'Analisi', tab_forecast: 'Previsione', tab_budgets: 'Budget', tab_settings: 'Altro',
     balance: 'Saldo', income: 'Entrate', expense: 'Spese', period_month: 'Mese', period_week: 'Settimana', period_day: 'Giorno', period_year: 'Anno', period_all: 'Tutto',
     add_transaction: 'Nuova operazione', edit_transaction: 'Modifica operazione', type: 'Tipo', amount: 'Importo', category: 'Categoria', date: 'Data', note: 'Nota', note_ph: 'Commento (facoltativo)', currency: 'Valuta', rate_to_base: 'Cambio verso {base}', save: 'Salva', cancel: 'Annulla', delete: 'Elimina', confirm_delete: 'Eliminare questa operazione?',
     no_transactions: 'Ancora nessuna operazione', no_transactions_hint: 'Tocca + per aggiungere la prima', today: 'Oggi', yesterday: 'Ieri',
@@ -300,7 +300,7 @@ const DICT = {
   },
 
   id: {
-    app_name: 'Keuangan', tab_home: 'Ringkasan', tab_analytics: 'Analitik', tab_forecast: 'Perkiraan', tab_budgets: 'Anggaran', tab_settings: 'Lainnya',
+    app_name: 'Keuangan', tab_home: 'Beranda', tab_analytics: 'Analitik', tab_forecast: 'Perkiraan', tab_budgets: 'Anggaran', tab_settings: 'Lainnya',
     balance: 'Saldo', income: 'Pemasukan', expense: 'Pengeluaran', period_month: 'Bulan', period_week: 'Minggu', period_day: 'Hari', period_year: 'Tahun', period_all: 'Semua',
     add_transaction: 'Transaksi baru', edit_transaction: 'Ubah transaksi', type: 'Tipe', amount: 'Jumlah', category: 'Kategori', date: 'Tanggal', note: 'Catatan', note_ph: 'Komentar (opsional)', currency: 'Mata uang', rate_to_base: 'Kurs ke {base}', save: 'Simpan', cancel: 'Batal', delete: 'Hapus', confirm_delete: 'Hapus transaksi ini?',
     no_transactions: 'Belum ada transaksi', no_transactions_hint: 'Ketuk + untuk menambah yang pertama', today: 'Hari ini', yesterday: 'Kemarin',
@@ -319,7 +319,7 @@ const DICT = {
   },
 
   es: {
-    app_name: 'Finanzas', tab_home: 'Resumen', tab_analytics: 'Análisis', tab_forecast: 'Previsión', tab_budgets: 'Presupuestos', tab_settings: 'Más',
+    app_name: 'Finanzas', tab_home: 'Inicio', tab_analytics: 'Análisis', tab_forecast: 'Previsión', tab_budgets: 'Presupuestos', tab_settings: 'Más',
     balance: 'Saldo', income: 'Ingresos', expense: 'Gastos', period_month: 'Mes', period_week: 'Semana', period_day: 'Día', period_year: 'Año', period_all: 'Todo',
     add_transaction: 'Nueva operación', edit_transaction: 'Editar operación', type: 'Tipo', amount: 'Importe', category: 'Categoría', date: 'Fecha', note: 'Nota', note_ph: 'Comentario (opcional)', currency: 'Moneda', rate_to_base: 'Cambio a {base}', save: 'Guardar', cancel: 'Cancelar', delete: 'Eliminar', confirm_delete: '¿Eliminar esta operación?',
     no_transactions: 'Aún no hay operaciones', no_transactions_hint: 'Toca + para añadir la primera', today: 'Hoy', yesterday: 'Ayer',
@@ -338,7 +338,7 @@ const DICT = {
   },
 
   ar: {
-    app_name: 'المالية', tab_home: 'نظرة عامة', tab_analytics: 'التحليلات', tab_forecast: 'التوقعات', tab_budgets: 'الميزانيات', tab_settings: 'المزيد',
+    app_name: 'المالية', tab_home: 'الرئيسية', tab_analytics: 'التحليلات', tab_forecast: 'التوقعات', tab_budgets: 'الميزانيات', tab_settings: 'المزيد',
     balance: 'الرصيد', income: 'الدخل', expense: 'المصروفات', period_month: 'شهر', period_week: 'أسبوع', period_day: 'يوم', period_year: 'سنة', period_all: 'كل الوقت',
     add_transaction: 'عملية جديدة', edit_transaction: 'تعديل العملية', type: 'النوع', amount: 'المبلغ', category: 'الفئة', date: 'التاريخ', note: 'ملاحظة', note_ph: 'تعليق (اختياري)', currency: 'العملة', rate_to_base: 'السعر مقابل {base}', save: 'حفظ', cancel: 'إلغاء', delete: 'حذف', confirm_delete: 'حذف هذه العملية؟',
     no_transactions: 'لا توجد عمليات بعد', no_transactions_hint: 'اضغط + لإضافة أول عملية', today: 'اليوم', yesterday: 'أمس',
@@ -357,7 +357,7 @@ const DICT = {
   },
 
   fr: {
-    app_name: 'Finances', tab_home: 'Aperçu', tab_analytics: 'Analytique', tab_forecast: 'Prévision', tab_budgets: 'Budgets', tab_settings: 'Plus',
+    app_name: 'Finances', tab_home: 'Accueil', tab_analytics: 'Analytique', tab_forecast: 'Prévision', tab_budgets: 'Budgets', tab_settings: 'Plus',
     balance: 'Solde', income: 'Revenus', expense: 'Dépenses', period_month: 'Mois', period_week: 'Semaine', period_day: 'Jour', period_year: 'Année', period_all: 'Tout',
     add_transaction: 'Nouvelle opération', edit_transaction: 'Modifier l’opération', type: 'Type', amount: 'Montant', category: 'Catégorie', date: 'Date', note: 'Note', note_ph: 'Commentaire (facultatif)', currency: 'Devise', rate_to_base: 'Taux vers {base}', save: 'Enregistrer', cancel: 'Annuler', delete: 'Supprimer', confirm_delete: 'Supprimer cette opération ?',
     no_transactions: 'Aucune opération', no_transactions_hint: 'Touchez + pour ajouter la première', today: 'Aujourd’hui', yesterday: 'Hier',

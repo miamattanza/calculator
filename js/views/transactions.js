@@ -160,6 +160,9 @@ const CATS_PER_PAGE = 8;
 // с шагом сетки .cat-page), чтобы промежуток на стыке страниц был как между
 // соседними кнопками. Шаг прокрутки карусели = ширина окна + этот зазор.
 const CAT_PAGE_GAP = 8;
+// Зазор между окнами «Расходы»/«Доходы» при свайпе (совпадает с gap .pager-slide
+// и с шагом клавиатуры), чтобы крайние колонки не слипались. Шаг ленты = W + это.
+const PAGE_GAP = 8;
 // Пока строим «встречную» страницу для живого свайпа Расходы/Доходы, шапку
 // (метка окна, баланс, кольцо лимита) не обновляем — она переключится по факту.
 let suppressHeader = false;
@@ -207,7 +210,7 @@ function attachPagerSwipe(pager, root) {
     if (!incoming) return false;
     slide = el('.pager-slide');
     (toIncome ? [pager, incoming] : [incoming, pager]).forEach((p) => slide.appendChild(p));
-    base = toIncome ? 0 : -W;   // так, что видна текущая страница
+    base = toIncome ? 0 : -(W + PAGE_GAP);   // так, что видна текущая страница
     slide.style.transition = 'none';
     slide.style.transform = `translateX(${base}px)`;
     pager.style.transform = ''; pager.style.transition = '';
@@ -232,7 +235,7 @@ function attachPagerSwipe(pager, root) {
     // Двигаем ленту за пальцем в диапазоне [base-W .. base] (текущая ↔ встречная),
     // за пределами — сопротивление.
     let t = base + dx;
-    const lo = -W, hi = 0;
+    const lo = -(W + PAGE_GAP), hi = 0;
     if (t > hi) t = hi + rubber(t - hi);
     else if (t < lo) t = lo + rubber(t - lo);
     slide.style.transition = 'none';
@@ -263,7 +266,7 @@ function attachPagerSwipe(pager, root) {
     if (!slide) { pager.style.transition = 'transform .24s ease'; pager.style.transform = 'translateX(0)'; return; }
     const commit = toIncome ? (dx < -W * 0.25) : (dx > W * 0.25);
     const targetMode = toIncome ? 'income' : 'expense';
-    if (commit) finishSlide(toIncome ? -W : 0, true, targetMode);
+    if (commit) finishSlide(toIncome ? -(W + PAGE_GAP) : 0, true, targetMode);
     else finishSlide(base, false, null);
   };
   pager.addEventListener('touchstart', (e) => { skip = inCat(e.target); const p = e.changedTouches[0]; start(p.clientX, p.clientY); }, { passive: true });

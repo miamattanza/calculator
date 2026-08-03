@@ -25,6 +25,7 @@ const SECTIONS = [
 let activeSection = 'home';
 const content = document.getElementById('content');
 const menuBtn = document.getElementById('menu-btn');
+const backBtn = document.getElementById('back-btn');
 const modeLabel = document.getElementById('mode-label');
 const headBalance = document.getElementById('head-balance');
 const settingsBtn = document.getElementById('settings-btn');
@@ -44,6 +45,8 @@ function renderSection() {
     if (budgetRing) { clear(budgetRing); budgetRing.style.display = 'none'; }
   }
   if (settingsBtn) settingsBtn.style.display = onHome ? '' : 'none';
+  // Кнопка «Назад» — только в разделах (не на «Главной»): один тап → на главную.
+  if (backBtn) backBtn.style.display = onHome ? 'none' : '';
   const section = SECTIONS.find((x) => x.id === activeSection);
   section.render(content);
   if (onHome) maybeBackupBanner();
@@ -159,6 +162,7 @@ async function main() {
   applyBackground();
 
   menuBtn.addEventListener('click', openMenu);
+  if (backBtn) backBtn.addEventListener('click', () => goSection('home'));
   if (settingsBtn) settingsBtn.addEventListener('click', () => { activeSection = 'settings'; renderSection(); });
   document.addEventListener('go-section', (e) => goSection(e.detail));
 

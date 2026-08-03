@@ -126,6 +126,9 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
 }
 #menu-btn:active { background: var(--fill-2); }
+/* Кнопка «Назад» рядом с гамбургером — быстрый возврат на «Главную» из разделов. */
+#back-btn { width: 42px; height: 42px; border-radius: 12px; background: var(--fill); margin-inline-start: 8px; display: flex; align-items: center; justify-content: center; font-size: 26px; line-height: 1; color: var(--accent); font-weight: 400; }
+#back-btn:active { background: var(--fill-2); }
 #menu-btn span { display: block; width: 18px; height: 2px; border-radius: 2px; background: var(--text); }
 #header #mode-label { margin-inline-start: 12px; font-size: 21px; font-weight: 700; letter-spacing: -0.3px; }
 #header #mode-label.expense { color: var(--accent); }
@@ -149,7 +152,9 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .pager { min-height: 60vh; will-change: transform; }
 /* Лента кросс-слайда между окнами Расходы/Доходы: две страницы бок о бок,
    двигается как одно целое — размеры страниц не меняются. */
-.pager-slide { display: flex; will-change: transform; }
+/* gap между окнами при свайпе = зазор между кнопками клавиатуры (PAGE_GAP в JS),
+   чтобы крайние колонки соседних окон не слипались на стыке. */
+.pager-slide { display: flex; gap: 8px; will-change: transform; }
 .pager-slide > .pager { flex: 0 0 100%; min-width: 0; }
 #content.fit-mode { overflow: hidden; }
 #content.fit-mode .pager { min-height: 0; }
@@ -492,7 +497,11 @@ select.select { appearance: none; -webkit-appearance: none; }
 /* ---- Режим перемещения категорий (долгое нажатие) ---- */
 /* Затемнение экрана поверх остального; сами категории поднимаем над ним, чтобы
    они оставались в фокусе и «дрожали». */
-.reorder-dim { position: fixed; inset: 0; background: rgba(0,0,0,0.22); z-index: 40; opacity: 0; transition: opacity .2s; pointer-events: none; }
+/* Затемнение в режиме перемещения. Элемент — потомок .pager (у неё
+   will-change: transform создаёт контейнер для fixed), поэтому inset считается
+   от .pager (ширина контента). Растягиваем на −16px по бокам (боковые отступы
+   #content), чтобы затемнение доходило до краёв экрана. */
+.reorder-dim { position: fixed; inset: 0 -16px; background: rgba(0,0,0,0.22); z-index: 40; opacity: 0; transition: opacity .2s; pointer-events: none; }
 .reorder-dim.on { opacity: 1; }
 /* z-index 48 — выше клавиши-корзины (47), чтобы перетаскиваемая плитка была
    ПОВЕРХ корзины, когда её подносят на выброс. */
