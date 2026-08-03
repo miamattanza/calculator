@@ -845,7 +845,9 @@ body.reordering .cat-viewport {
   -webkit-clip-path: inset(-100vh 0 -100vh 0);
   clip-path: inset(-100vh 0 -100vh 0);
 }
-.cat-track { display: flex; }
+/* gap между страницами = зазор между кнопками (CAT_PAGE_GAP в JS), чтобы на
+   стыке страниц при свайпе промежуток был как между соседними кнопками. */
+.cat-track { display: flex; gap: 8px; }
 .cat-track > .cat-page { flex: 0 0 100%; }
 /* Одинаковый размер всех ячеек категорий (включая пустые «+»). */
 .cat-page .cat-chip { padding: 0; }

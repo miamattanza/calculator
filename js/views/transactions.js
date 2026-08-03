@@ -156,6 +156,45 @@ let sumParts = [];        // «лента» калькулятора: [{v, op}] 
 let opMode = '+';         // текущий оператор кнопки: '+' или '×' (переключается долгим нажатием)
 let catPage = 0;          // текущая страница категорий
 const CATS_PER_PAGE = 8;
+// Зазор между страницами категорий (должен совпадать с gap в CSS .cat-track и
+// с шагом сетки .cat-page), чтобы промежуток на стыке страниц был как между
+// соседними кнопками. Шаг прокрутки карусели = ширина окна + этот зазор.
+const CAT_PAGE_GAP = 8;
+
+// Кросс-слайд между окнами: новая страница въезжает одновременно с уходом
+// старой (без пустого пространства между ними). fromX — текущее смещение старой
+// страницы (после пальца). toIncome — переключаемся на «Доходы» (уезжаем влево).
+let sliding = false;
+function slideSwitch(root, targetMode, toIncome, fromX) {
+  if (sliding) return;
+  sliding = true;
+  const w = root.clientWidth || window.innerWidth;
+  const oldPager = root.querySelector('.pager');
+  const h = oldPager ? oldPager.offsetHeight : 0;
+  const outX = toIncome ? -w : w;   // куда уезжает старая
+  const absPos = (p, x) => { p.style.position = 'absolute'; p.style.top = '0'; p.style.left = '0'; p.style.width = '100%'; p.style.transition = 'none'; p.style.transform = `translateX(${x}px)`; p.style.opacity = '1'; };
+  root.style.position = 'relative';
+  root.style.overflow = 'hidden';
+  if (h) root.style.height = h + 'px';
+  if (oldPager) { absPos(oldPager, fromX); oldPager.remove(); }
+  // Рендер новой страницы (renderHome очистит root — старая уже откреплена).
+  homeMode = targetMode; catPage = 0;
+  renderHome(root);
+  const newPager = root.querySelector('.pager');
+  absPos(newPager, -outX);          // новая приезжает с противоположной стороны
+  if (oldPager) root.appendChild(oldPager);
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const T = 'transform .3s cubic-bezier(.32,.72,0,1)';
+    if (oldPager) { oldPager.style.transition = T; oldPager.style.transform = `translateX(${outX}px)`; }
+    newPager.style.transition = T; newPager.style.transform = 'translateX(0)';
+  }));
+  setTimeout(() => {
+    if (oldPager) oldPager.remove();
+    for (const p of ['position', 'top', 'left', 'width', 'transition', 'transform', 'opacity']) newPager.style[p] = '';
+    root.style.position = ''; root.style.overflow = ''; root.style.height = '';
+    sliding = false;
+  }, 330);
+}
 
 // Переход к конкретному окну (без зацикливания: expense — левое, income —
 // правое; на краю страница просто возвращается на место).
@@ -209,7 +248,6 @@ function attachPagerSwipe(pager, root) {
         d = Math.sign(dx) * Math.min(Math.abs(dx) * 0.35, max);
       }
       pager.style.transform = `translateX(${d}px)`;
-      pager.style.opacity = String(1 - Math.min(Math.abs(d) / w, 1) * 0.35);
     }
   };
   const end = (x, y) => {
@@ -218,15 +256,13 @@ function attachPagerSwipe(pager, root) {
     if (skip) return;
     const dx = x - sx;
     if (dir !== 'h') { pager.style.transform = ''; pager.style.opacity = ''; return; }
-    pager.style.transition = 'transform .24s ease, opacity .24s ease';
     const target = dx < 0 ? 'income' : 'expense'; // влево → доходы, вправо → расходы
     if (Math.abs(dx) > w * 0.25 && target !== homeMode) {
-      const outX = dx < 0 ? -w : w;
-      pager.style.transform = `translateX(${outX}px)`;
-      pager.style.opacity = '0';
-      setTimeout(() => setMode(root, target, dx < 0 ? w : -w), 190);
+      // Кросс-слайд: новая страница въезжает одновременно с уходом старой.
+      slideSwitch(root, target, dx < 0, dx);
     } else {
       // край или недостаточный свайп — возвращаем страницу на место (без зацикливания)
+      pager.style.transition = 'transform .24s ease';
       pager.style.transform = 'translateX(0)';
       pager.style.opacity = '1';
     }
@@ -565,7 +601,7 @@ export function renderHome(root) {
     const updateGhost = () => {
       if (!ghost) return;
       const w = catViewport.offsetWidth || 1;
-      const dx = (lastX - sx) + (catPage - startPage) * w;
+      const dx = (lastX - sx) + (catPage - startPage) * (w + CAT_PAGE_GAP);
       const dy = lastY - sy;
       const cw = chip.offsetWidth || 1, ch = chip.offsetHeight || 1;
       const frac = Math.min(1, Math.max(Math.abs(dx) / cw, Math.abs(dy) / ch));
@@ -610,7 +646,7 @@ export function renderHome(root) {
     const setPos = (anim) => {
       const w = catViewport.offsetWidth || 1;
       chip.style.transition = anim ? 'transform .26s cubic-bezier(.32,.72,0,1)' : 'none';
-      chip.style.transform = `translate(${(lastX - sx) + (catPage - startPage) * w}px, ${lastY - sy}px) scale(1.12)`;
+      chip.style.transform = `translate(${(lastX - sx) + (catPage - startPage) * (w + CAT_PAGE_GAP)}px, ${lastY - sy}px) scale(1.12)`;
       updateGhost();
       updateTrash();
     };
@@ -719,7 +755,7 @@ export function renderHome(root) {
   const applyTrack = (animate) => {
     const w = catViewport.offsetWidth;
     catTrack.style.transition = animate ? 'transform .26s cubic-bezier(.32,.72,0,1)' : 'none';
-    catTrack.style.transform = `translateX(${-catPage * w}px)`;
+    catTrack.style.transform = `translateX(${-catPage * (w + CAT_PAGE_GAP)}px)`;
     renderDots();
   };
   const catPager = el('.cat-pager', {}, [catViewport, catDots]);
@@ -736,8 +772,8 @@ export function renderHome(root) {
     if (cdir === 'h') {
       if (e && e.cancelable) e.preventDefault();
       const w = catViewport.offsetWidth;
-      let pos = -catPage * w + dx;
-      const min = -(pages - 1) * w;
+      let pos = -catPage * (w + CAT_PAGE_GAP) + dx;
+      const min = -(pages - 1) * (w + CAT_PAGE_GAP);
       if (pos > 0) pos *= 0.3; else if (pos < min) pos = min + (pos - min) * 0.3;
       catTrack.style.transform = `translateX(${pos}px)`;
     }
