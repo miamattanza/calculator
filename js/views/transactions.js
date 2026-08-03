@@ -168,30 +168,36 @@ let sliding = false;
 function slideSwitch(root, targetMode, toIncome, fromX) {
   if (sliding) return;
   sliding = true;
-  const w = root.clientWidth || window.innerWidth;
   const oldPager = root.querySelector('.pager');
-  const h = oldPager ? oldPager.offsetHeight : 0;
-  const outX = toIncome ? -w : w;   // куда уезжает старая
-  const absPos = (p, x) => { p.style.position = 'absolute'; p.style.top = '0'; p.style.left = '0'; p.style.width = '100%'; p.style.transition = 'none'; p.style.transform = `translateX(${x}px)`; p.style.opacity = '1'; };
-  root.style.position = 'relative';
-  root.style.overflow = 'hidden';
-  if (h) root.style.height = h + 'px';
-  if (oldPager) { absPos(oldPager, fromX); oldPager.remove(); }
+  // Ширину берём по фактической странице (у #content есть боковые отступы,
+  // поэтому clientWidth не подходит — иначе страницы «раздувались»).
+  const w = oldPager ? oldPager.offsetWidth : (root.clientWidth || window.innerWidth);
+  if (oldPager) { oldPager.style.transition = 'none'; oldPager.style.transform = ''; oldPager.style.opacity = ''; oldPager.remove(); }
   // Рендер новой страницы (renderHome очистит root — старая уже откреплена).
   homeMode = targetMode; catPage = 0;
   renderHome(root);
   const newPager = root.querySelector('.pager');
-  absPos(newPager, -outX);          // новая приезжает с противоположной стороны
-  if (oldPager) root.appendChild(oldPager);
+  newPager.remove();
+  // Обе страницы кладём в flex-ленту и двигаем её целиком — синхронный слайд без
+  // изменения размеров (страницы остаются нормальной ширины).
+  const slide = el('.pager-slide');
+  (toIncome ? [oldPager, newPager] : [newPager, oldPager]).forEach((p) => { if (p) slide.appendChild(p); });
+  const startT = toIncome ? fromX : (fromX - w);   // старая под пальцем — стыкуемся без прыжка
+  const endT = toIncome ? -w : 0;
+  slide.style.transition = 'none';
+  slide.style.transform = `translateX(${startT}px)`;
+  root.style.overflowX = 'hidden';
+  root.appendChild(slide);
   requestAnimationFrame(() => requestAnimationFrame(() => {
-    const T = 'transform .3s cubic-bezier(.32,.72,0,1)';
-    if (oldPager) { oldPager.style.transition = T; oldPager.style.transform = `translateX(${outX}px)`; }
-    newPager.style.transition = T; newPager.style.transform = 'translateX(0)';
+    slide.style.transition = 'transform .3s cubic-bezier(.32,.72,0,1)';
+    slide.style.transform = `translateX(${endT}px)`;
   }));
   setTimeout(() => {
-    if (oldPager) oldPager.remove();
-    for (const p of ['position', 'top', 'left', 'width', 'transition', 'transform', 'opacity']) newPager.style[p] = '';
-    root.style.position = ''; root.style.overflow = ''; root.style.height = '';
+    newPager.remove();
+    slide.remove();
+    newPager.style.transform = ''; newPager.style.transition = '';
+    root.appendChild(newPager);
+    root.style.overflowX = '';
     sliding = false;
   }, 330);
 }
