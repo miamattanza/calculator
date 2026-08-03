@@ -422,6 +422,8 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .nav-row:last-child { border-bottom: none; }
 .nav-row:active { background: var(--fill); }
 .nav-icon { font-size: 18px; width: 24px; text-align: center; }
+/* Иконка конвертера в эмодзи-шрифте выглядит темноватой — слегка осветляем. */
+.nav-icon.nav-icon-light { filter: brightness(1.35) saturate(1.05); }
 .nav-label { flex: 1; font-size: 16px; }
 .nav-row.danger .nav-label { color: var(--red); }
 .nav-chevron { color: var(--text-3); font-size: 20px; }
@@ -810,18 +812,23 @@ input[type="search"] { -webkit-appearance: none; appearance: none; }
 
 /* ---- Редактор категории: превью иконки + загрузка ---- */
 .icon-field { display: flex; flex-direction: column; gap: 12px; align-items: center; }
-.icon-preview { align-self: center; width: 84px; height: 84px; border-radius: 20px; font-size: 42px; }
+.icon-preview { align-self: center; display: flex; }
+/* Превью иконки — того же размера, что плитка на главном экране. */
+.icon-preview-art { width: 84px; height: 84px; border-radius: 22%; font-size: 46px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 /* Кнопка «+» для открытия полноэкранного выбора иконок. */
 .icon-picker-open { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 12px; background: var(--fill); color: var(--accent); font-size: 15px; font-weight: 600; }
 .icon-picker-open:active { background: var(--fill-2); }
 .icon-picker-plus { font-size: 20px; font-weight: 400; line-height: 1; }
-/* Палитра цветов: кружки-образцы для цвета кнопки и цвета иконки. */
-.swatch-row { display: flex; flex-wrap: wrap; gap: 10px; padding: 2px 0; }
-.swatch { width: 30px; height: 30px; border-radius: 50%; flex: 0 0 auto; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12); }
-.swatch.active { box-shadow: 0 0 0 2px var(--bg-elev), 0 0 0 4px var(--accent); }
+/* Горизонтальные «барабаны» выбора цвета: прокрутка центрирует и выбирает цвет.
+   Центральный (выбранный) образец увеличен и обведён акцентом. */
+.color-drum { position: relative; }
+.drum-track { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 10px calc(50% - 17px); -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.drum-track::-webkit-scrollbar { display: none; }
+.drum-swatch { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; scroll-snap-align: center; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15); transition: transform .14s ease; }
+.drum-swatch.active { transform: scale(1.22); box-shadow: 0 0 0 2px var(--bg-elev), 0 0 0 4px var(--accent), inset 0 0 0 1px rgba(0,0,0,0.15); }
 /* «Без фона»: прозрачный образец с диагональю. */
-.swatch-none { background: var(--fill); position: relative; overflow: hidden; }
-.swatch-none::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top right, transparent 44%, var(--red) 45%, var(--red) 55%, transparent 56%); }
+.drum-swatch.swatch-none { background: var(--fill); position: relative; overflow: hidden; }
+.drum-swatch.swatch-none::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top right, transparent 44%, var(--red) 45%, var(--red) 55%, transparent 56%); }
 .icon-rules { font-size: 12px; color: var(--text-3); text-align: center; margin-top: -6px; }
 .btn-upload { background: var(--fill); border-radius: 10px; padding: 11px; font-size: 15px; font-weight: 500; color: var(--accent); }
 .cat-img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }

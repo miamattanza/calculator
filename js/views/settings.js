@@ -77,7 +77,7 @@ export function renderSettings(root, rerenderApp) {
     settingRow(t('base_currency'), curSelect),
     settingRow(t('current_currency'), curNowSelect),
     el('.setting-hint', { text: t('current_currency_hint') }),
-    navRow('💱', t('converter'), () => openConverter()),
+    navRow('💱', t('converter'), () => openConverter(), false, 'nav-icon-light'),
     settingRow(t('convert_all'), convToggle),
     el('.setting-hint', { text: t('convert_all_hint') }),
   ]);
@@ -154,9 +154,9 @@ function settingRow(label, control) {
   return el('.setting-row', {}, [el('.setting-label', { text: label }), control]);
 }
 
-function navRow(icon, label, onClick, danger) {
+function navRow(icon, label, onClick, danger, iconClass) {
   return el('.nav-row', { class: danger ? 'danger' : '', onClick }, [
-    el('.nav-icon', { text: icon }),
+    el('.nav-icon', { class: iconClass || '', text: icon }),
     el('.nav-label', { text: label }),
     danger ? null : el('.nav-chevron', { text: '›' }),
   ]);
@@ -210,6 +210,55 @@ function importJSON() {
 const EMOJI_CHOICES = ['💼','💰','🎁','📈','🧾','💵','🏦','💸','🪙','📊','🤝','⭐️','🎯','❤️'];
 // Цвета — 14 групп из палитры проекта (G01–G14). Только они и их оттенки.
 const COLOR_CHOICES = ['#84542A','#993229','#305A88','#2C775C','#8A3865','#43368C','#96782C','#3F7836','#2A2F51','#646D2C','#296670','#52396A','#726B65','#7A297A'];
+
+// Яркое цветовое колесо (доп. цвета к основной палитре) — для «барабанов».
+function hsl2hex(h, s, l) {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const k = (n) => (n + h / 30) % 12;
+  const f = (n) => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1))));
+  const hx = (x) => x.toString(16).padStart(2, '0');
+  return '#' + hx(f(0)) + hx(f(8)) + hx(f(4));
+}
+const COLOR_WHEEL = [];
+for (let h = 0; h < 360; h += 18) COLOR_WHEEL.push(hsl2hex(h, 68, 52));
+
+// Горизонтальный «барабан» выбора цвета: прокрутка центрирует цвет и выбирает
+// его; тап по образцу тоже центрирует. selected — текущее значение (null = без
+// фона, только для барабана цвета кнопки). Возвращает { el, recenter(value) }.
+function makeColorDrum({ items, selected, onSelect }) {
+  const track = el('.drum-track');
+  const wrap = el('.color-drum', {}, [track]);
+  const norm = (v) => (v == null ? null : String(v).toLowerCase());
+  const centerOf = (b) => b.offsetLeft + b.offsetWidth / 2;
+  const centerTo = (b, smooth) => track.scrollTo({ left: centerOf(b) - track.clientWidth / 2, behavior: smooth ? 'smooth' : 'auto' });
+  const btns = items.map((it) => {
+    const b = el('button.drum-swatch' + (it.none ? '.swatch-none' : ''), { type: 'button', style: it.none ? {} : { background: it.value } });
+    b.addEventListener('click', () => centerTo(b, true));
+    track.appendChild(b);
+    return b;
+  });
+  const matchIdx = (v) => { const nv = norm(v); const i = items.findIndex((it) => it.none ? v == null : norm(it.value) === nv); return i < 0 ? 0 : i; };
+  let activeIdx = matchIdx(selected);
+  const setActive = (i, fire) => {
+    if (i < 0 || i >= btns.length) return;
+    btns.forEach((b, j) => b.classList.toggle('active', j === i));
+    const changed = i !== activeIdx; activeIdx = i;
+    if (fire && changed) onSelect(items[i].none ? null : items[i].value);
+  };
+  let raf = 0;
+  track.addEventListener('scroll', () => {
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => {
+      const mid = track.scrollLeft + track.clientWidth / 2;
+      let best = 0, bd = Infinity;
+      btns.forEach((b, i) => { const d = Math.abs(centerOf(b) - mid); if (d < bd) { bd = d; best = i; } });
+      setActive(best, true);
+    });
+  }, { passive: true });
+  requestAnimationFrame(() => requestAnimationFrame(() => { setActive(activeIdx, false); centerTo(btns[activeIdx], false); }));
+  return { el: wrap, recenter: (v) => { const i = matchIdx(v); setActive(i, false); centerTo(btns[i], true); } };
+}
 
 function openCategoriesManager() {
   const body = el('.form');
@@ -285,7 +334,7 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType, pres
     iconPreview.appendChild(catIcon(
       { icon: model.icon, color: model.color, image: model.image, iconKey: model.image ? null : model.iconKey,
         iconColor: model.iconColor, noBg: model.noBg },
-      'trx-icon'));
+      'icon-preview-art'));
   };
   // Полноэкранный выбор иконок (плитки + эмодзи + загрузка) — открывается по «+».
   let iconPickerModal = null;
@@ -385,34 +434,25 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType, pres
     },
   }, [el('.icon-picker-plus', { text: '＋' }), el('span', { text: t('choose_icon') })]);
 
-  // --- Цвет кнопки (фон плитки) + «без фона»; цвет иконки ---
-  const BTN_COLORS = COLOR_CHOICES;
-  const ICON_COLORS = ['#FFFFFF', '#1E2127', ...COLOR_CHOICES];
-  const btnColorWrap = el('.swatch-row');
-  const iconColorWrap = el('.swatch-row');
-  const swatch = (col, active, onClick, extraCls) => el('button.swatch' + (extraCls || ''), {
-    type: 'button', class: active ? 'active' : '', style: col ? { background: col } : {}, onClick,
+  // --- Цвет кнопки и цвет иконки: два горизонтальных «барабана» ---
+  // Основная палитра проекта + яркое цветовое колесо + нейтральные оттенки.
+  const BTN_COLORS = [...COLOR_CHOICES, ...COLOR_WHEEL, '#000000', '#3A3E47', '#9DA1A9'];
+  const ICON_COLORS = ['#FFFFFF', '#000000', '#1E2127', '#C6C9CE', ...COLOR_CHOICES, ...COLOR_WHEEL];
+  const effIconColor = () => model.iconColor || (model.noBg ? model.color : '#FFFFFF');
+  const btnDrum = makeColorDrum({
+    items: [{ none: true }, ...BTN_COLORS.map((v) => ({ value: v }))],
+    selected: model.noBg ? null : model.color,
+    onSelect: (v) => { if (v == null) { model.noBg = true; } else { model.noBg = false; model.color = v; } iconDrum.recenter(effIconColor()); updatePreview(); },
   });
-  renderSwatches = () => {
-    clear(btnColorWrap); clear(iconColorWrap);
-    // Цвет кнопки: палитра + «без фона» (только иконка).
-    for (const col of BTN_COLORS) {
-      btnColorWrap.appendChild(swatch(col, !model.noBg && (model.color || '').toLowerCase() === col.toLowerCase(),
-        () => { model.noBg = false; model.color = col; renderSwatches(); updatePreview(); }));
-    }
-    btnColorWrap.appendChild(swatch(null, model.noBg,
-      () => { model.noBg = true; renderSwatches(); updatePreview(); }, '.swatch-none'));
-    // Цвет иконки: белый, тёмный и палитра. Активен явный iconColor, иначе —
-    // белый по умолчанию (или цвет категории в режиме «без фона»).
-    const effIcon = (model.iconColor || (model.noBg ? model.color : '#FFFFFF') || '').toLowerCase();
-    for (const col of ICON_COLORS) {
-      iconColorWrap.appendChild(swatch(col, effIcon === col.toLowerCase(),
-        () => { model.iconColor = col; renderSwatches(); updatePreview(); }));
-    }
-  };
+  const iconDrum = makeColorDrum({
+    items: ICON_COLORS.map((v) => ({ value: v })),
+    selected: effIconColor(),
+    onSelect: (v) => { model.iconColor = v; updatePreview(); },
+  });
+  // afterPick() пере-центрирует барабаны на текущие цвета выбранной иконки.
+  renderSwatches = () => { btnDrum.recenter(model.noBg ? null : model.color); iconDrum.recenter(effIconColor()); };
 
   updatePreview();
-  renderSwatches();
 
   // Валюта категории (из прежней версии) — теперь её нельзя назначать, но
   // оставшуюся у некоторых категорий можно убрать.
@@ -431,8 +471,8 @@ export function openCategoryEditor(existing, onDone = () => {}, presetType, pres
     field(t('category_name'), nameInput).row,
     field(t('type'), typeSeg).row,
     field(t('used_icon'), el('.icon-field', {}, [iconPreview, openPickerBtn])).row,
-    field(t('button_color'), btnColorWrap).row,
-    field(t('icon_color'), iconColorWrap).row,
+    field(t('button_color'), btnDrum.el).row,
+    field(t('icon_color'), iconDrum.el).row,
     ...(currencyBtn ? [currencyBtn] : []),
     error, saveBtn,
   );
