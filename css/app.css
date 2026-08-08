@@ -152,9 +152,8 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .pager { min-height: 60vh; will-change: transform; }
 /* Лента кросс-слайда между окнами Расходы/Доходы: две страницы бок о бок,
    двигается как одно целое — размеры страниц не меняются. */
-/* gap между окнами при свайпе = зазор между кнопками клавиатуры (PAGE_GAP в JS),
-   чтобы крайние колонки соседних окон не слипались на стыке. */
-.pager-slide { display: flex; gap: 8px; will-change: transform; }
+/* Просвет между окнами при свайпе задаётся инлайн из JS (доля ширины окна). */
+.pager-slide { display: flex; will-change: transform; }
 .pager-slide > .pager { flex: 0 0 100%; min-width: 0; }
 #content.fit-mode { overflow: hidden; }
 #content.fit-mode .pager { min-height: 0; }

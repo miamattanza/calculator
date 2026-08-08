@@ -160,9 +160,9 @@ const CATS_PER_PAGE = 8;
 // с шагом сетки .cat-page), чтобы промежуток на стыке страниц был как между
 // соседними кнопками. Шаг прокрутки карусели = ширина окна + этот зазор.
 const CAT_PAGE_GAP = 8;
-// Зазор между окнами «Расходы»/«Доходы» при свайпе (совпадает с gap .pager-slide
-// и с шагом клавиатуры), чтобы крайние колонки не слипались. Шаг ленты = W + это.
-const PAGE_GAP = 8;
+// Просвет между окнами «Расходы»/«Доходы» при свайпе — доля от ширины окна
+// (~50%). Задаётся инлайн на .pager-slide; шаг ленты = W + gap.
+const PAGE_GAP_RATIO = 0.5;
 // Пока строим «встречную» страницу для живого свайпа Расходы/Доходы, шапку
 // (метка окна, баланс, кольцо лимита) не обновляем — она переключится по факту.
 let suppressHeader = false;
@@ -188,9 +188,24 @@ function attachPagerSwipe(pager, root) {
   let sx = 0, sy = 0, dir = null, dragging = false, skip = false, w = window.innerWidth;
   // Состояние ленты: slide — контейнер, incoming — встречная страница, base —
   // смещение ленты, при котором видна текущая страница; toIncome — направление.
-  let slide = null, incoming = null, base = 0, toIncome = false, W = 0;
+  let slide = null, incoming = null, base = 0, toIncome = false, W = 0, gap = 0;
   const inCat = (target) => !!(target && target.closest && target.closest('.cat-pager, .swipe-wrap'));
   const rubber = (over) => over * 0.3;   // сопротивление за пределами диапазона
+  // Кроссфейд названия окна (Расходы/Доходы) синхронно со свайпом. Одно поле:
+  // текущее гаснет на 0.5→0.75 прогресса, встречное проявляется на 0.75→1.0.
+  const modeLabel = document.getElementById('mode-label');
+  const showLabel = (mode, opacity) => {
+    if (!modeLabel) return;
+    modeLabel.textContent = mode === 'expense' ? t('expense') : t('income');
+    modeLabel.className = mode === 'expense' ? 'expense' : 'income';
+    modeLabel.style.opacity = String(opacity);
+  };
+  const labelForProgress = (p) => {
+    const tgt = toIncome ? 'income' : 'expense';
+    if (p < 0.75) showLabel(homeMode, p <= 0.5 ? 1 : (0.75 - p) / 0.25);
+    else showLabel(tgt, Math.min(1, (p - 0.75) / 0.25));
+  };
+  const resetLabel = () => { if (modeLabel) { modeLabel.style.opacity = ''; modeLabel.style.transition = ''; } };
   const teardown = (keepCurrent) => {
     // keepCurrent — вернуть текущую страницу в root (отмена свайпа).
     if (!slide) return;
@@ -208,9 +223,11 @@ function attachPagerSwipe(pager, root) {
     toIncome = target === 'income';
     incoming = buildIncoming(target);
     if (!incoming) return false;
+    gap = Math.round(W * PAGE_GAP_RATIO);    // просвет между окнами ~50% ширины
     slide = el('.pager-slide');
+    slide.style.gap = gap + 'px';
     (toIncome ? [pager, incoming] : [incoming, pager]).forEach((p) => slide.appendChild(p));
-    base = toIncome ? 0 : -(W + PAGE_GAP);   // так, что видна текущая страница
+    base = toIncome ? 0 : -(W + gap);        // так, что видна текущая страница
     slide.style.transition = 'none';
     slide.style.transform = `translateX(${base}px)`;
     pager.style.transform = ''; pager.style.transition = '';
@@ -232,19 +249,24 @@ function attachPagerSwipe(pager, root) {
       return;
     }
     if (!slide && !buildSlide(target)) return;
-    // Двигаем ленту за пальцем в диапазоне [base-W .. base] (текущая ↔ встречная),
-    // за пределами — сопротивление.
+    // Двигаем ленту за пальцем в диапазоне [base-(W+gap) .. base]; за пределами —
+    // сопротивление. Прогресс p (0 — текущее окно, 1 — встречное) — для названия.
+    const span = W + gap;
     let t = base + dx;
-    const lo = -(W + PAGE_GAP), hi = 0;
+    const lo = -span, hi = 0;
     if (t > hi) t = hi + rubber(t - hi);
     else if (t < lo) t = lo + rubber(t - lo);
     slide.style.transition = 'none';
     slide.style.transform = `translateX(${t}px)`;
+    labelForProgress(Math.max(0, Math.min(1, Math.abs(t - base) / span)));
   };
   const finishSlide = (targetT, commit, targetMode) => {
     sliding = true;
     slide.style.transition = 'transform .28s cubic-bezier(.32,.72,0,1)';
     slide.style.transform = `translateX(${targetT}px)`;
+    // Доводим название синхронно с доводкой ленты.
+    if (modeLabel) modeLabel.style.transition = 'opacity .2s ease';
+    showLabel(commit ? targetMode : homeMode, 1);
     setTimeout(() => {
       if (commit) {
         homeMode = targetMode; catPage = 0;
@@ -254,6 +276,7 @@ function attachPagerSwipe(pager, root) {
       } else {
         teardown(true);
       }
+      resetLabel();
       sliding = false;
     }, 290);
   };
@@ -266,7 +289,7 @@ function attachPagerSwipe(pager, root) {
     if (!slide) { pager.style.transition = 'transform .24s ease'; pager.style.transform = 'translateX(0)'; return; }
     const commit = toIncome ? (dx < -W * 0.25) : (dx > W * 0.25);
     const targetMode = toIncome ? 'income' : 'expense';
-    if (commit) finishSlide(toIncome ? -(W + PAGE_GAP) : 0, true, targetMode);
+    if (commit) finishSlide(toIncome ? -(W + gap) : 0, true, targetMode);
     else finishSlide(base, false, null);
   };
   pager.addEventListener('touchstart', (e) => { skip = inCat(e.target); const p = e.changedTouches[0]; start(p.clientX, p.clientY); }, { passive: true });
