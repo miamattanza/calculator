@@ -11,6 +11,7 @@ import { renderForecast } from './views/forecast.js';
 import { renderPlanning } from './views/planning.js';
 import { renderBudgets } from './views/budgets.js';
 import { renderSettings, applyTheme, applyBackground, exportJSON } from './views/settings.js';
+import { maybeOnboard } from './onboarding.js';
 
 // Разделы приложения. Обзор — главный экран, остальные открываются из меню.
 const SECTIONS = [
@@ -192,9 +193,11 @@ async function main() {
   // окончательная (важно для корректного числа строк на реальных устройствах).
   requestAnimationFrame(() => { if (activeSection === 'home') renderSection(); });
 
-  // Первый запуск — предложить выбрать язык.
+  // Первый запуск — предложить выбрать язык, затем показать вводный тур.
   if (!store.getState().settings.langChosen) {
-    openLanguageOnboarding(() => rerenderAll());
+    openLanguageOnboarding(() => { rerenderAll(); maybeOnboard(); });
+  } else {
+    maybeOnboard();   // язык уже выбран, но тур ещё не показывали
   }
 
   // Service Worker для офлайн-работы и установки на домашний экран.

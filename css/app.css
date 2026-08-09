@@ -151,6 +151,31 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 #settings-btn:active { background: var(--fill-2); }
 
 /* Контейнер страницы окна — тащится пальцем при свайпе. */
+/* ---- Вводный тур (онбординг) ---- */
+.tour-overlay { position: fixed; inset: 0; z-index: 300; }
+.tour-overlay.dim { background: rgba(0,0,0,0.62); }
+/* «Прожектор»: прозрачная рамка вокруг цели, всё вне неё затемнено box-shadow. */
+.tour-hole { position: fixed; border-radius: 14px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.62); transition: all .25s ease; pointer-events: none; }
+.tour-hint { position: fixed; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 1; }
+.tour-hand { font-size: 34px; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.5); animation: tour-swipe 1.4s ease-in-out infinite; }
+.tour-ring { width: 36px; height: 36px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 1px 6px rgba(0,0,0,.5); }
+.tour-hint-longpress .tour-ring { animation: tour-press 1.4s ease-in-out infinite; }
+.tour-hint-tap .tour-ring { animation: tour-tap 1.3s ease-in-out infinite; }
+@keyframes tour-swipe { 0%,100% { transform: translateX(-14px); } 50% { transform: translateX(14px); } }
+@keyframes tour-press { 0%,100% { transform: scale(1); opacity: .95; } 55% { transform: scale(.7); opacity: .6; } }
+@keyframes tour-tap { 0%,100% { transform: scale(1); opacity: .95; } 50% { transform: scale(1.35); opacity: .4; } }
+.tour-pop { position: fixed; max-width: 300px; width: calc(100vw - 32px); background: var(--bg-elev); border-radius: 16px; padding: 16px 18px; box-shadow: 0 8px 30px rgba(0,0,0,0.35); }
+.tour-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+.tour-desc { font-size: 14px; line-height: 1.45; color: var(--text-2); }
+.tour-dots { display: flex; gap: 5px; justify-content: center; margin: 14px 0 12px; flex-wrap: wrap; }
+.tour-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sep-strong); }
+.tour-dot.active { background: var(--accent); }
+.tour-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tour-skip { color: var(--text-3); font-size: 15px; padding: 8px 4px; }
+.tour-next { background: var(--accent); color: #fff; font-weight: 600; font-size: 15px; padding: 10px 22px; border-radius: 12px; }
+.tour-next:active { filter: brightness(0.92); }
+@media (prefers-reduced-motion: reduce) { .tour-hand, .tour-ring { animation: none !important; } }
+
 .pager { min-height: 60vh; will-change: transform; }
 /* Галочка-подтверждение записи операции (пульс на нажатой плитке). */
 .save-flash { position: fixed; z-index: 200; display: flex; align-items: center; justify-content: center;

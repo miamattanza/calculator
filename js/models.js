@@ -1,6 +1,6 @@
 // models.js — фабрики сущностей и данные по умолчанию.
 
-export const APP_VERSION = '1.75';
+export const APP_VERSION = '1.76';
 
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -114,6 +114,7 @@ export const DEFAULT_SETTINGS = {
   sumPlusLeft: false,   // кнопка «+» (сложение сумм) слева (над «1») вместо справа (над «3»)
   soundFeedback: false, // звуковой сигнал при записи операции (вибро — всегда)
   langChosen: false,    // выбран ли язык при первом запуске
+  onboarded: false,     // показан ли вводный тур
   background: 'none',   // фоновый паттерн ('none' | id | 'custom')
   bgCustom: null,       // свой фон (dataURL)
   budgetTotal: 0,       // общий месячный лимит (0 = не задан)

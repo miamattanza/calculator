@@ -7,6 +7,7 @@ import { el, clear, sheet, field, toast, confirmDialog, choiceDialog, toggle, ca
 import { CURRENCIES, roundRate, currencyFlag } from '../format.js';
 import { APP_VERSION } from '../models.js';
 import { iconByKey, iconsByType } from '../icons.js';
+import { startOnboarding } from '../onboarding.js';
 
 
 export function renderSettings(root, rerenderApp) {
@@ -129,6 +130,7 @@ export function renderSettings(root, rerenderApp) {
   // Категории
   root.appendChild(el('.settings-group', {}, [
     navRow('🏷', t('categories_manage'), () => openCategoriesManager()),
+    navRow('❓', t('ob_start'), () => startOnboarding()),
   ]));
 
   // Данные
