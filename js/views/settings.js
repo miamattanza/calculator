@@ -94,6 +94,9 @@ export function renderSettings(root, rerenderApp) {
     await store.setSetting('sumPlusLeft', checked);
     rerenderApp();
   });
+  const soundToggle = toggle(!!s.soundFeedback, async (checked) => {
+    await store.setSetting('soundFeedback', checked);
+  });
 
   const displayGroup = el('.settings-group', {}, [
     settingRow(t('split_history'), splitToggle),
@@ -102,6 +105,8 @@ export function renderSettings(root, rerenderApp) {
     el('.setting-hint', { text: t('fit_history_hint') }),
     settingRow(t('sum_plus_left'), plusLeftToggle),
     el('.setting-hint', { text: t('sum_plus_hint') }),
+    settingRow(t('sound_feedback'), soundToggle),
+    el('.setting-hint', { text: t('sound_feedback_hint') }),
   ]);
 
   // Поле «Максимум строк» — только когда подгонка под экран выключена.

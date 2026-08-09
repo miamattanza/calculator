@@ -152,6 +152,19 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 
 /* Контейнер страницы окна — тащится пальцем при свайпе. */
 .pager { min-height: 60vh; will-change: transform; }
+/* Галочка-подтверждение записи операции (пульс на нажатой плитке). */
+.save-flash { position: fixed; z-index: 200; display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: var(--green); box-shadow: 0 6px 20px rgba(0,0,0,0.28);
+  opacity: 0; transform: scale(0.4); pointer-events: none; }
+.save-flash svg { width: 58%; height: 58%; }
+.save-flash.on { animation: save-pop .64s cubic-bezier(.2,.9,.3,1) forwards; }
+@keyframes save-pop {
+  0% { opacity: 0; transform: scale(0.4); }
+  22% { opacity: 1; transform: scale(1.08); }
+  68% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) { .save-flash.on { animation-duration: .3s; } }
 /* Лента кросс-слайда между окнами Расходы/Доходы: две страницы бок о бок,
    двигается как одно целое — размеры страниц не меняются. */
 /* Просвет между окнами при свайпе задаётся инлайн из JS (доля ширины окна). */

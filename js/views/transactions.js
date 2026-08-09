@@ -386,6 +386,44 @@ function attachHold(btn, onTap, onHold) {
   });
 }
 
+// Короткий приятный сигнал подтверждения записи (два тона), только по настройке.
+let _audioCtx = null;
+function playSaveSound() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    _audioCtx = _audioCtx || new AC();
+    const ctx = _audioCtx;
+    if (ctx.state === 'suspended') ctx.resume();
+    const now = ctx.currentTime;
+    for (const [f, dt] of [[880, 0], [1320, 0.075]]) {  // A5 → E6
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = f; o.connect(g); g.connect(ctx.destination);
+      const t0 = now + dt;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.13, t0 + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
+      o.start(t0); o.stop(t0 + 0.18);
+    }
+  } catch (e) { /* звук недоступен — не критично */ }
+}
+
+// Визуальное подтверждение записи: зелёная галочка-пульс в центре нажатой
+// плитки (живёт на body, поэтому переживает перерисовку главного экрана).
+function flashSaved(rect) {
+  const size = 46;
+  const node = el('.save-flash', { 'aria-hidden': 'true', html:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 L9 17 L4 12"/></svg>' });
+  node.style.left = Math.round(rect.left + rect.width / 2 - size / 2) + 'px';
+  node.style.top = Math.round(rect.top + rect.height / 2 - size / 2) + 'px';
+  node.style.width = size + 'px'; node.style.height = size + 'px';
+  document.body.appendChild(node);
+  requestAnimationFrame(() => node.classList.add('on'));
+  setTimeout(() => node.remove(), 700);
+  if (navigator.vibrate) { try { navigator.vibrate(15); } catch (e) {} }
+  if (store.getState().settings.soundFeedback) playSaveSound();
+}
+
 // Вычисление «ленты» калькулятора с учётом приоритета умножения над сложением.
 // parts: [{v, op}], tail — текущее набираемое число (последний операнд).
 function evalTape(parts, tail) {
@@ -540,7 +578,7 @@ export function renderHome(root) {
   const commit = async (categoryId) => {
     const tail = entryDigits ? (parseFloat(entryDigits) || 0) : 0;
     const v = evalTape(sumParts, tail);   // «лента» с учётом × перед +
-    if (v <= 0) { amountEl.classList.add('shake'); setTimeout(() => amountEl.classList.remove('shake'), 400); return; }
+    if (v <= 0) { amountEl.classList.add('shake'); setTimeout(() => amountEl.classList.remove('shake'), 400); return false; }
     entryDigits = ''; sumParts = []; opMode = '+';
     const cat = store.categoryById(categoryId);
     // Валюта операции: своя у категории, иначе — текущая («ходовая»).
@@ -551,6 +589,7 @@ export function renderHome(root) {
     if (rate == null) { cur = base; rate = 1; }
     await store.saveTransaction({ type: homeMode, amount: v, currency: cur, rate, categoryId, date: dateISO(), note: '' });
     // saveTransaction → подписка → renderHome (табло сбрасывается, история обновляется)
+    return true;
   };
 
   // --- Категории: 2 ряда по 4 (8 на страницу). Позиции АБСОЛЮТНЫЕ (по slot =
@@ -745,7 +784,12 @@ export function renderHome(root) {
         else if (d && d.kind === 'empty') store.moveCategoryToSlot(homeMode, cat.id, parseInt(d.el.dataset.slot, 10) || 0);
         return;
       }
-      if (!moved && !longFired) commit(cat.id);
+      if (!moved && !longFired) {
+        // Обратная связь об успешной записи — галочка-пульс на нажатой плитке
+        // (+ вибро, + звук по настройке). Rect берём до перерисовки.
+        const r = chip.getBoundingClientRect();
+        commit(cat.id).then((ok) => { if (ok) flashSaved(r); });
+      }
     };
     chip.addEventListener('touchstart', (e) => { const p = e.changedTouches[0]; down(p.clientX, p.clientY); }, { passive: true });
     chip.addEventListener('touchmove', (e) => { const p = e.changedTouches[0]; move(p.clientX, p.clientY, e); }, { passive: false });
