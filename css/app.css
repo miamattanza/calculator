@@ -30,33 +30,35 @@
 
 /* Тёплая тёмная тема: не чёрная, а тёмно-коричнево-оливковая, мягкая,
    с охровыми нотками и невысоким контрастом. */
-/* Тёмная тема из палитры (нейтральная, N06–N10). */
+/* Тёмная тема — тёплый глубокий графит (не чёрный): у фона/поверхностей лёгкий
+   тёплый (красновато-коричневый) подтон, а не холодный синий. --fill/--fill-2
+   выводятся из --text и --bg, поэтому тоже становятся тёплыми. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #15171C;
-    --bg-elev: #1E2127;
-    --card: #1E2127;
-    --text: #F1F1F3;
-    --text-2: #C6C9CE;
-    --text-3: #9DA1A9;
-    --sep: #2B2E36;
-    --sep-strong: #3A3E47;
-    --accent: #6E86DC;   /* бренд, осветлённый для читаемости на тёмном */
-    --shadow: 0 1px 3px rgba(0,0,0,0.5);
+    --bg: #1A1613;        /* глубокий тёплый графит */
+    --bg-elev: #26211C;
+    --card: #26211C;
+    --text: #F2EEE8;
+    --text-2: #CCC5BB;
+    --text-3: #9C9488;
+    --sep: #332D26;
+    --sep-strong: #473F36;
+    --accent: #7E93E0;   /* бренд, осветлённый для читаемости на тёмном */
+    --shadow: 0 1px 3px rgba(0,0,0,0.55);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #15171C;
-  --bg-elev: #1E2127;
-  --card: #1E2127;
-  --text: #F1F1F3;
-  --text-2: #C6C9CE;
-  --text-3: #9DA1A9;
-  --sep: #2B2E36;
-  --sep-strong: #3A3E47;
-  --accent: #6E86DC;
-  --shadow: 0 1px 3px rgba(0,0,0,0.5);
+  --bg: #1A1613;
+  --bg-elev: #26211C;
+  --card: #26211C;
+  --text: #F2EEE8;
+  --text-2: #CCC5BB;
+  --text-3: #9C9488;
+  --sep: #332D26;
+  --sep-strong: #473F36;
+  --accent: #7E93E0;
+  --shadow: 0 1px 3px rgba(0,0,0,0.55);
 }
 
 /* Фолбэк для старых браузеров без color-mix() (например старые Android /
@@ -65,9 +67,9 @@
 @supports not (background: color-mix(in srgb, red, blue)) {
   :root { --fill: #ECEAE5; --fill-2: #DEDBD4; }
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --fill: #23262D; --fill-2: #2C3038; }
+    :root:not([data-theme="light"]) { --fill: #2A241F; --fill-2: #362F28; }
   }
-  :root[data-theme="dark"] { --fill: #23262D; --fill-2: #2C3038; }
+  :root[data-theme="dark"] { --fill: #2A241F; --fill-2: #362F28; }
   :root[data-theme="light"] { --fill: #ECEAE5; --fill-2: #DEDBD4; }
   #tabbar { background: var(--bg-elev); }
   .trx-group.alt, .trx-group.alt .swipe-content { background: var(--fill); }
@@ -417,9 +419,9 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .settings-group { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); margin-bottom: 20px; }
 /* В тёмной теме карточки-«окна» рубрик почти сливались с фоном — делаем их
    чуть светлее фона, чтобы границы были заметны. */
-:root[data-theme="dark"] .settings-group { background: #272B33; }
+:root[data-theme="dark"] .settings-group { background: #302A24; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .settings-group { background: #272B33; }
+  :root:not([data-theme="light"]) .settings-group { background: #302A24; }
 }
 .group-caption { font-size: 13px; color: var(--text-3); margin: 4px 16px 6px; text-transform: uppercase; letter-spacing: 0.3px; }
 .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; border-bottom: 0.5px solid var(--sep); gap: 12px; }
