@@ -3,7 +3,7 @@
 
 import * as store from '../store.js';
 import { t, availableLangs, LANG_NAMES } from '../i18n.js';
-import { el, clear, sheet, field, toast, confirmDialog, choiceDialog, toggle, catIcon, rowCols, swipeDeleteRow, segmented } from '../dom.js';
+import { el, clear, sheet, field, toast, confirmDialog, choiceDialog, toggle, catIcon, rowCols, swipeDeleteRow } from '../dom.js';
 import { CURRENCIES, roundRate, currencyFlag } from '../format.js';
 import { APP_VERSION } from '../models.js';
 import { iconByKey, iconsByType } from '../icons.js';
@@ -126,22 +126,6 @@ export function renderSettings(root, rerenderApp) {
 
   root.appendChild(el('.group-caption', { text: t('display') }));
   root.appendChild(displayGroup);
-
-  // Стиль кнопок-иконок + адаптация интерфейса под витраж.
-  const styleSeg = segmented(
-    [{ value: 'default', label: t('style_default') }, { value: 'vitrage', label: t('style_vitrage') }],
-    s.iconStyle === 'vitrage' ? 'vitrage' : 'default',
-    async (v) => { await store.setSetting('iconStyle', v); applyIconStyle(v); rerenderApp(); },
-  );
-  const adaptToggle = toggle(!!s.adaptUI, async (checked) => {
-    await store.setSetting('adaptUI', checked); applyAdaptUI(checked); rerenderApp();
-  });
-  root.appendChild(el('.group-caption', { text: t('button_style') }));
-  root.appendChild(el('.settings-group', {}, [
-    settingRow(t('button_style'), styleSeg),
-    settingRow(t('adapt_ui'), adaptToggle),
-    el('.setting-hint', { text: t('adapt_ui_hint') }),
-  ]));
 
   // Категории
   root.appendChild(el('.settings-group', {}, [
@@ -887,16 +871,4 @@ export function openConverter() {
 export function applyTheme(theme) {
   const root = document.documentElement;
   root.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
-}
-
-// Стиль кнопок-иконок: 'vitrage' → catIcon рисует витражные плитки (серия 6).
-export function applyIconStyle(style) {
-  const root = document.documentElement;
-  if (style === 'vitrage') root.dataset.iconStyle = 'vitrage';
-  else delete root.dataset.iconStyle;
-}
-
-// «Адаптировать интерфейс» под витраж (золотой акцент и детали).
-export function applyAdaptUI(on) {
-  document.documentElement.classList.toggle('ui-vitrage', !!on);
 }

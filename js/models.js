@@ -1,6 +1,6 @@
 // models.js — фабрики сущностей и данные по умолчанию.
 
-export const APP_VERSION = '1.78';
+export const APP_VERSION = '1.79';
 
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -115,8 +115,6 @@ export const DEFAULT_SETTINGS = {
   soundFeedback: false, // звуковой сигнал при записи операции (вибро — всегда)
   langChosen: false,    // выбран ли язык при первом запуске
   onboarded: false,     // показан ли вводный тур
-  iconStyle: 'default', // стиль кнопок-иконок: 'default' | 'vitrage' (витраж, серия 6)
-  adaptUI: false,       // адаптировать интерфейс под стиль витража (золотой акцент)
   background: 'none',   // фоновый паттерн ('none' | id | 'custom')
   bgCustom: null,       // свой фон (dataURL)
   budgetTotal: 0,       // общий месячный лимит (0 = не задан)

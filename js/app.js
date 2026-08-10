@@ -10,7 +10,7 @@ import { renderAnalytics } from './views/analytics.js';
 import { renderForecast } from './views/forecast.js';
 import { renderPlanning } from './views/planning.js';
 import { renderBudgets } from './views/budgets.js';
-import { renderSettings, applyTheme, applyBackground, applyIconStyle, applyAdaptUI, exportJSON } from './views/settings.js';
+import { renderSettings, applyTheme, applyBackground, exportJSON } from './views/settings.js';
 import { maybeOnboard } from './onboarding.js';
 
 // Разделы приложения. Обзор — главный экран, остальные открываются из меню.
@@ -143,21 +143,17 @@ function openLanguageOnboarding(onDone) {
 
 // Встраиваем SVG-спрайт иконок категорий в документ, чтобы <use href="#..">
 // работал как ссылка внутри документа (надёжно на всех браузерах, в т.ч. iOS).
-async function injectSprite(id, url) {
-  if (document.getElementById(id)) return;
+async function injectIconSprite() {
+  if (document.getElementById('cat-icon-sprite')) return;
   try {
-    const txt = await fetch(url).then((r) => r.text());
+    const txt = await fetch('icons/ui-icons.svg').then((r) => r.text());
     const holder = document.createElement('div');
-    holder.id = id;
+    holder.id = 'cat-icon-sprite';
     holder.setAttribute('aria-hidden', 'true');
     holder.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
     holder.innerHTML = txt;
     document.body.insertBefore(holder, document.body.firstChild);
   } catch (e) { /* офлайн без кэша — иконки появятся при следующей загрузке */ }
-}
-async function injectIconSprite() {
-  await injectSprite('cat-icon-sprite', 'icons/ui-icons.svg');       // стандартные плитки
-  await injectSprite('cat-icon-sprite-s6', 'icons/series6.svg');     // витраж (серия 6)
 }
 
 async function main() {
@@ -165,8 +161,6 @@ async function main() {
   await injectIconSprite();
   applyTheme(store.getState().settings.theme);
   applyBackground();
-  applyIconStyle(store.getState().settings.iconStyle);
-  applyAdaptUI(store.getState().settings.adaptUI);
 
   menuBtn.addEventListener('click', openMenu);
   if (backBtn) backBtn.addEventListener('click', () => goSection('home'));

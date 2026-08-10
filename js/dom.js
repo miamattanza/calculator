@@ -2,7 +2,7 @@
 // (модальные листы в стиле iOS, тосты, диалог подтверждения).
 
 import { t } from './i18n.js';
-import { isBuiltinIcon, iconByKey, series6Slug } from './icons.js';
+import { isBuiltinIcon, iconByKey } from './icons.js';
 
 // el('div.class#id', {attrs}, [children | 'text'])
 export function el(tag, attrs = {}, children = []) {
@@ -41,21 +41,6 @@ export function clear(node) { while (node.firstChild) node.removeChild(node.firs
 // Иконка категории: загруженное изображение (если есть) либо эмодзи.
 export function catIcon(cat, cls) {
   const box = el('.' + (cls || 'cat-emoji'), { style: { '--chip': cat ? cat.color : '#726B65' } });
-  // Стиль «Витраж»: вместо плитки+глифа показываем цельную витражную SVG-иконку
-  // (серия 6). Единый стиль для всех категорий — по iconKey, иначе по key, иначе
-  // универсальная плитка s6-other. Настройки цвета/«без фона» тут не применяются.
-  if (cat && document.documentElement.dataset.iconStyle === 'vitrage') {
-    box.classList.add('cat-vitrage');
-    const NS = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(NS, 'svg');
-    svg.setAttribute('viewBox', '0 0 96 96');
-    svg.setAttribute('class', 'cat-vitrage-art');
-    const use = document.createElementNS(NS, 'use');
-    use.setAttribute('href', '#s6-' + series6Slug(cat.iconKey || cat.key));
-    svg.appendChild(use);
-    box.appendChild(svg);
-    return box;
-  }
   const tile = cat && cat.iconKey ? iconByKey(cat.iconKey) : null;
   if (tile) {
     // Плитка: цветной квадрат + иконка (с запечённой тенью) из спрайта.

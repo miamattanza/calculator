@@ -1,7 +1,7 @@
 // service-worker.js — офлайн-кэш «оболочки приложения».
 // При обновлении кода увеличивайте CACHE_VERSION, чтобы обновить кэш.
 
-const CACHE_VERSION = 'fintracker-v78';
+const CACHE_VERSION = 'fintracker-v79';
 const APP_SHELL = [
   './',
   './index.html',
@@ -29,7 +29,6 @@ const APP_SHELL = [
   './icons/icon-512.png',
   './icons/apple-touch-icon.png',
   './icons/ui-icons.svg',
-  './icons/series6.svg',
 ];
 
 self.addEventListener('install', (event) => {
