@@ -106,53 +106,53 @@ function runTour() {
     return { left: l, top, width: w, height: h };
   };
 
+  // Геометрия стрелки. Отступ острия от рамки и минимальная длина линии, чтобы
+  // стрелка не выходила слишком короткой (тогда подсказку опускаем дальше).
+  const GAP_R = 11, MIN_LEN = 62, EDGE = 6;
+
   // Позиция подсказки: под целью, если она в верхней половине экрана, иначе над.
+  // Отодвигаем на GAP_R + MIN_LEN + EDGE, чтобы гарантировать длину стрелки.
   const positionPop = (rect) => {
     const vw = window.innerWidth, vh = window.innerHeight, m = 12;
     const pw = pop.offsetWidth, ph = pop.offsetHeight;
     let left = Math.round(rect.left + rect.width / 2 - pw / 2);
     left = Math.max(m, Math.min(left, vw - pw - m));
     const below = rect.top < vh * 0.5;
-    // Оставляем зазор под стрелку.
-    let top = below ? rect.top + rect.height + 40 : rect.top - ph - 40;
+    let top = below
+      ? rect.top + rect.height + GAP_R + EDGE + MIN_LEN
+      : rect.top - GAP_R - EDGE - MIN_LEN - ph;
     top = Math.max(m, Math.min(top, vh - ph - m));
     pop.style.left = left + 'px';
     pop.style.top = top + 'px';
-    return { left, top, width: pw, height: ph };
+    return { left, top, width: pw, height: ph, below };
   };
 
-  // Пунктирная стрелка от подсказки к рамке (плавная дуга).
+  // Пунктирная стрелка от подсказки к рамке. Куб. Безье, где касательная в конце
+  // направлена по нормали к цели — остриё входит в элемент строго под 90°.
+  // Из подсказки линия выходит перпендикулярно её грани (в пределах 30–90°).
   const drawArrow = (ringBox, popBox) => {
-    const rc = { x: ringBox.left + ringBox.width / 2, y: ringBox.top + ringBox.height / 2 };
-    const pc = { x: popBox.left + popBox.width / 2, y: popBox.top + popBox.height / 2 };
-    const dx = rc.x - pc.x, dy = rc.y - pc.y;
-    const gapR = 12; // отступ острия от рамки
-    let start, end;
-    if (Math.abs(dy) >= Math.abs(dx)) {
-      if (dy < 0) { // цель выше подсказки
-        start = { x: pc.x, y: popBox.top - 6 };
-        end = { x: rc.x, y: ringBox.top + ringBox.height + gapR };
-      } else {       // цель ниже подсказки
-        start = { x: pc.x, y: popBox.top + popBox.height + 6 };
-        end = { x: rc.x, y: ringBox.top - gapR };
-      }
+    const rcx = ringBox.left + ringBox.width / 2;
+    const pcx = popBox.left + popBox.width / 2;
+    let start, end, sN, tN;
+    if (popBox.below) {
+      // Подсказка ниже цели: стрелка идёт вверх, входит в нижнюю грань под 90°.
+      end = { x: rcx, y: ringBox.top + ringBox.height + GAP_R };
+      tN = { x: 0, y: 1 };                    // внешняя нормаль цели (к подсказке)
+      start = { x: pcx, y: popBox.top - EDGE };
+      sN = { x: 0, y: -1 };                   // выход из верхней грани подсказки
     } else {
-      if (dx < 0) { // цель левее
-        start = { x: popBox.left - 6, y: pc.y };
-        end = { x: ringBox.left + ringBox.width + gapR, y: rc.y };
-      } else {       // цель правее
-        start = { x: popBox.left + popBox.width + 6, y: pc.y };
-        end = { x: ringBox.left - gapR, y: rc.y };
-      }
+      // Подсказка выше цели: стрелка идёт вниз, входит в верхнюю грань под 90°.
+      end = { x: rcx, y: ringBox.top - GAP_R };
+      tN = { x: 0, y: -1 };
+      start = { x: pcx, y: popBox.top + popBox.height + EDGE };
+      sN = { x: 0, y: 1 };
     }
-    const mx = (start.x + end.x) / 2, my = (start.y + end.y) / 2;
-    const vx = end.x - start.x, vy = end.y - start.y;
-    const len = Math.hypot(vx, vy) || 1;
-    const nx = -vy / len, ny = vx / len;             // перпендикуляр
-    const bow = Math.min(44, len * 0.26);
-    const sign = rc.x < window.innerWidth / 2 ? 1 : -1; // изгиб внутрь экрана
-    const cx = mx + nx * bow * sign, cy = my + ny * bow * sign;
-    arrowLine.setAttribute('d', `M ${start.x} ${start.y} Q ${cx} ${cy} ${end.x} ${end.y}`);
+    const dist = Math.hypot(end.x - start.x, end.y - start.y) || 1;
+    const k = Math.max(26, Math.min(78, dist * 0.42));
+    const c1 = { x: start.x + sN.x * k, y: start.y + sN.y * k };
+    const c2 = { x: end.x + tN.x * k, y: end.y + tN.y * k };
+    arrowLine.setAttribute('d',
+      `M ${start.x} ${start.y} C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${end.x} ${end.y}`);
     svg.style.display = '';
   };
 

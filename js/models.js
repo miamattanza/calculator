@@ -1,6 +1,6 @@
 // models.js — фабрики сущностей и данные по умолчанию.
 
-export const APP_VERSION = '1.80';
+export const APP_VERSION = '1.81';
 
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
