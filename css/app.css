@@ -176,6 +176,19 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .tour-next:active { filter: brightness(0.92); }
 @media (prefers-reduced-motion: reduce) { .tour-hand, .tour-ring { animation: none !important; } }
 
+/* ---- Стиль «Витраж» (серия 6): цельные витражные плитки ---- */
+.cat-vitrage { background: transparent !important; box-shadow: none !important; overflow: visible; }
+.cat-vitrage .cat-vitrage-art { width: 100%; height: 100%; display: block;
+  /* «Лучи солнца сзади»: слегка подсвечиваем и добавляем тёплый ореол, чтобы
+     витраж не был темноватым (как будто свет проходит сквозь стекло). */
+  filter: brightness(1.16) saturate(1.06) contrast(1.02) drop-shadow(0 0 5px rgba(255,238,205,0.32)); }
+.cat-chip .cat-vitrage { border-radius: 0; }
+/* «Адаптировать интерфейс»: акцент и детали под золото витража. */
+:root.ui-vitrage { --accent: #C68A2B; }
+:root.ui-vitrage #header #mode-label.expense,
+:root.ui-vitrage #header #mode-label.income { color: #D6A23A; }
+:root.ui-vitrage .tour-next, :root.ui-vitrage .btn-primary { background: #C68A2B; }
+
 .pager { min-height: 60vh; will-change: transform; }
 /* Галочка-подтверждение записи операции (пульс на нажатой плитке). */
 .save-flash { position: fixed; z-index: 200; display: flex; align-items: center; justify-content: center;

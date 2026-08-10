@@ -105,3 +105,29 @@ export const CATEGORY_ICON_DIR = "icons/categories/";
 export function isBuiltinIcon(image) {
   return typeof image === "string" && image.indexOf(CATEGORY_ICON_DIR) === 0;
 }
+
+// ---- Стиль «Витраж» (серия 6) ----
+// Соответствие ключей иконок приложения слагам витражного набора (60 SVG в
+// спрайте icons/series6.svg, символы s6-<slug>). Недостающим — универсальная
+// плитка s6-other того же стиля (без смешения стилей).
+const SERIES6 = {
+  'rent-mortgage':'housing','utilities':'utilities','internet-tv':'internet_tv','mobile':'mobile','cleaning':'home_interior',
+  'groceries':'groceries','cafe-restaurants':'restaurants','fast-food':'restaurants','coffee-snacks':'coffee_takeaway','food-delivery':'restaurants',
+  'public-transport':'public_transport','taxi-carsharing':'taxi','personal-car':'car','fuel':'fuel','car-maintenance':'car_service','car-insurance':'car_insurance','flights':'flights','train-bus-longdistance':'rail',
+  'pharmacy':'pharmacy','doctors-diagnostics':'doctors','dental':'dentistry','health-insurance':'doctors','sport-fitness':'sport','sports-gear':'fitness',
+  'clothing-shoes':'clothing','salon-beauty':'beauty','cosmetics-perfume':'cosmetics','hygiene-household-chem':'selfcare',
+  'courses-training':'courses','books-magazines':'books','tutors-mentors':'education',
+  'cinema-theatre-concerts':'cinema','hobbies-games':'hobbies','alcohol-hookah':'restaurants','travel-tours':'travel',
+  'gifts-celebrations':'gifts','kids-needs':'children','pets':'pets',
+  'taxes':'other','loans-interest':'other','pension-investments':'investments',
+  'home-repair-construction':'home_interior','furniture-appliances':'furniture','electronics-repair-services':'electronics',
+  'software-subscriptions':'software','mobile-apps-games':'games','life-property-insurance':'car_insurance',
+  'bank-fees':'other','membership-fees':'other','unexpected-expenses':'other','miscellaneous':'other',
+  'charity-donations':'charity','fines-penalties':'other','transfers-to-family':'other',
+  'salary':'salary','bonus':'bonuses','overtime':'salary','tips':'other','business-income':'income','freelance':'freelance','services-income':'other','goods-sale':'sales',
+  'investments':'investments','dividends':'investments','deposit-interest':'investments','crypto':'investments','trading':'investments',
+  'rent-housing-income':'housing','rent-items-income':'other','cashback':'other','tax-refund':'other','insurance-payout':'other','employer-compensation':'salary','overpayment-refund':'other',
+  'pension':'other','unemployment-benefit':'other','alimony':'other','maternity-benefits':'children','subsidies':'other',
+  'gift-income':'gifts','lucky-find':'other','winnings':'other','debt-repayment':'income','own-account-transfer':'other','family-transfer':'other','scrap-recycling':'other','hobby-income':'hobbies','loan-interest-received':'investments',
+};
+export function series6Slug(key) { return (key && SERIES6[key]) || 'other'; }
