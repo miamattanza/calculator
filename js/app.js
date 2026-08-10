@@ -34,9 +34,14 @@ const budgetRing = document.getElementById('budget-ring');
 
 export function goSection(id) { activeSection = id; renderSection(); }
 
+let lastRenderedSection = null;
 function renderSection() {
+  // Сохраняем прокрутку при перерисовке того же раздела (например, после
+  // удаления операции из истории по подписке store) — иначе экран «прыгал»
+  // наверх. При переходе в другой раздел прокрутку сбрасываем.
+  const sameSection = lastRenderedSection === activeSection;
+  const prevScroll = content.scrollTop;
   clear(content);
-  content.scrollTop = 0;
   const onHome = activeSection === 'home';
   // Шапка с балансом/меткой окна, сигнал лимита и иконка Аналитики — на «Обзоре».
   if (!onHome) {
@@ -50,6 +55,8 @@ function renderSection() {
   if (backBtn) backBtn.style.display = onHome ? 'none' : '';
   const section = SECTIONS.find((x) => x.id === activeSection);
   section.render(content);
+  content.scrollTop = sameSection ? prevScroll : 0;
+  lastRenderedSection = activeSection;
   if (onHome) maybeBackupBanner();
 }
 
