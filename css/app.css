@@ -35,30 +35,30 @@
    выводятся из --text и --bg, поэтому тоже становятся тёплыми. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #1A1613;        /* глубокий тёплый графит */
-    --bg-elev: #26211C;
-    --card: #26211C;
-    --text: #F2EEE8;
-    --text-2: #CCC5BB;
-    --text-3: #9C9488;
-    --sep: #332D26;
-    --sep-strong: #473F36;
+    --bg: #1E2126;        /* графит: светлее и чуть холоднее прежнего */
+    --bg-elev: #292D33;
+    --card: #292D33;
+    --text: #EDEFF2;
+    --text-2: #C2C7CE;
+    --text-3: #8D949D;
+    --sep: #343941;
+    --sep-strong: #474D57;
     --accent: #7E93E0;   /* бренд, осветлённый для читаемости на тёмном */
-    --shadow: 0 1px 3px rgba(0,0,0,0.55);
+    --shadow: 0 1px 3px rgba(0,0,0,0.5);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #1A1613;
-  --bg-elev: #26211C;
-  --card: #26211C;
-  --text: #F2EEE8;
-  --text-2: #CCC5BB;
-  --text-3: #9C9488;
-  --sep: #332D26;
-  --sep-strong: #473F36;
+  --bg: #1E2126;
+  --bg-elev: #292D33;
+  --card: #292D33;
+  --text: #EDEFF2;
+  --text-2: #C2C7CE;
+  --text-3: #8D949D;
+  --sep: #343941;
+  --sep-strong: #474D57;
   --accent: #7E93E0;
-  --shadow: 0 1px 3px rgba(0,0,0,0.55);
+  --shadow: 0 1px 3px rgba(0,0,0,0.5);
 }
 
 /* Фолбэк для старых браузеров без color-mix() (например старые Android /
@@ -67,9 +67,9 @@
 @supports not (background: color-mix(in srgb, red, blue)) {
   :root { --fill: #ECEAE5; --fill-2: #DEDBD4; }
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --fill: #2A241F; --fill-2: #362F28; }
+    :root:not([data-theme="light"]) { --fill: #2B2F35; --fill-2: #383D45; }
   }
-  :root[data-theme="dark"] { --fill: #2A241F; --fill-2: #362F28; }
+  :root[data-theme="dark"] { --fill: #2B2F35; --fill-2: #383D45; }
   :root[data-theme="light"] { --fill: #ECEAE5; --fill-2: #DEDBD4; }
   #tabbar { background: var(--bg-elev); }
   .trx-group.alt, .trx-group.alt .swipe-content { background: var(--fill); }
@@ -457,9 +457,9 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .settings-group { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); margin-bottom: 20px; }
 /* В тёмной теме карточки-«окна» рубрик почти сливались с фоном — делаем их
    чуть светлее фона, чтобы границы были заметны. */
-:root[data-theme="dark"] .settings-group { background: #302A24; }
+:root[data-theme="dark"] .settings-group { background: #31353C; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .settings-group { background: #302A24; }
+  :root:not([data-theme="light"]) .settings-group { background: #31353C; }
 }
 .group-caption { font-size: 13px; color: var(--text-3); margin: 4px 16px 6px; text-transform: uppercase; letter-spacing: 0.3px; }
 .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; border-bottom: 0.5px solid var(--sep); gap: 12px; }
