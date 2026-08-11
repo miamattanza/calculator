@@ -275,6 +275,8 @@ function openCategoriesManager() {
   const body = el('.form');
   const listWrap = el('.cat-manage-list');
 
+  // Компактная сетка: только уже используемые категории. Тап — редактирование
+  // (имя, цвет, иконка). Добавление — через «+» в меню категорий на главном.
   function refresh() {
     clear(listWrap);
     for (const type of ['expense', 'income']) {
@@ -283,25 +285,20 @@ function openCategoriesManager() {
         el('span', { text: type === 'expense' ? t('expense') : t('income') }),
         el('span.cat-manage-count', { text: String(cats.length) }),
       ]));
-      const group = el('.settings-group.cat-manage-group');
+      const grid = el('.cat-manage-grid');
       for (const c of cats) {
-        group.appendChild(el('button.cat-manage-row', { type: 'button', onClick: () => openCategoryEditor(c, refresh) }, [
+        grid.appendChild(el('button.cat-manage-cell', { type: 'button', style: { '--chip': c.color }, onClick: () => openCategoryEditor(c, refresh) }, [
           catIcon(c, 'cat-manage-icon'),
           el('.cat-manage-name', { text: store.categoryName(c) }),
-          el('.nav-chevron', { text: '›' }),
         ]));
       }
-      group.appendChild(el('button.cat-manage-add', { type: 'button', onClick: () => openCategoryEditor(null, refresh, type) }, [
-        el('.cat-manage-add-plus', { text: '＋' }),
-        el('span', { text: t('add_category') }),
-      ]));
-      listWrap.appendChild(group);
+      listWrap.appendChild(grid);
     }
   }
   refresh();
 
   body.append(
-    el('.setting-hint', { text: t('reorder_hint') }),
+    el('.setting-hint', { text: t('edit_category_hint') }),
     listWrap,
   );
   sheet(t('manage_categories'), body);

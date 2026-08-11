@@ -86,9 +86,19 @@ export function openTransactionForm(existing) {
   }
   renderCategories();
 
-  // Дата
+  // Дата (одно из самых частых действий) + быстрая кнопка «Вчера» — чтобы не
+  // открывать календарь.
   const dateInput = el('input.select', { type: 'date', value: model.date });
   dateInput.addEventListener('change', () => { model.date = dateInput.value; });
+  const yesterdayBtn = el('button.btn-quick', {
+    type: 'button', text: t('yesterday'),
+    onClick: () => {
+      const d = new Date(); d.setDate(d.getDate() - 1);
+      const iso = d.toISOString().slice(0, 10);
+      model.date = iso; dateInput.value = iso;
+    },
+  });
+  const dateControl = el('.date-control', {}, [dateInput, yesterdayBtn]);
 
   // Заметка
   const noteInput = el('input.select', { type: 'text', placeholder: t('note_ph'), value: model.note });
@@ -102,11 +112,12 @@ export function openTransactionForm(existing) {
     // Тип показываем только при создании; при редактировании тип операции
     // фиксирован (расход остаётся расходом, доход — доходом).
     ...(existing ? [] : [field(t('type'), typeSeg).row]),
+    // Дата — над суммой (частое редактирование). Курс здесь не показываем —
+    // он берётся из конвертера автоматически.
+    field(t('date'), dateControl).row,
     el('.amount-wrap', {}, [amountInput, amountCur]),
     field(t('category'), catGrid).row,
     field(t('currency'), currencySelect).row,
-    rateField.row,
-    field(t('date'), dateInput).row,
     field(t('note'), noteInput).row,
     error,
     saveBtn,
@@ -362,7 +373,7 @@ const TRASH_CAN_SVG = `<svg class="trashcan" viewBox="0 0 48 48" fill="none" str
 
 // Долгое нажатие (hold) на кнопку: короткий тап → onTap, удержание → onHold.
 // Порог 350 мс; сдвиг пальца отменяет. Используется на клавише «.» (конвертер).
-function attachHold(btn, onTap, onHold) {
+function attachHold(btn, onTap, onHold, delay = 350) {
   let timer = null, held = false, sx = 0, sy = 0, moved = false;
   const begin = (x, y) => {
     sx = x; sy = y; moved = false; held = false;
@@ -370,7 +381,7 @@ function attachHold(btn, onTap, onHold) {
       held = true;
       if (navigator.vibrate) { try { navigator.vibrate(10); } catch (e) {} }
       onHold();
-    }, 350);
+    }, delay);
   };
   const track = (x, y) => { if (!moved && (Math.abs(x - sx) > 10 || Math.abs(y - sy) > 10)) { moved = true; clearTimeout(timer); } };
   const finish = () => { clearTimeout(timer); if (!held && !moved) onTap(); };
@@ -405,6 +416,25 @@ function playSaveSound() {
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
       o.start(t0); o.stop(t0 + 0.18);
     }
+  } catch (e) { /* звук недоступен — не критично */ }
+}
+
+// Короткий сигнал отказа (низкий «бип»), когда ввод отклонён (лимит цифр).
+function playRejectSound() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    _audioCtx = _audioCtx || new AC();
+    const ctx = _audioCtx;
+    if (ctx.state === 'suspended') ctx.resume();
+    const now = ctx.currentTime;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'square'; o.frequency.setValueAtTime(220, now); o.frequency.exponentialRampToValueAtTime(140, now + 0.14);
+    o.connect(g); g.connect(ctx.destination);
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(0.09, now + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.17);
+    o.start(now); o.stop(now + 0.19);
   } catch (e) { /* звук недоступен — не критично */ }
 }
 
@@ -510,9 +540,21 @@ export function renderHome(root) {
       const s = (parseInt(ip || '0', 10) || 0).toLocaleString(locale());
       disp = entryDigits.indexOf('.') >= 0 ? s + decSep() + (fp || '') : s;
     }
-    amountEl.textContent = disp + ' ' + curSym;
+    const full = disp + ' ' + curSym;
+    amountEl.textContent = full;
+    // Подгоняем размер, чтобы длинные суммы (до 8 цифр) не переносились и знак
+    // валюты оставался в строке (не уходил вниз и не наезжал на «+»).
+    const L = full.length;
+    amountEl.style.fontSize = L > 13 ? '28px' : L > 11 ? '32px' : L > 9 ? '37px' : '';
     amountEl.classList.toggle('zero', (parseFloat(entryDigits) || 0) <= 0 && !sumParts.length);
     renderTape();
+  };
+  // Сигнал отказа ввода (превышен лимит цифр): дрожание + вибро + звук (по настройке).
+  const rejectInput = () => {
+    amountEl.classList.remove('shake'); void amountEl.offsetWidth; amountEl.classList.add('shake');
+    setTimeout(() => amountEl.classList.remove('shake'), 400);
+    if (navigator.vibrate) { try { navigator.vibrate([10, 35, 10]); } catch (e) {} }
+    if (store.getState().settings.soundFeedback) playRejectSound();
   };
 
   // --- Клавиатура (без подтверждения — запись по тапу на категорию).
@@ -521,7 +563,7 @@ export function renderHome(root) {
   const pressDigit = (d) => {
     const dot = entryDigits.indexOf('.');
     if (dot >= 0 && entryDigits.length - dot - 1 >= 2) return;   // максимум 2 знака после точки
-    if (entryDigits.replace('.', '').length >= 12) return;
+    if (entryDigits.replace('.', '').length >= 8) { rejectInput(); return; }  // не больше 8 цифр
     entryDigits = (entryDigits === '0' ? '' : entryDigits) + d;
     renderAmount();
   };
@@ -545,6 +587,17 @@ export function renderHome(root) {
     if (entryDigits) entryDigits = entryDigits.slice(0, -1);
     else if (sumParts.length) sumParts.pop();
     renderAmount();
+  };
+  // Долгое нажатие «⌫» — быстро очистить всё «схлопыванием» (без резкого сброса).
+  const fastDelete = () => {
+    if (!entryDigits && !sumParts.length) return;
+    amountEl.classList.add('collapsing');
+    if (navigator.vibrate) { try { navigator.vibrate(10); } catch (e) {} }
+    setTimeout(() => {
+      entryDigits = ''; sumParts = []; opMode = '+';
+      renderAmount();
+      amountEl.classList.remove('collapsing');
+    }, 180);
   };
   ['1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach((n) =>
     keypad.appendChild(el('button.key', { type: 'button', text: n, onClick: () => pressDigit(n) })));
@@ -573,7 +626,9 @@ export function renderHome(root) {
     ]),
   ]);
   keypad.appendChild(zeroKey);
-  keypad.appendChild(el('button.key.key-del', { type: 'button', text: '⌫', 'aria-label': t('delete'), onClick: del }));
+  const delKey = el('button.key.key-del', { type: 'button', text: '⌫', 'aria-label': t('delete') });
+  attachHold(delKey, del, fastDelete, 400);   // тап — минус цифра; удержание 0.4с — очистить всё
+  keypad.appendChild(delKey);
 
   const commit = async (categoryId) => {
     const tail = entryDigits ? (parseFloat(entryDigits) || 0) : 0;

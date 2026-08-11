@@ -181,6 +181,12 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .tour-arrow-line { stroke: var(--tour-accent); stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: 7 6; animation: tour-flow .8s linear infinite; }
 .tour-arrow #tour-ah path { fill: var(--tour-accent); }
 @keyframes tour-flow { to { stroke-dashoffset: -26; } }
+/* Жест «свайп влево/вправо» для демо переключения окон. */
+.tour-swipe { position: fixed; transform: translate(-50%,-50%); width: 150px; height: 64px; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.tour-swipe::before { content: '⇄'; position: absolute; font-size: 52px; line-height: 1; color: var(--tour-accent); opacity: .45; }
+.tour-swipe-dot { width: 30px; height: 30px; border-radius: 50%; background: var(--tour-accent); box-shadow: 0 0 0 4px rgba(255,255,255,.9), 0 2px 7px rgba(0,0,0,.4); animation: tour-swipe-move 1.5s ease-in-out infinite; }
+@keyframes tour-swipe-move { 0%,100% { transform: translateX(-44px) scale(.92); } 50% { transform: translateX(44px) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .tour-swipe-dot { animation: none; } }
 /* Окно подсказки: ширина/высота фиксируются из JS (одинаковы в пределах зоны),
    позиция и размер меняются только при переезде между зонами (JS-tween). */
 .tour-pop { position: fixed; display: flex; flex-direction: column; background: var(--bg-elev); border-radius: 16px; padding: 14px 18px 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.35); box-sizing: border-box; overflow: hidden; }
@@ -193,6 +199,9 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .tour-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sep-strong); flex: 0 0 auto; }
 .tour-dot.active { background: var(--tour-accent); transform: scale(1.25); }
 .tour-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tour-nav { display: flex; align-items: center; gap: 8px; }
+.tour-back { color: var(--text-2); font-size: 15px; font-weight: 600; padding: 10px 16px; border-radius: 12px; background: var(--fill); }
+.tour-back:active { background: var(--fill-2); }
 .tour-skip { color: var(--text-3); font-size: 15px; padding: 8px 4px; }
 .tour-next { background: var(--tour-accent); color: #fff; font-weight: 600; font-size: 15px; padding: 10px 22px; border-radius: 12px; }
 .tour-next:active { filter: brightness(0.92); }
@@ -224,7 +233,10 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .entry-amount {
   text-align: center; font-size: 42px; font-weight: 700; letter-spacing: -1px;
   padding: 6px 0 14px; font-variant-numeric: tabular-nums;
+  white-space: nowrap;   /* знак валюты остаётся в строке, не переносится вниз */
 }
+/* «Схлопывание» при долгом нажатии «⌫» (быстрая очистка). */
+.entry-amount.collapsing { transition: transform .18s ease, opacity .18s ease; transform: scaleX(0.06); opacity: 0.25; transform-origin: center; }
 /* «Лента» слагаемых кнопки «+» — чуть выше цифр. */
 .entry-tape {
   text-align: center; font-size: 15px; font-weight: 600; color: var(--text-3);
@@ -511,6 +523,11 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .field { display: flex; flex-direction: column; gap: 7px; }
 .field-label { font-size: 13px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.3px; padding-left: 2px; }
 .select { width: 100%; background: var(--fill); border: none; border-radius: 10px; padding: 12px 14px; font-size: 17px; }
+/* Дата + быстрая кнопка «Вчера» в одну строку. */
+.date-control { display: flex; gap: 8px; align-items: stretch; }
+.date-control .select { flex: 1; min-width: 0; }
+.btn-quick { flex: 0 0 auto; padding: 0 16px; border-radius: 10px; background: var(--fill); color: var(--accent); font-size: 15px; font-weight: 600; white-space: nowrap; }
+.btn-quick:active { background: var(--fill-2); }
 select.select { appearance: none; -webkit-appearance: none; }
 .amount-wrap { display: flex; align-items: center; gap: 8px; justify-content: center; padding: 8px 0; }
 .amount-input { width: auto; max-width: 70%; text-align: right; background: none; border: none; font-size: 44px; font-weight: 700; letter-spacing: -1px; }
@@ -639,8 +656,13 @@ body.reordering .key-zero .trash-lid { transform: rotate(-42deg); transition-del
 .cat-manage-group { padding: 4px; }
 .cat-manage-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: start; padding: 9px 10px; border-radius: 12px; background: transparent; }
 .cat-manage-row:active { background: var(--fill); }
-.cat-manage-icon { width: 48px; height: 48px; flex-shrink: 0; border-radius: 22%; display: flex; align-items: center; justify-content: center; font-size: 26px; background: var(--fill); overflow: hidden; }
 .cat-manage-name { flex: 1; font-size: 16px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Компактная сетка категорий (только редактирование). */
+.cat-manage-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 8px; margin: 2px 4px 20px; }
+.cat-manage-cell { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; padding: 0; }
+.cat-manage-cell:active { opacity: .65; }
+.cat-manage-icon { width: 100%; max-width: 64px; aspect-ratio: 1; border-radius: 22%; display: flex; align-items: center; justify-content: center; font-size: 28px; overflow: hidden; background: color-mix(in srgb, var(--chip, #726B65) 30%, transparent); }
+.cat-manage-cell .cat-manage-name { flex: none; width: 100%; max-width: 76px; font-size: 12px; line-height: 1.2; text-align: center; color: var(--text-2); white-space: normal; }
 .cat-manage-add { display: flex; align-items: center; gap: 12px; width: 100%; text-align: start; padding: 9px 10px; border-radius: 12px; color: var(--accent); font-size: 16px; font-weight: 600; }
 .cat-manage-add:active { background: var(--fill); }
 .cat-manage-add-plus { width: 40px; height: 40px; flex-shrink: 0; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 22px; background: var(--fill); color: var(--accent); }

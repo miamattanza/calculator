@@ -23,6 +23,9 @@ const STEPS = [
   { key: 'keypad',   target: '.entry-keypad',          shape: 'rect',   zone: 'keys' },
   { key: 'dot',      target: '.key-dot',               shape: 'rect',   zone: 'keys' },
   { key: 'cancel',   target: '.key-del',               shape: 'rect',   zone: 'keys' },
+  // Свайп-демо: подсвечиваем всё, кроме меню категорий (шапка + табло + клавиши),
+  // и показываем анимацию свайпа влево/вправо (переключение Расходы⇄Доходы).
+  { key: 'swipe',    unionOf: ['#header', '.entry-block'], shape: 'rect', zone: 'swipe' },
   { key: 'cats',     target: '.cat-viewport',          shape: 'rect',   zone: 'cats' },
   { key: 'history',  target: '.mini-hist .swipe-wrap', shape: 'rect',   zone: 'hist' },
   { key: 'expand',   target: '.mini-more',             shape: 'rect',   zone: 'expand', tight: true, pad: { x: 16, y: 9 } },
@@ -31,7 +34,7 @@ const STEPS = [
 // Сторона подсказки для каждой зоны: 'below' — окно под элементом (стрелка вверх,
 // шкала-точки вверху окна); 'above' — окно над элементом (стрелка вниз, шкала
 // внизу окна). Начало стрелки всегда у активной точки на грани, обращённой к цели.
-const ZONE_SIDE = { top: 'below', entry: 'below', keys: 'below', cats: 'above', hist: 'above', expand: 'above' };
+const ZONE_SIDE = { top: 'below', entry: 'below', keys: 'below', swipe: 'below', cats: 'above', hist: 'above', expand: 'above' };
 
 const NS = 'http://www.w3.org/2000/svg';
 const GAP_R = 11, MIN_LEN = 66, EDGE = 6;
@@ -50,8 +53,17 @@ export function maybeOnboard() {
   if (!s.onboarded && s.langChosen) setTimeout(startOnboarding, 500);
 }
 
-// Прямоугольник цели (по тексту, если tight). null — если не видно.
+// Прямоугольник цели (по тексту, если tight; объединение, если unionOf).
 function targetRect(step) {
+  if (step.unionOf) {
+    let L = Infinity, T = Infinity, R = -Infinity, B = -Infinity, any = false;
+    for (const sel of step.unionOf) {
+      const n = document.querySelector(sel); if (!n) continue;
+      const r = n.getBoundingClientRect(); if (r.width < 2 || r.height < 2) continue;
+      any = true; L = Math.min(L, r.left); T = Math.min(T, r.top); R = Math.max(R, r.right); B = Math.max(B, r.bottom);
+    }
+    return any ? { left: L, top: T, right: R, bottom: B, width: R - L, height: B - T } : null;
+  }
   const node = document.querySelector(step.target);
   if (!node) return null;
   let r;
@@ -78,14 +90,20 @@ function runTour() {
     '<path class="tour-arrow-line" fill="none" marker-end="url(#tour-ah)"></path>';
   const arrowLine = svg.querySelector('.tour-arrow-line');
 
+  // Индикатор жеста «свайп влево/вправо» (для шага swipe): палец-точка скользит
+  // по двойной стрелке внутри подсвеченной области.
+  const swipeHint = el('.tour-swipe', {}, [el('.tour-swipe-dot')]);
+
   const pop = el('.tour-pop');
   const dots = el('.tour-dots');                 // шкала-точки вверху окна
   const title = el('.tour-title');
   const desc = el('.tour-desc');
   const skip = el('button.tour-skip', { type: 'button', text: t('ob_skip') });
+  const back = el('button.tour-back', { type: 'button', text: t('ob_back') });
   const next = el('button.tour-next', { type: 'button' });
-  pop.append(dots, title, desc, el('.tour-actions', {}, [skip, next]));
-  overlay.append(svg, ring, pop);
+  const nav = el('.tour-nav', {}, [back, next]);
+  pop.append(dots, title, desc, el('.tour-actions', {}, [skip, nav]));
+  overlay.append(svg, swipeHint, ring, pop);
   document.body.appendChild(overlay);
   document.body.classList.add('modal-open');
 
@@ -109,6 +127,7 @@ function runTour() {
   };
   skip.addEventListener('click', finish);
   next.addEventListener('click', () => step(1));
+  back.addEventListener('click', () => step(-1));
 
   // ── Геометрия ──────────────────────────────────────────────────────────────
   const ringBoxFrom = (rect, shape, pad) => {
@@ -174,6 +193,15 @@ function runTour() {
   // от активной точки шкалы (её x), с выходом из грани окна, обращённой к цели.
   const drawArrow = () => {
     if (!ringApplied || !popApplied) return;
+    // Шаг «свайп»: вместо стрелки — анимированный жест по центру области.
+    if (curStep && curStep.zone === 'swipe') {
+      svg.style.display = 'none';
+      swipeHint.style.display = '';
+      swipeHint.style.left = (ringApplied.l + ringApplied.w / 2) + 'px';
+      swipeHint.style.top = (ringApplied.t + ringApplied.h / 2) + 'px';
+      return;
+    }
+    swipeHint.style.display = 'none';
     const rr = ringApplied, pr = popApplied;
     const rcx = rr.l + rr.w / 2, rcy = rr.t + rr.h / 2;
     const pcy = pr.t + pr.h / 2;
@@ -200,7 +228,7 @@ function runTour() {
   // под окно + зазор для стрелки (для 'above' — двигаем зону ниже, для 'below' —
   // выше). Только для целей внутри прокручиваемого #content.
   const scrollForZone = (zone, side) => {
-    if (!canScroll()) return null;
+    if (!canScroll() || !curStep.target) return null;    // unionOf/шапка — не скроллим
     const node = document.querySelector(curStep.target);
     if (!node || !content.contains(node)) return null;   // напр., шапка — не скроллим
     const zr = zoneRect(zone); if (!zr) return null;
@@ -265,6 +293,9 @@ function runTour() {
     let hasNext = false;
     for (let k = i + 1; k < STEPS.length; k++) if (visible(STEPS[k])) { hasNext = true; break; }
     next.textContent = hasNext ? t('ob_next') : t('ob_done_btn');
+    let hasPrev = false;
+    for (let k = i - 1; k >= 0; k--) if (visible(STEPS[k])) { hasPrev = true; break; }
+    back.style.display = hasPrev ? '' : 'none';
     clear(dots);
     const dotEls = [];
     for (let k = 0; k < STEPS.length; k++) { const d = el('.tour-dot', { class: k === i ? 'active' : '' }); dots.appendChild(d); dotEls.push(d); }
