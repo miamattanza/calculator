@@ -10,20 +10,26 @@ import { el, clear } from './dom.js';
 
 // Шаги тура. target — CSS-селектор подсвечиваемого элемента.
 // shape — форма рамки: 'rect' (скруглённый прямоугольник) | 'circle' (круг).
-// Разворачиваем пошагово: пока только базовая навигация по интерфейсу.
+// zone — «область»: пока объясняются шаги одной зоны, окно подсказки не двигается
+// (меняется только рамка и конец стрелки). При переходе в другую зону окно плавно
+// переезжает. side — принудительная сторона подсказки ('below'|'above'|auto).
 const STEPS = [
-  { key: 'menu',     target: '#menu-btn',              shape: 'rect'   },
-  { key: 'balance',  target: '#head-balance',          shape: 'rect'   },
-  { key: 'budget',   target: '#budget-ring',           shape: 'circle' },
-  { key: 'settings', target: '#settings-btn',          shape: 'rect'   },
-  { key: 'amount',   target: '.entry-amount',          shape: 'rect'   },
-  { key: 'plus',     target: '.entry-plus',            shape: 'circle' },
-  { key: 'keypad',   target: '.entry-keypad',          shape: 'rect'   },
-  { key: 'dot',      target: '.key-dot',               shape: 'rect'   },
-  { key: 'cats',     target: '.cat-viewport',          shape: 'rect'   },
-  { key: 'history',  target: '.mini-hist .swipe-wrap', shape: 'rect'   },
-  { key: 'expand',   target: '.mini-more',             shape: 'rect'   },
+  { key: 'menu',     target: '#menu-btn',              shape: 'rect',   zone: 'top'  },
+  { key: 'balance',  target: '#head-balance',          shape: 'rect',   zone: 'top'  },
+  { key: 'budget',   target: '#budget-ring',           shape: 'circle', zone: 'top'  },
+  { key: 'settings', target: '#settings-btn',          shape: 'rect',   zone: 'top'  },
+  { key: 'amount',   target: '.entry-amount',          shape: 'rect',   zone: 'entry' },
+  { key: 'plus',     target: '.entry-plus',            shape: 'circle', zone: 'entry' },
+  { key: 'keypad',   target: '.entry-keypad',          shape: 'rect',   zone: 'keys' },
+  { key: 'dot',      target: '.key-dot',               shape: 'rect',   zone: 'keys' },
+  { key: 'cancel',   target: '.key-del',               shape: 'rect',   zone: 'keys' },
+  { key: 'cats',     target: '.cat-viewport',          shape: 'rect',   zone: 'cats' },
+  { key: 'history',  target: '.mini-hist .swipe-wrap', shape: 'rect',   zone: 'hist' },
+  { key: 'expand',   target: '.mini-more',             shape: 'rect',   zone: 'expand' },
 ];
+
+// Сторона подсказки для зон, где важно зафиксировать её положение.
+const ZONE_SIDE = { top: 'below', entry: 'below', keys: 'below' };
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -85,10 +91,11 @@ function runTour() {
 
   const finish = async () => {
     active = false;
+    cancelAnimationFrame(animId);
     overlay.remove();
     document.body.classList.remove('modal-open');
-    window.removeEventListener('resize', reposition);
-    window.removeEventListener('scroll', reposition, true);
+    window.removeEventListener('resize', onResize);
+    window.removeEventListener('scroll', drawArrowLive, true);
     if (!store.getState().settings.onboarded) await store.setSetting('onboarded', true);
   };
   skip.addEventListener('click', finish);
@@ -113,45 +120,54 @@ function runTour() {
   };
 
   // Геометрия стрелки. Отступ острия от рамки и минимальная длина линии, чтобы
-  // стрелка не выходила слишком короткой (тогда подсказку опускаем дальше).
-  const GAP_R = 11, MIN_LEN = 62, EDGE = 6;
+  // стрелка не выходила слишком короткой (тогда подсказку отодвигаем дальше).
+  const GAP_R = 11, MIN_LEN = 66, EDGE = 6;
 
-  // Позиция подсказки: со стороны цели, где больше свободного места. Отодвигаем
-  // на GAP_R + MIN_LEN + EDGE, чтобы гарантировать длину стрелки.
-  const positionPop = (rect) => {
-    const vw = window.innerWidth, vh = window.innerHeight, m = 12;
-    const pw = pop.offsetWidth, ph = pop.offsetHeight;
-    let left = Math.round(rect.left + rect.width / 2 - pw / 2);
-    left = Math.max(m, Math.min(left, vw - pw - m));
-    const below = (vh - rect.bottom) >= rect.top;
-    let top = below
-      ? rect.top + rect.height + GAP_R + EDGE + MIN_LEN
-      : rect.top - GAP_R - EDGE - MIN_LEN - ph;
-    top = Math.max(m, Math.min(top, vh - ph - m));
-    pop.style.left = left + 'px';
-    pop.style.top = top + 'px';
-    return { left, top, width: pw, height: ph, below };
+  // Объединённый прямоугольник всех видимых целей зоны (по нему фиксируем окно).
+  const zoneRect = (zone) => {
+    let L = Infinity, T = Infinity, R = -Infinity, B = -Infinity, any = false;
+    for (const s of STEPS) {
+      if (s.zone !== zone) continue;
+      const r = visibleRect(s.target);
+      if (!r) continue;
+      any = true;
+      L = Math.min(L, r.left); T = Math.min(T, r.top);
+      R = Math.max(R, r.right); B = Math.max(B, r.bottom);
+    }
+    return any ? { left: L, top: T, right: R, bottom: B, width: R - L, height: B - T } : null;
   };
 
-  // Пунктирная стрелка от подсказки к рамке. Куб. Безье, где касательная в конце
-  // направлена по нормали к цели — остриё входит в элемент строго под 90°.
-  // Из подсказки линия выходит перпендикулярно её грани (в пределах 30–90°).
-  const drawArrow = (ringBox, popBox) => {
-    const rcx = ringBox.left + ringBox.width / 2;
-    const pcx = popBox.left + popBox.width / 2;
+  // Фиксированное положение окна подсказки для зоны. Считается один раз при входе
+  // в зону; сторона — из ZONE_SIDE или по большему свободному месту.
+  const computeZonePop = (zone) => {
+    const zr = zoneRect(zone) || visibleRect(STEPS[idx].target);
+    const vw = window.innerWidth, vh = window.innerHeight, m = 12;
+    const pw = pop.offsetWidth, ph = pop.offsetHeight;
+    let left = Math.round((zr.left + zr.right) / 2 - pw / 2);
+    left = Math.max(m, Math.min(left, vw - pw - m));
+    const side = ZONE_SIDE[zone] || ((vh - zr.bottom) >= zr.top ? 'below' : 'above');
+    let top = side === 'below'
+      ? zr.bottom + GAP_R + EDGE + MIN_LEN
+      : zr.top - GAP_R - EDGE - MIN_LEN - ph;
+    top = Math.max(m, Math.min(top, vh - ph - m));
+    return { left, top, width: pw, height: ph };
+  };
+
+  // Пунктирная стрелка от подсказки к рамке. Куб. Безье: касательная в конце — по
+  // нормали к цели (остриё входит строго под 90°), из окна линия выходит перпенд.
+  // его грани. Начало берётся из ЖИВОГО положения окна, конец — из живого положения
+  // рамки, поэтому во время плавных переездов стрелка следует за обоими.
+  const drawArrowRects = (rr, pr) => {
+    const rcx = rr.left + rr.width / 2, rcy = rr.top + rr.height / 2;
+    const pcx = pr.left + pr.width / 2, pcy = pr.top + pr.height / 2;
+    const below = pcy > rcy;                 // окно ниже цели → стрелка вверх
     let start, end, sN, tN;
-    if (popBox.below) {
-      // Подсказка ниже цели: стрелка идёт вверх, входит в нижнюю грань под 90°.
-      end = { x: rcx, y: ringBox.top + ringBox.height + GAP_R };
-      tN = { x: 0, y: 1 };                    // внешняя нормаль цели (к подсказке)
-      start = { x: pcx, y: popBox.top - EDGE };
-      sN = { x: 0, y: -1 };                   // выход из верхней грани подсказки
+    if (below) {
+      end = { x: rcx, y: rr.top + rr.height + GAP_R }; tN = { x: 0, y: 1 };
+      start = { x: pcx, y: pr.top - EDGE };            sN = { x: 0, y: -1 };
     } else {
-      // Подсказка выше цели: стрелка идёт вниз, входит в верхнюю грань под 90°.
-      end = { x: rcx, y: ringBox.top - GAP_R };
-      tN = { x: 0, y: -1 };
-      start = { x: pcx, y: popBox.top + popBox.height + EDGE };
-      sN = { x: 0, y: 1 };
+      end = { x: rcx, y: rr.top - GAP_R };             tN = { x: 0, y: -1 };
+      start = { x: pcx, y: pr.top + pr.height + EDGE }; sN = { x: 0, y: 1 };
     }
     const dist = Math.hypot(end.x - start.x, end.y - start.y) || 1;
     const k = Math.max(26, Math.min(78, dist * 0.42));
@@ -162,19 +178,38 @@ function runTour() {
     svg.style.display = '';
   };
 
-  let curStep = null;
+  // Перерисовка стрелки по живым прямоугольникам окна и рамки.
+  const drawArrowLive = () => drawArrowRects(ring.getBoundingClientRect(), pop.getBoundingClientRect());
+
+  let curStep = null, curZone = null, zonePop = null;
+  let animId = 0;
+  // Пока едут рамка и/или окно (CSS-переходы), обновляем стрелку каждый кадр.
+  const animateArrow = () => {
+    cancelAnimationFrame(animId);
+    const t0 = performance.now();
+    const tick = (now) => {
+      drawArrowLive();
+      if (now - t0 < 440) animId = requestAnimationFrame(tick);
+    };
+    animId = requestAnimationFrame(tick);
+  };
+
   const reposition = () => {
     if (!curStep) return;
     const rect = visibleRect(curStep.target);
     if (!rect) return;
-    const ringBox = positionRing(rect, curStep.shape);
-    const popBox = positionPop(rect);
-    drawArrow(ringBox, popBox);
+    positionRing(rect, curStep.shape);
+    if (!zonePop) zonePop = computeZonePop(curStep.zone);
+    pop.style.left = zonePop.left + 'px';
+    pop.style.top = zonePop.top + 'px';
+    drawArrowLive();
   };
-  window.addEventListener('resize', reposition);
-  // Пересчёт при прокрутке (нижние цели могут быть за пределами экрана).
+  const onResize = () => { zonePop = null; reposition(); };
+  window.addEventListener('resize', onResize);
+  // Пересчёт стрелки при прокрутке (нижние цели могут быть за пределами экрана).
   // Фаза перехвата — чтобы ловить прокрутку любого внутреннего контейнера.
-  window.addEventListener('scroll', reposition, true);
+  window.addEventListener('scroll', drawArrowLive, true);
+
   const step = (dir) => {
     let i = idx + dir;
     while (i >= 0 && i < STEPS.length && !visibleRect(STEPS[i].target)) i += dir;
@@ -182,12 +217,18 @@ function runTour() {
     show(i);
   };
 
+  let firstShow = true;
   const show = (i) => {
     idx = i;
+    const zoneChanged = !curStep || curStep.zone !== STEPS[i].zone;
     curStep = STEPS[i];
-    // Прокручиваем цель в зону видимости (нижние элементы могут быть за краем).
-    const node = document.querySelector(curStep.target);
-    if (node && node.scrollIntoView) node.scrollIntoView({ block: 'center', behavior: 'auto' });
+    // При смене зоны — прокрутить область в зону видимости и пересчитать окно.
+    if (zoneChanged) {
+      const node = document.querySelector(curStep.target);
+      if (node && node.scrollIntoView) node.scrollIntoView({ block: 'center', behavior: 'auto' });
+      curZone = curStep.zone;
+      zonePop = null;
+    }
     title.textContent = t('ob_' + curStep.key + '_t');
     desc.textContent = t('ob_' + curStep.key + '_d');
     // «Далее» на всех, кроме последнего видимого шага впереди.
@@ -196,7 +237,17 @@ function runTour() {
     next.textContent = hasNext ? t('ob_next') : t('ob_done_btn');
     clear(dots);
     for (let k = 0; k < STEPS.length; k++) dots.appendChild(el('.tour-dot', { class: k === i ? 'active' : '' }));
-    reposition();
+
+    if (firstShow) {
+      // Первый показ без анимации переезда (иначе окно «прилетало» из угла).
+      pop.style.transition = 'none';
+      reposition();
+      requestAnimationFrame(() => { pop.style.transition = ''; });
+      firstShow = false;
+    } else {
+      reposition();
+      animateArrow();   // рамка/окно едут по CSS-переходам — стрелка следует за ними
+    }
   };
 
   // Стартуем с первого видимого шага.

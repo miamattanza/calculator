@@ -171,7 +171,9 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .tour-arrow-line { stroke: var(--tour-accent); stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: 7 6; animation: tour-flow .8s linear infinite; }
 .tour-arrow #tour-ah path { fill: var(--tour-accent); }
 @keyframes tour-flow { to { stroke-dashoffset: -26; } }
-.tour-pop { position: fixed; max-width: 300px; width: calc(100vw - 32px); background: var(--bg-elev); border-radius: 16px; padding: 16px 18px; box-shadow: 0 8px 30px rgba(0,0,0,0.35); }
+.tour-pop { position: fixed; max-width: 300px; width: calc(100vw - 32px); background: var(--bg-elev); border-radius: 16px; padding: 16px 18px; box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+  transition: left .38s cubic-bezier(.4,0,.2,1), top .38s cubic-bezier(.4,0,.2,1); }
+@media (prefers-reduced-motion: reduce) { .tour-pop { transition: none; } }
 .tour-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
 .tour-desc { font-size: 14px; line-height: 1.45; color: var(--text-2); }
 .tour-dots { display: flex; gap: 5px; justify-content: center; margin: 14px 0 12px; flex-wrap: wrap; }
