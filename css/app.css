@@ -199,7 +199,7 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .tour-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sep-strong); flex: 0 0 auto; }
 .tour-dot.active { background: var(--tour-accent); transform: scale(1.25); }
 .tour-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.tour-nav { display: flex; align-items: center; gap: 8px; }
+.tour-nav { display: flex; align-items: center; gap: 8px; margin-inline-end: 4px; }
 .tour-back { color: var(--text-2); font-size: 15px; font-weight: 600; padding: 10px 16px; border-radius: 12px; background: var(--fill); }
 .tour-back:active { background: var(--fill-2); }
 .tour-skip { color: var(--text-3); font-size: 15px; padding: 8px 4px; }

@@ -23,11 +23,15 @@ const STEPS = [
   { key: 'keypad',   target: '.entry-keypad',          shape: 'rect',   zone: 'keys' },
   { key: 'dot',      target: '.key-dot',               shape: 'rect',   zone: 'keys' },
   { key: 'cancel',   target: '.key-del',               shape: 'rect',   zone: 'keys' },
-  // Свайп-демо: подсвечиваем всё, кроме меню категорий (шапка + табло + клавиши),
-  // и показываем анимацию свайпа влево/вправо (переключение Расходы⇄Доходы).
-  { key: 'swipe',    unionOf: ['#header', '.entry-block'], shape: 'rect', zone: 'swipe' },
+  // Свайп-демо: подсвечиваем область «шапка + табло + клавиши» (кроме меню
+  // категорий) и показываем анимацию свайпа влево/вправо (Расходы⇄Доходы).
+  { key: 'swipe',    region: 'topSwipe',               shape: 'rect',   zone: 'swipe', pad: 0, swipeDemo: true },
   { key: 'cats',     target: '.cat-viewport',          shape: 'rect',   zone: 'cats' },
+  // Тот же жест свайпа для категорий (листание страниц) — окно не двигается.
+  { key: 'swipecats', target: '.cat-viewport',         shape: 'rect',   zone: 'cats', swipeDemo: true },
   { key: 'history',  target: '.mini-hist .swipe-wrap', shape: 'rect',   zone: 'hist' },
+  // И для строки истории — свайп влево/вправо.
+  { key: 'swipehist', target: '.mini-hist .swipe-wrap', shape: 'rect',  zone: 'hist', swipeDemo: true },
   { key: 'expand',   target: '.mini-more',             shape: 'rect',   zone: 'expand', tight: true, pad: { x: 16, y: 9 } },
 ];
 
@@ -55,6 +59,19 @@ export function maybeOnboard() {
 
 // Прямоугольник цели (по тексту, если tight; объединение, если unionOf).
 function targetRect(step) {
+  // Свайп-область сверху: по ширине клавиатуры (цифры), сверху — до кнопок
+  // «гамбургер»/«настройки», снизу — низ клавиатуры. Внутренний отступ ~5–6px
+  // даёт бирюзовая обводка (box-shadow), поэтому берём точные границы.
+  if (step.region === 'topSwipe') {
+    const kp = document.querySelector('.entry-keypad');
+    if (!kp) return null;
+    const k = kp.getBoundingClientRect();
+    if (k.width < 2) return null;
+    const tops = ['#menu-btn', '#settings-btn'].map((s) => document.querySelector(s))
+      .filter(Boolean).map((e) => e.getBoundingClientRect().top).filter((y) => y > -50);
+    const top = tops.length ? Math.min(...tops) : k.top;
+    return { left: k.left, top, right: k.right, bottom: k.bottom, width: k.right - k.left, height: k.bottom - top };
+  }
   if (step.unionOf) {
     let L = Infinity, T = Infinity, R = -Infinity, B = -Infinity, any = false;
     for (const sel of step.unionOf) {
@@ -193,8 +210,8 @@ function runTour() {
   // от активной точки шкалы (её x), с выходом из грани окна, обращённой к цели.
   const drawArrow = () => {
     if (!ringApplied || !popApplied) return;
-    // Шаг «свайп»: вместо стрелки — анимированный жест по центру области.
-    if (curStep && curStep.zone === 'swipe') {
+    // Шаги-демо свайпа: вместо стрелки — анимированный жест по центру области.
+    if (curStep && curStep.swipeDemo) {
       svg.style.display = 'none';
       swipeHint.style.display = '';
       swipeHint.style.left = (ringApplied.l + ringApplied.w / 2) + 'px';
