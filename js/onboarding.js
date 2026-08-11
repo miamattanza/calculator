@@ -1,18 +1,18 @@
-// onboarding.js — вводный тур нового образца: статичная рамка вокруг элемента
-// (без пульсации) + пунктирная «текучая» стрелка от подсказки к элементу.
-// Форма рамки повторяет форму элемента (прямоугольник со скруглением или круг).
-// Полностью офлайн, тексты — из i18n (все языки). Запускается при первом запуске
-// и повторно из «Настройки → Как пользоваться».
+// onboarding.js — вводный тур: статичная рамка вокруг элемента (без пульсации)
+// + пунктирная «текучая» стрелка от подсказки к элементу. Форма рамки повторяет
+// форму элемента. Подсказки сгруппированы по «зонам»: пока объясняются элементы
+// одной зоны, окно неподвижно и не меняет размер — двигаются только рамка и конец
+// стрелки; начало стрелки привязано к активной точке шкалы (вверху окна). Между
+// зонами окно и экран плавно переезжают (единый tween: скролл + позиции + стрелка).
+// Полностью офлайн, тексты — из i18n (все языки).
 
 import * as store from './store.js';
 import { t } from './i18n.js';
 import { el, clear } from './dom.js';
 
-// Шаги тура. target — CSS-селектор подсвечиваемого элемента.
-// shape — форма рамки: 'rect' (скруглённый прямоугольник) | 'circle' (круг).
-// zone — «область»: пока объясняются шаги одной зоны, окно подсказки не двигается
-// (меняется только рамка и конец стрелки). При переходе в другую зону окно плавно
-// переезжает. side — принудительная сторона подсказки ('below'|'above'|auto).
+// Шаги тура. target — CSS-селектор; shape — 'rect'|'circle'; zone — область
+// (в пределах зоны окно фиксировано); tight — рамка по тексту (не по всему блоку);
+// pad — отступ рамки {x,y} или число.
 const STEPS = [
   { key: 'menu',     target: '#menu-btn',              shape: 'rect',   zone: 'top'  },
   { key: 'balance',  target: '#head-balance',          shape: 'rect',   zone: 'top'  },
@@ -25,47 +25,45 @@ const STEPS = [
   { key: 'cancel',   target: '.key-del',               shape: 'rect',   zone: 'keys' },
   { key: 'cats',     target: '.cat-viewport',          shape: 'rect',   zone: 'cats' },
   { key: 'history',  target: '.mini-hist .swipe-wrap', shape: 'rect',   zone: 'hist' },
-  { key: 'expand',   target: '.mini-more',             shape: 'rect',   zone: 'expand' },
+  { key: 'expand',   target: '.mini-more',             shape: 'rect',   zone: 'expand', tight: true, pad: { x: 16, y: 9 } },
 ];
 
-// Сторона подсказки для зон, где важно зафиксировать её положение.
+// Сторона подсказки для зон, где важно её зафиксировать снизу/над.
 const ZONE_SIDE = { top: 'below', entry: 'below', keys: 'below' };
 
 const NS = 'http://www.w3.org/2000/svg';
+const GAP_R = 11, MIN_LEN = 66, EDGE = 6;
 
 let active = false;
-
 export function isOnboardingActive() { return active; }
 
-// Запуск тура. Гарантируем, что мы на главном экране (там все цели).
 export function startOnboarding() {
   if (active) return;
   document.dispatchEvent(new CustomEvent('go-section', { detail: 'home' }));
-  // Небольшая задержка — дать главному экрану отрисоваться.
   setTimeout(runTour, 220);
 }
 
-// Показать тур при первом запуске (после выбора языка), один раз.
 export function maybeOnboard() {
   const s = store.getState().settings;
   if (!s.onboarded && s.langChosen) setTimeout(startOnboarding, 500);
 }
 
-// Виден ли элемент (есть в DOM и имеет размер).
-function visibleRect(sel) {
-  const node = sel ? document.querySelector(sel) : null;
+// Прямоугольник цели (по тексту, если tight). null — если не видно.
+function targetRect(step) {
+  const node = document.querySelector(step.target);
   if (!node) return null;
-  const r = node.getBoundingClientRect();
-  if (r.width < 2 || r.height < 2) return null;
+  let r;
+  if (step.tight) { const rg = document.createRange(); rg.selectNodeContents(node); r = rg.getBoundingClientRect(); }
+  else r = node.getBoundingClientRect();
+  if (!r || r.width < 2 || r.height < 2) return null;
   return r;
 }
+function visible(step) { return !!targetRect(step); }
 
 function runTour() {
   active = true;
   let idx = 0;
 
-  // Прозрачный слой: перехватывает нажатия (фон не реагирует), но не затемняет —
-  // как в присланном примере. Внутри: SVG-стрелка, рамка-подсветка, подсказка.
   const overlay = el('.tour-overlay', { role: 'dialog', 'aria-modal': 'true' });
   const ring = el('.tour-ring');
 
@@ -79,15 +77,24 @@ function runTour() {
   const arrowLine = svg.querySelector('.tour-arrow-line');
 
   const pop = el('.tour-pop');
+  const dots = el('.tour-dots');                 // шкала-точки вверху окна
   const title = el('.tour-title');
   const desc = el('.tour-desc');
-  const dots = el('.tour-dots');
   const skip = el('button.tour-skip', { type: 'button', text: t('ob_skip') });
   const next = el('button.tour-next', { type: 'button' });
-  pop.append(title, desc, dots, el('.tour-actions', {}, [skip, next]));
+  pop.append(dots, title, desc, el('.tour-actions', {}, [skip, next]));
   overlay.append(svg, ring, pop);
   document.body.appendChild(overlay);
   document.body.classList.add('modal-open');
+
+  const content = document.getElementById('content');
+  const FIXED_W = Math.min(300, window.innerWidth - 24);
+  pop.style.width = FIXED_W + 'px';
+
+  // Текущее применённое состояние (для tween) и параметры зоны.
+  let curStep = null, zonePop = null, zoneH = 0, activeDot = null;
+  let ringApplied = null, popApplied = null;
+  let animId = 0, tweening = false, firstShow = true;
 
   const finish = async () => {
     active = false;
@@ -95,163 +102,193 @@ function runTour() {
     overlay.remove();
     document.body.classList.remove('modal-open');
     window.removeEventListener('resize', onResize);
-    window.removeEventListener('scroll', drawArrowLive, true);
+    window.removeEventListener('scroll', onScroll, true);
     if (!store.getState().settings.onboarded) await store.setSetting('onboarded', true);
   };
   skip.addEventListener('click', finish);
   next.addEventListener('click', () => step(1));
 
-  // Позиция рамки поверх цели (с небольшим отступом).
-  const positionRing = (rect, shape) => {
-    const pad = 7;
-    ring.style.display = '';
-    ring.classList.toggle('circle', shape === 'circle');
-    // Для круга держим квадрат по большей стороне (иконка круглая).
-    let w = rect.width + pad * 2, h = rect.height + pad * 2, l = rect.left - pad, top = rect.top - pad;
-    if (shape === 'circle') {
-      const d = Math.max(w, h);
-      l -= (d - w) / 2; top -= (d - h) / 2; w = h = d;
-    }
-    ring.style.left = Math.round(l) + 'px';
-    ring.style.top = Math.round(top) + 'px';
-    ring.style.width = Math.round(w) + 'px';
-    ring.style.height = Math.round(h) + 'px';
-    return { left: l, top, width: w, height: h };
+  // ── Геометрия ──────────────────────────────────────────────────────────────
+  const ringBoxFrom = (rect, shape, pad) => {
+    const px = pad && pad.x != null ? pad.x : (typeof pad === 'number' ? pad : 7);
+    const py = pad && pad.y != null ? pad.y : (typeof pad === 'number' ? pad : 7);
+    let w = rect.width + px * 2, h = rect.height + py * 2, l = rect.left - px, t2 = rect.top - py;
+    if (shape === 'circle') { const d = Math.max(w, h); l -= (d - w) / 2; t2 -= (d - h) / 2; w = h = d; }
+    return { l, t: t2, w, h };
   };
 
-  // Геометрия стрелки. Отступ острия от рамки и минимальная длина линии, чтобы
-  // стрелка не выходила слишком короткой (тогда подсказку отодвигаем дальше).
-  const GAP_R = 11, MIN_LEN = 66, EDGE = 6;
-
-  // Объединённый прямоугольник всех видимых целей зоны (по нему фиксируем окно).
   const zoneRect = (zone) => {
     let L = Infinity, T = Infinity, R = -Infinity, B = -Infinity, any = false;
     for (const s of STEPS) {
       if (s.zone !== zone) continue;
-      const r = visibleRect(s.target);
+      const r = targetRect(s);
       if (!r) continue;
       any = true;
-      L = Math.min(L, r.left); T = Math.min(T, r.top);
-      R = Math.max(R, r.right); B = Math.max(B, r.bottom);
+      L = Math.min(L, r.left); T = Math.min(T, r.top); R = Math.max(R, r.right); B = Math.max(B, r.bottom);
     }
-    return any ? { left: L, top: T, right: R, bottom: B, width: R - L, height: B - T } : null;
+    return any ? { left: L, top: T, right: R, bottom: B } : null;
   };
 
-  // Фиксированное положение окна подсказки для зоны. Считается один раз при входе
-  // в зону; сторона — из ZONE_SIDE или по большему свободному месту.
-  const computeZonePop = (zone) => {
-    const zr = zoneRect(zone) || visibleRect(STEPS[idx].target);
+  // Высота окна для зоны = максимум по её шагам (в пределах зоны не меняется).
+  const measureZoneHeight = (zone) => {
+    const st = title.textContent, sd = desc.textContent, sh = pop.style.height;
+    pop.style.height = 'auto';
+    let maxH = 0;
+    for (const s of STEPS) {
+      if (s.zone !== zone) continue;
+      title.textContent = t('ob_' + s.key + '_t');
+      desc.textContent = t('ob_' + s.key + '_d');
+      maxH = Math.max(maxH, pop.offsetHeight);
+    }
+    title.textContent = st; desc.textContent = sd; pop.style.height = sh;
+    return maxH;
+  };
+
+  // Фиксированное положение окна для зоны (delta — предсказанный сдвиг из-за скролла).
+  const computeZonePop = (zone, delta) => {
+    delta = delta || 0;
+    let zr = zoneRect(zone);
+    if (!zr) { const r = targetRect(curStep) || { left: 0, top: 0, right: 0, bottom: 0 }; zr = { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; }
+    zr = { left: zr.left, right: zr.right, top: zr.top - delta, bottom: zr.bottom - delta };
     const vw = window.innerWidth, vh = window.innerHeight, m = 12;
-    const pw = pop.offsetWidth, ph = pop.offsetHeight;
+    const pw = FIXED_W, ph = zoneH || pop.offsetHeight;
     let left = Math.round((zr.left + zr.right) / 2 - pw / 2);
     left = Math.max(m, Math.min(left, vw - pw - m));
-    const side = ZONE_SIDE[zone] || ((vh - zr.bottom) >= zr.top ? 'below' : 'above');
-    let top = side === 'below'
-      ? zr.bottom + GAP_R + EDGE + MIN_LEN
-      : zr.top - GAP_R - EDGE - MIN_LEN - ph;
+    const need = ph + GAP_R + EDGE + MIN_LEN + m;
+    const roomAbove = zr.top, roomBelow = vh - zr.bottom;
+    let side = ZONE_SIDE[zone] || (roomBelow >= roomAbove ? 'below' : 'above');
+    if (side === 'below' && roomBelow < need && roomAbove >= need) side = 'above';
+    if (side === 'above' && roomAbove < need && roomBelow >= need) side = 'below';
+    let top = side === 'below' ? zr.bottom + GAP_R + EDGE + MIN_LEN : zr.top - GAP_R - EDGE - MIN_LEN - ph;
     top = Math.max(m, Math.min(top, vh - ph - m));
     return { left, top, width: pw, height: ph };
   };
 
-  // Пунктирная стрелка от подсказки к рамке. Куб. Безье: касательная в конце — по
-  // нормали к цели (остриё входит строго под 90°), из окна линия выходит перпенд.
-  // его грани. Начало берётся из ЖИВОГО положения окна, конец — из живого положения
-  // рамки, поэтому во время плавных переездов стрелка следует за обоими.
-  const drawArrowRects = (rr, pr) => {
-    const rcx = rr.left + rr.width / 2, rcy = rr.top + rr.height / 2;
-    const pcx = pr.left + pr.width / 2, pcy = pr.top + pr.height / 2;
-    const below = pcy > rcy;                 // окно ниже цели → стрелка вверх
+  const applyRing = (b) => { ring.style.display = ''; ring.style.left = b.l + 'px'; ring.style.top = b.t + 'px'; ring.style.width = b.w + 'px'; ring.style.height = b.h + 'px'; };
+  const applyPop = (b) => { pop.style.left = b.l + 'px'; pop.style.top = b.t + 'px'; pop.style.height = b.h + 'px'; };
+  const setCircle = (on) => ring.classList.toggle('circle', on);
+
+  // Стрелка: касательная в конце — по нормали к цели (вход под 90°); начало —
+  // от активной точки шкалы (её x), с выходом из грани окна, обращённой к цели.
+  const drawArrow = () => {
+    if (!ringApplied || !popApplied) return;
+    const rr = ringApplied, pr = popApplied;
+    const rcx = rr.l + rr.w / 2, rcy = rr.t + rr.h / 2;
+    const pcy = pr.t + pr.h / 2;
+    let sx = pr.l + pr.w / 2;
+    if (activeDot) { const d = activeDot.getBoundingClientRect(); if (d.width) sx = d.left + d.width / 2; }
+    const below = pcy > rcy;                        // окно ниже цели → стрелка вверх
     let start, end, sN, tN;
-    if (below) {
-      end = { x: rcx, y: rr.top + rr.height + GAP_R }; tN = { x: 0, y: 1 };
-      start = { x: pcx, y: pr.top - EDGE };            sN = { x: 0, y: -1 };
-    } else {
-      end = { x: rcx, y: rr.top - GAP_R };             tN = { x: 0, y: -1 };
-      start = { x: pcx, y: pr.top + pr.height + EDGE }; sN = { x: 0, y: 1 };
-    }
+    if (below) { end = { x: rcx, y: rr.t + rr.h + GAP_R }; tN = { x: 0, y: 1 }; start = { x: sx, y: pr.t - EDGE }; sN = { x: 0, y: -1 }; }
+    else { end = { x: rcx, y: rr.t - GAP_R }; tN = { x: 0, y: -1 }; start = { x: sx, y: pr.t + pr.h + EDGE }; sN = { x: 0, y: 1 }; }
     const dist = Math.hypot(end.x - start.x, end.y - start.y) || 1;
     const k = Math.max(26, Math.min(78, dist * 0.42));
     const c1 = { x: start.x + sN.x * k, y: start.y + sN.y * k };
     const c2 = { x: end.x + tN.x * k, y: end.y + tN.y * k };
-    arrowLine.setAttribute('d',
-      `M ${start.x} ${start.y} C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${end.x} ${end.y}`);
+    arrowLine.setAttribute('d', `M ${start.x} ${start.y} C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${end.x} ${end.y}`);
     svg.style.display = '';
   };
 
-  // Перерисовка стрелки по живым прямоугольникам окна и рамки.
-  const drawArrowLive = () => drawArrowRects(ring.getBoundingClientRect(), pop.getBoundingClientRect());
+  // ── Скролл (плавный, предсказуемый) ─────────────────────────────────────────
+  const canScroll = () => content && content.scrollHeight > content.clientHeight + 2 &&
+    getComputedStyle(content).overflowY !== 'hidden';
+  const centerScrollTop = (rect) => {
+    const sr = content.getBoundingClientRect();
+    let tgt = content.scrollTop + (rect.top + rect.height / 2) - (sr.top + sr.height / 2);
+    return Math.max(0, Math.min(tgt, content.scrollHeight - content.clientHeight));
+  };
 
-  let curStep = null, curZone = null, zonePop = null;
-  let animId = 0;
-  // Пока едут рамка и/или окно (CSS-переходы), обновляем стрелку каждый кадр.
-  const animateArrow = () => {
+  const lerp = (a, b, e) => a + (b - a) * e;
+  const lerpBox = (a, b, e) => ({ l: lerp(a.l, b.l, e), t: lerp(a.t, b.t, e), w: lerp(a.w, b.w, e), h: lerp(a.h, b.h, e) });
+  const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+
+  // Единый tween: скролл + рамка + окно + стрелка синхронно.
+  const tween = (o) => {
     cancelAnimationFrame(animId);
+    tweening = true;
     const t0 = performance.now();
     const tick = (now) => {
-      drawArrowLive();
-      if (now - t0 < 440) animId = requestAnimationFrame(tick);
+      const p = Math.min(1, (now - t0) / o.dur), e = easeOut(p);
+      if (o.scroll) content.scrollTop = lerp(o.fromScroll, o.toScroll, e);
+      ringApplied = lerpBox(o.fromRing, o.toRing, e);
+      popApplied = lerpBox(o.fromPop, o.toPop, e);
+      applyRing(ringApplied); applyPop(popApplied); drawArrow();
+      if (p < 1) animId = requestAnimationFrame(tick);
+      else { tweening = false; settleNow(); }
     };
     animId = requestAnimationFrame(tick);
   };
 
-  const reposition = () => {
-    if (!curStep) return;
-    const rect = visibleRect(curStep.target);
-    if (!rect) return;
-    positionRing(rect, curStep.shape);
-    if (!zonePop) zonePop = computeZonePop(curStep.zone);
-    pop.style.left = zonePop.left + 'px';
-    pop.style.top = zonePop.top + 'px';
-    drawArrowLive();
+  // Точная посадка по живым прямоугольникам (после скролла/резайза).
+  const settleNow = () => {
+    const r = targetRect(curStep); if (!r) return;
+    ringApplied = ringBoxFrom(r, curStep.shape, curStep.pad);
+    const fp = computeZonePop(curStep.zone, 0); zonePop = fp;
+    popApplied = { l: fp.left, t: fp.top, w: fp.width, h: fp.height };
+    applyRing(ringApplied); applyPop(popApplied); drawArrow();
   };
-  const onResize = () => { zonePop = null; reposition(); };
-  window.addEventListener('resize', onResize);
-  // Пересчёт стрелки при прокрутке (нижние цели могут быть за пределами экрана).
-  // Фаза перехвата — чтобы ловить прокрутку любого внутреннего контейнера.
-  window.addEventListener('scroll', drawArrowLive, true);
 
+  const onScroll = () => { if (tweening) return; const r = targetRect(curStep); if (!r) return; ringApplied = ringBoxFrom(r, curStep.shape, curStep.pad); applyRing(ringApplied); drawArrow(); };
+  const onResize = () => { if (!curStep) return; zoneH = measureZoneHeight(curStep.zone); settleNow(); };
+  window.addEventListener('resize', onResize);
+  window.addEventListener('scroll', onScroll, true);
+
+  // ── Навигация ───────────────────────────────────────────────────────────────
   const step = (dir) => {
     let i = idx + dir;
-    while (i >= 0 && i < STEPS.length && !visibleRect(STEPS[i].target)) i += dir;
+    while (i >= 0 && i < STEPS.length && !visible(STEPS[i])) i += dir;
     if (i < 0 || i >= STEPS.length) { finish(); return; }
     show(i);
   };
 
-  let firstShow = true;
   const show = (i) => {
-    idx = i;
-    const zoneChanged = !curStep || curStep.zone !== STEPS[i].zone;
-    curStep = STEPS[i];
-    // При смене зоны — прокрутить область в зону видимости и пересчитать окно.
-    if (zoneChanged) {
-      const node = document.querySelector(curStep.target);
-      if (node && node.scrollIntoView) node.scrollIntoView({ block: 'center', behavior: 'auto' });
-      curZone = curStep.zone;
-      zonePop = null;
-    }
+    const prev = curStep;
+    idx = i; curStep = STEPS[i];
+    const zoneChanged = !prev || prev.zone !== curStep.zone;
+
     title.textContent = t('ob_' + curStep.key + '_t');
     desc.textContent = t('ob_' + curStep.key + '_d');
-    // «Далее» на всех, кроме последнего видимого шага впереди.
     let hasNext = false;
-    for (let k = i + 1; k < STEPS.length; k++) if (visibleRect(STEPS[k].target)) { hasNext = true; break; }
+    for (let k = i + 1; k < STEPS.length; k++) if (visible(STEPS[k])) { hasNext = true; break; }
     next.textContent = hasNext ? t('ob_next') : t('ob_done_btn');
     clear(dots);
-    for (let k = 0; k < STEPS.length; k++) dots.appendChild(el('.tour-dot', { class: k === i ? 'active' : '' }));
+    const dotEls = [];
+    for (let k = 0; k < STEPS.length; k++) { const d = el('.tour-dot', { class: k === i ? 'active' : '' }); dots.appendChild(d); dotEls.push(d); }
+    activeDot = dotEls[i];
+    setCircle(curStep.shape === 'circle');
+
+    const rect = targetRect(curStep);
+    if (!rect) return;
+    const vh = window.innerHeight;
+
+    // Предсказание скролла (для синхронного tween).
+    let doScroll = false, fromScroll = 0, toScroll = 0, delta = 0;
+    if ((rect.top < 100 || rect.bottom > vh - 100) && canScroll()) {
+      fromScroll = content.scrollTop; toScroll = centerScrollTop(rect); delta = toScroll - fromScroll;
+      doScroll = Math.abs(delta) > 2;
+    }
+    const shift = (r) => ({ left: r.left, top: r.top - delta, right: r.right, bottom: r.bottom - delta, width: r.width, height: r.height });
+    const finalRing = ringBoxFrom(shift(rect), curStep.shape, curStep.pad);
+    if (zoneChanged) zoneH = measureZoneHeight(curStep.zone);
+    const fp = zoneChanged ? computeZonePop(curStep.zone, delta) : zonePop;
+    zonePop = fp;
+    const finalPop = { l: fp.left, t: fp.top, w: fp.width, h: fp.height };
 
     if (firstShow) {
-      // Первый показ без анимации переезда (иначе окно «прилетало» из угла).
-      pop.style.transition = 'none';
-      reposition();
-      requestAnimationFrame(() => { pop.style.transition = ''; });
       firstShow = false;
-    } else {
-      reposition();
-      animateArrow();   // рамка/окно едут по CSS-переходам — стрелка следует за ними
+      if (doScroll) content.scrollTop = toScroll;
+      settleNow();
+      return;
     }
+    tween({
+      scroll: doScroll, fromScroll, toScroll,
+      fromRing: ringApplied || finalRing, toRing: finalRing,
+      fromPop: popApplied || finalPop, toPop: finalPop,
+      dur: doScroll ? 540 : (zoneChanged ? 420 : 340),
+    });
   };
 
-  // Стартуем с первого видимого шага.
-  const first = STEPS.findIndex((s) => visibleRect(s.target));
+  const first = STEPS.findIndex((s) => visible(s));
   if (first < 0) { finish(); return; }
   show(first);
 }

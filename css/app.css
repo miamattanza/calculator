@@ -150,6 +150,7 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 #settings-btn { width: 38px; height: 38px; border-radius: 10px; background: var(--fill); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--text-2); }
 #settings-btn:active { background: var(--fill-2); }
 .gear-icon { width: 21px; height: 21px; display: block; }
+.menu-item-icon .gear-icon { display: inline-block; vertical-align: -4px; }
 
 /* Контейнер страницы окна — тащится пальцем при свайпе. */
 /* ---- Вводный тур (онбординг) ---- */
@@ -157,13 +158,12 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 :root { --tour-accent: #0E8C82; }
 /* Прозрачный слой: перехватывает нажатия, но не затемняет интерфейс. */
 .tour-overlay { position: fixed; inset: 0; z-index: 300; }
-/* Статичная рамка вокруг цели: белый зазор + бирюзовый контур. Без пульсации;
-   плавно «переезжает» между шагами. Форма повторяет форму элемента. */
+/* Статичная рамка вокруг цели: белый зазор + бирюзовый контур. Без пульсации.
+   Движение (переезд/изменение размера) задаётся из JS (единый tween), поэтому
+   CSS-переходов здесь нет. Форма повторяет форму элемента. */
 .tour-ring {
   position: fixed; border-radius: 13px; pointer-events: none;
   box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--tour-accent), 0 6px 18px rgba(0,0,0,0.22);
-  transition: left .32s cubic-bezier(.4,0,.2,1), top .32s cubic-bezier(.4,0,.2,1),
-              width .32s cubic-bezier(.4,0,.2,1), height .32s cubic-bezier(.4,0,.2,1);
 }
 .tour-ring.circle { border-radius: 50%; }
 /* Пунктирная «текучая» стрелка. Единственная анимация — бег пунктира. */
@@ -171,14 +171,15 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .tour-arrow-line { stroke: var(--tour-accent); stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: 7 6; animation: tour-flow .8s linear infinite; }
 .tour-arrow #tour-ah path { fill: var(--tour-accent); }
 @keyframes tour-flow { to { stroke-dashoffset: -26; } }
-.tour-pop { position: fixed; max-width: 300px; width: calc(100vw - 32px); background: var(--bg-elev); border-radius: 16px; padding: 16px 18px; box-shadow: 0 8px 30px rgba(0,0,0,0.35);
-  transition: left .38s cubic-bezier(.4,0,.2,1), top .38s cubic-bezier(.4,0,.2,1); }
-@media (prefers-reduced-motion: reduce) { .tour-pop { transition: none; } }
+/* Окно подсказки: ширина/высота фиксируются из JS (одинаковы в пределах зоны),
+   позиция и размер меняются только при переезде между зонами (JS-tween). */
+.tour-pop { position: fixed; background: var(--bg-elev); border-radius: 16px; padding: 14px 18px 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.35); box-sizing: border-box; overflow: hidden; }
 .tour-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
 .tour-desc { font-size: 14px; line-height: 1.45; color: var(--text-2); }
-.tour-dots { display: flex; gap: 5px; justify-content: center; margin: 14px 0 12px; flex-wrap: wrap; }
-.tour-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sep-strong); }
-.tour-dot.active { background: var(--tour-accent); }
+/* Шкала-точки — вверху окна, растянута по ширине (начало стрелки привязано к точке). */
+.tour-dots { display: flex; gap: 4px; justify-content: space-between; margin: 0 2px 12px; }
+.tour-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sep-strong); flex: 0 0 auto; }
+.tour-dot.active { background: var(--tour-accent); transform: scale(1.25); }
 .tour-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .tour-skip { color: var(--text-3); font-size: 15px; padding: 8px 4px; }
 .tour-next { background: var(--tour-accent); color: #fff; font-weight: 600; font-size: 15px; padding: 10px 22px; border-radius: 12px; }

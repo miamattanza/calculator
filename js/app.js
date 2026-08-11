@@ -13,6 +13,10 @@ import { renderBudgets } from './views/budgets.js';
 import { renderSettings, applyTheme, applyBackground, exportJSON } from './views/settings.js';
 import { maybeOnboard } from './onboarding.js';
 
+// Иконка «Настройки» — та же схематичная шестерёнка, что и в шапке (см. index.html),
+// чтобы в меню и на главном экране значок совпадал.
+const GEAR_SVG = '<svg class="gear-icon" viewBox="276 517 193.5 193.5" fill="none" stroke="currentColor" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M460.49,627.63V600H446.41a5.77,5.77,0,0,1-5.59-4.27,70,70,0,0,0-7.22-17.38,5.5,5.5,0,0,1,.82-6.69l10.14-10.13L425,542l-10,10a5.85,5.85,0,0,1-7.09.88,70.09,70.09,0,0,0-17.22-7.11,5.69,5.69,0,0,1-4.2-5.51V526.05H358.91v14.18a5.64,5.64,0,0,1-4.17,5.47,70,70,0,0,0-17.34,7.17,5.71,5.71,0,0,1-6.93-.85l-10-10L300.9,561.53l10,10a5.75,5.75,0,0,1,.85,7,70,70,0,0,0-7.16,17.34,5.61,5.61,0,0,1-5.44,4.15H285v27.63h13.87a6.06,6.06,0,0,1,5.85,4.48,70.17,70.17,0,0,0,7.14,17.11A5.59,5.59,0,0,1,311,656L300.9,666.1l19.54,19.54,10.15-10.14a5.48,5.48,0,0,1,6.67-.82,70.2,70.2,0,0,0,17.49,7.26,5.6,5.6,0,0,1,4.16,5.45v14.19h27.64v-14a5.85,5.85,0,0,1,4.32-5.66,70.08,70.08,0,0,0,17.1-7.07,5.85,5.85,0,0,1,7.1.87l9.95,9.95,19.54-19.54-9.95-9.94a5.87,5.87,0,0,1-.87-7.12,69.91,69.91,0,0,0,7.11-17.24,5.63,5.63,0,0,1,5.46-4.17Zm-85.28,33.8a47.68,47.68,0,1,1,45.13-45.13A47.68,47.68,0,0,1,375.21,661.43Z"/></svg>';
+
 // Разделы приложения. Обзор — главный экран, остальные открываются из меню.
 const SECTIONS = [
   { id: 'home',      icon: '🏠', labelKey: 'tab_home',      render: (r) => renderHome(r) },
@@ -92,7 +96,7 @@ function openMenu() {
       class: s.id === activeSection ? 'active' : '',
       onClick: () => { activeSection = s.id; renderSection(); close(); },
     }, [
-      el('.menu-item-icon', { text: s.icon }),
+      s.id === 'settings' ? el('.menu-item-icon', { html: GEAR_SVG }) : el('.menu-item-icon', { text: s.icon }),
       el('.menu-item-label', { text: t(s.labelKey) }),
       s.id === activeSection ? el('.menu-item-check', { text: '✓' }) : null,
     ]));
