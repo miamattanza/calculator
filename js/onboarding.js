@@ -28,8 +28,10 @@ const STEPS = [
   { key: 'expand',   target: '.mini-more',             shape: 'rect',   zone: 'expand', tight: true, pad: { x: 16, y: 9 } },
 ];
 
-// Сторона подсказки для зон, где важно её зафиксировать снизу/над.
-const ZONE_SIDE = { top: 'below', entry: 'below', keys: 'below' };
+// Сторона подсказки для каждой зоны: 'below' — окно под элементом (стрелка вверх,
+// шкала-точки вверху окна); 'above' — окно над элементом (стрелка вниз, шкала
+// внизу окна). Начало стрелки всегда у активной точки на грани, обращённой к цели.
+const ZONE_SIDE = { top: 'below', entry: 'below', keys: 'below', cats: 'above', hist: 'above', expand: 'above' };
 
 const NS = 'http://www.w3.org/2000/svg';
 const GAP_R = 11, MIN_LEN = 66, EDGE = 6;
@@ -178,9 +180,11 @@ function runTour() {
     let sx = pr.l + pr.w / 2;
     if (activeDot) { const d = activeDot.getBoundingClientRect(); if (d.width) sx = d.left + d.width / 2; }
     const below = pcy > rcy;                        // окно ниже цели → стрелка вверх
+    // Остриё заходит ВНУТРЬ элемента (~70% пути от грани к центру, но не глубже 22px).
+    const depth = Math.min(0.7 * (rr.h / 2), 22);
     let start, end, sN, tN;
-    if (below) { end = { x: rcx, y: rr.t + rr.h + GAP_R }; tN = { x: 0, y: 1 }; start = { x: sx, y: pr.t - EDGE }; sN = { x: 0, y: -1 }; }
-    else { end = { x: rcx, y: rr.t - GAP_R }; tN = { x: 0, y: -1 }; start = { x: sx, y: pr.t + pr.h + EDGE }; sN = { x: 0, y: 1 }; }
+    if (below) { end = { x: rcx, y: rr.t + rr.h - depth }; tN = { x: 0, y: 1 }; start = { x: sx, y: pr.t - EDGE }; sN = { x: 0, y: -1 }; }
+    else { end = { x: rcx, y: rr.t + depth }; tN = { x: 0, y: -1 }; start = { x: sx, y: pr.t + pr.h + EDGE }; sN = { x: 0, y: 1 }; }
     const dist = Math.hypot(end.x - start.x, end.y - start.y) || 1;
     const k = Math.max(26, Math.min(78, dist * 0.42));
     const c1 = { x: start.x + sN.x * k, y: start.y + sN.y * k };
@@ -192,10 +196,20 @@ function runTour() {
   // ── Скролл (плавный, предсказуемый) ─────────────────────────────────────────
   const canScroll = () => content && content.scrollHeight > content.clientHeight + 2 &&
     getComputedStyle(content).overflowY !== 'hidden';
-  const centerScrollTop = (rect) => {
-    const sr = content.getBoundingClientRect();
-    let tgt = content.scrollTop + (rect.top + rect.height / 2) - (sr.top + sr.height / 2);
-    return Math.max(0, Math.min(tgt, content.scrollHeight - content.clientHeight));
+  // Желаемый scrollTop: разместить зону так, чтобы с нужной стороны осталось место
+  // под окно + зазор для стрелки (для 'above' — двигаем зону ниже, для 'below' —
+  // выше). Только для целей внутри прокручиваемого #content.
+  const scrollForZone = (zone, side) => {
+    if (!canScroll()) return null;
+    const node = document.querySelector(curStep.target);
+    if (!node || !content.contains(node)) return null;   // напр., шапка — не скроллим
+    const zr = zoneRect(zone); if (!zr) return null;
+    const vh = window.innerHeight;
+    const need = (zoneH || pop.offsetHeight) + GAP_R + EDGE + MIN_LEN + 16;
+    const zh = zr.bottom - zr.top;
+    const desiredTop = side === 'above' ? need + 12 : Math.max(12, vh - need - 12 - zh);
+    let ts = content.scrollTop + (zr.top - desiredTop);
+    return Math.max(0, Math.min(ts, content.scrollHeight - content.clientHeight));
   };
 
   const lerp = (a, b, e) => a + (b - a) * e;
@@ -257,19 +271,22 @@ function runTour() {
     activeDot = dotEls[i];
     setCircle(curStep.shape === 'circle');
 
+    // Сторона окна и грань со шкалой (сверху/снизу — к цели).
+    const side = ZONE_SIDE[curStep.zone] || 'below';
+    pop.classList.toggle('dots-bottom', side === 'above');
+    if (zoneChanged) zoneH = measureZoneHeight(curStep.zone);
+
     const rect = targetRect(curStep);
     if (!rect) return;
-    const vh = window.innerHeight;
 
-    // Предсказание скролла (для синхронного tween).
-    let doScroll = false, fromScroll = 0, toScroll = 0, delta = 0;
-    if ((rect.top < 100 || rect.bottom > vh - 100) && canScroll()) {
-      fromScroll = content.scrollTop; toScroll = centerScrollTop(rect); delta = toScroll - fromScroll;
-      doScroll = Math.abs(delta) > 2;
-    }
+    // Предсказание скролла (для синхронного tween): двигаем зону так, чтобы с нужной
+    // стороны хватило места под окно и зазор для стрелки.
+    let doScroll = false, fromScroll = content ? content.scrollTop : 0, toScroll = fromScroll, delta = 0;
+    const ts = scrollForZone(curStep.zone, side);
+    if (ts != null && Math.abs(ts - fromScroll) > 2) { toScroll = ts; delta = ts - fromScroll; doScroll = true; }
+
     const shift = (r) => ({ left: r.left, top: r.top - delta, right: r.right, bottom: r.bottom - delta, width: r.width, height: r.height });
     const finalRing = ringBoxFrom(shift(rect), curStep.shape, curStep.pad);
-    if (zoneChanged) zoneH = measureZoneHeight(curStep.zone);
     const fp = zoneChanged ? computeZonePop(curStep.zone, delta) : zonePop;
     zonePop = fp;
     const finalPop = { l: fp.left, t: fp.top, w: fp.width, h: fp.height };

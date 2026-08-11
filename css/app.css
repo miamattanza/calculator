@@ -173,11 +173,13 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 @keyframes tour-flow { to { stroke-dashoffset: -26; } }
 /* Окно подсказки: ширина/высота фиксируются из JS (одинаковы в пределах зоны),
    позиция и размер меняются только при переезде между зонами (JS-tween). */
-.tour-pop { position: fixed; background: var(--bg-elev); border-radius: 16px; padding: 14px 18px 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.35); box-sizing: border-box; overflow: hidden; }
+.tour-pop { position: fixed; display: flex; flex-direction: column; background: var(--bg-elev); border-radius: 16px; padding: 14px 18px 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.35); box-sizing: border-box; overflow: hidden; }
 .tour-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
 .tour-desc { font-size: 14px; line-height: 1.45; color: var(--text-2); }
-/* Шкала-точки — вверху окна, растянута по ширине (начало стрелки привязано к точке). */
-.tour-dots { display: flex; gap: 4px; justify-content: space-between; margin: 0 2px 12px; }
+/* Шкала-точки — на грани окна, обращённой к цели (сверху по умолчанию, снизу для
+   окна над элементом), растянута по ширине: начало стрелки привязано к точке. */
+.tour-dots { display: flex; gap: 4px; justify-content: space-between; margin: 0 2px 12px; order: 0; }
+.tour-pop.dots-bottom .tour-dots { order: 5; margin: 12px 2px 0; }
 .tour-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sep-strong); flex: 0 0 auto; }
 .tour-dot.active { background: var(--tour-accent); transform: scale(1.25); }
 .tour-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
