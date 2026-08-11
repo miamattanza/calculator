@@ -33,32 +33,42 @@
 /* Тёмная тема — тёплый глубокий графит (не чёрный): у фона/поверхностей лёгкий
    тёплый (красновато-коричневый) подтон, а не холодный синий. --fill/--fill-2
    выводятся из --text и --bg, поэтому тоже становятся тёплыми. */
+/* Тёмная тема — нейтральный графит #4B4B4B (по запросу). Акцент/успех/ошибка и
+   пр. осветлены и подсыщены, чтобы уверенно читались на этом сером фоне. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #5E6462;        /* мягкий серо-зелёный графит (по запросу) */
-    --bg-elev: #6A706E;
-    --card: #6A706E;
-    --text: #F3F5F4;
-    --text-2: #D8DBDA;
-    --text-3: #B0B4B2;
-    --sep: #6F7573;
-    --sep-strong: #7E8482;
-    --accent: #AEBEF2;   /* бренд, осветлённый для читаемости на светлом графите */
-    --shadow: 0 1px 3px rgba(0,0,0,0.4);
+    --bg: #4B4B4B;
+    --bg-elev: #585858;
+    --card: #585858;
+    --text: #F2F2F2;
+    --text-2: #D0D0D0;
+    --text-3: #A4A4A4;
+    --sep: #5E5E5E;
+    --sep-strong: #707070;
+    --accent: #A9BBF5;   /* «Расходы» и акцент — васильковый, ярче для контраста */
+    --green: #57B98A;    /* «Доходы»/плюс — осветлённый зелёный */
+    --red: #F0716F;      /* удаление/перерасход — осветлённый красный */
+    --warning: #E3AA4C;
+    --info: #66AFDE;
+    --shadow: 0 1px 3px rgba(0,0,0,0.45);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #5E6462;
-  --bg-elev: #6A706E;
-  --card: #6A706E;
-  --text: #F3F5F4;
-  --text-2: #D8DBDA;
-  --text-3: #B0B4B2;
-  --sep: #6F7573;
-  --sep-strong: #7E8482;
-  --accent: #AEBEF2;
-  --shadow: 0 1px 3px rgba(0,0,0,0.4);
+  --bg: #4B4B4B;
+  --bg-elev: #585858;
+  --card: #585858;
+  --text: #F2F2F2;
+  --text-2: #D0D0D0;
+  --text-3: #A4A4A4;
+  --sep: #5E5E5E;
+  --sep-strong: #707070;
+  --accent: #A9BBF5;
+  --green: #57B98A;
+  --red: #F0716F;
+  --warning: #E3AA4C;
+  --info: #66AFDE;
+  --shadow: 0 1px 3px rgba(0,0,0,0.45);
 }
 
 /* Фолбэк для старых браузеров без color-mix() (например старые Android /
@@ -67,9 +77,9 @@
 @supports not (background: color-mix(in srgb, red, blue)) {
   :root { --fill: #ECEAE5; --fill-2: #DEDBD4; }
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --fill: #6B716F; --fill-2: #787E7C; }
+    :root:not([data-theme="light"]) { --fill: #585858; --fill-2: #646464; }
   }
-  :root[data-theme="dark"] { --fill: #6B716F; --fill-2: #787E7C; }
+  :root[data-theme="dark"] { --fill: #585858; --fill-2: #646464; }
   :root[data-theme="light"] { --fill: #ECEAE5; --fill-2: #DEDBD4; }
   #tabbar { background: var(--bg-elev); }
   .trx-group.alt, .trx-group.alt .swipe-content { background: var(--fill); }
@@ -244,6 +254,9 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .home-pager.expense-mode .entry-amount { color: var(--accent); }
 .home-pager.income-mode .entry-amount { color: var(--green); }
 .entry-amount.zero { opacity: 0.5; }
+/* В тёмной теме «0» табло был слишком блёклым — поднимаем видимость. */
+:root[data-theme="dark"] .entry-amount.zero { opacity: 0.72; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .entry-amount.zero { opacity: 0.72; } }
 .entry-amount.shake { animation: shakeX .4s; }
 @keyframes shakeX { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
 .entry-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -469,9 +482,9 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .settings-group { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); margin-bottom: 20px; }
 /* В тёмной теме карточки-«окна» рубрик почти сливались с фоном — делаем их
    чуть светлее фона, чтобы границы были заметны. */
-:root[data-theme="dark"] .settings-group { background: #6F7573; }
+:root[data-theme="dark"] .settings-group { background: #5A5A5A; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .settings-group { background: #6F7573; }
+  :root:not([data-theme="light"]) .settings-group { background: #5A5A5A; }
 }
 .group-caption { font-size: 13px; color: var(--text-3); margin: 4px 16px 6px; text-transform: uppercase; letter-spacing: 0.3px; }
 .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; border-bottom: 0.5px solid var(--sep); gap: 12px; }
@@ -486,6 +499,8 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .nav-icon.nav-icon-light { filter: brightness(1.35) saturate(1.05); }
 .nav-label { flex: 1; font-size: 16px; }
 .nav-row.danger .nav-label { color: var(--red); }
+.nav-icon-danger { color: var(--red); display: flex; align-items: center; justify-content: center; }
+.nav-icon-danger svg { width: 19px; height: 19px; }
 .nav-chevron { color: var(--text-3); font-size: 20px; }
 .about-row { padding: 14px 16px; }
 .about-row p { font-size: 14px; color: var(--text-2); line-height: 1.5; }

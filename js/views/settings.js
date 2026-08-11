@@ -78,9 +78,9 @@ export function renderSettings(root, rerenderApp) {
     settingRow(t('base_currency'), curSelect),
     settingRow(t('current_currency'), curNowSelect),
     el('.setting-hint', { text: t('current_currency_hint') }),
-    navRow('💱', t('converter'), () => openConverter(), false, 'nav-icon-light'),
     settingRow(t('convert_all'), convToggle),
     el('.setting-hint', { text: t('convert_all_hint') }),
+    navRow('💱', t('converter'), () => openConverter(), false, 'nav-icon-light'),
   ]);
   root.appendChild(curGroup);
 
@@ -161,9 +161,13 @@ function settingRow(label, control) {
   return el('.setting-row', {}, [el('.setting-label', { text: label }), control]);
 }
 
+// Контурная корзина (для «Удалить все данные»): эмодзи 🗑 в тёмной теме почти не
+// видно, поэтому рисуем SVG и красим в --red — заметно в обеих темах.
+const TRASH_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9.5 7V5.6A1.6 1.6 0 0 1 11.1 4h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9l.8-12M10 11v6M14 11v6"/></svg>';
+
 function navRow(icon, label, onClick, danger, iconClass) {
   return el('.nav-row', { class: danger ? 'danger' : '', onClick }, [
-    el('.nav-icon', { class: iconClass || '', text: icon }),
+    danger ? el('.nav-icon.nav-icon-danger', { html: TRASH_SVG }) : el('.nav-icon', { class: iconClass || '', text: icon }),
     el('.nav-label', { text: label }),
     danger ? null : el('.nav-chevron', { text: '›' }),
   ]);
