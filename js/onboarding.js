@@ -12,12 +12,17 @@ import { el, clear } from './dom.js';
 // shape — форма рамки: 'rect' (скруглённый прямоугольник) | 'circle' (круг).
 // Разворачиваем пошагово: пока только базовая навигация по интерфейсу.
 const STEPS = [
-  { key: 'menu',     target: '#menu-btn',     shape: 'rect'   },
-  { key: 'balance',  target: '#head-balance', shape: 'rect'   },
-  { key: 'budget',   target: '#budget-ring',  shape: 'circle' },
-  { key: 'settings', target: '#settings-btn', shape: 'rect'   },
-  { key: 'amount',   target: '.entry-amount', shape: 'rect'   },
-  { key: 'plus',     target: '.entry-plus',   shape: 'circle' },
+  { key: 'menu',     target: '#menu-btn',              shape: 'rect'   },
+  { key: 'balance',  target: '#head-balance',          shape: 'rect'   },
+  { key: 'budget',   target: '#budget-ring',           shape: 'circle' },
+  { key: 'settings', target: '#settings-btn',          shape: 'rect'   },
+  { key: 'amount',   target: '.entry-amount',          shape: 'rect'   },
+  { key: 'plus',     target: '.entry-plus',            shape: 'circle' },
+  { key: 'keypad',   target: '.entry-keypad',          shape: 'rect'   },
+  { key: 'dot',      target: '.key-dot',               shape: 'rect'   },
+  { key: 'cats',     target: '.cat-viewport',          shape: 'rect'   },
+  { key: 'history',  target: '.mini-hist .swipe-wrap', shape: 'rect'   },
+  { key: 'expand',   target: '.mini-more',             shape: 'rect'   },
 ];
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -83,6 +88,7 @@ function runTour() {
     overlay.remove();
     document.body.classList.remove('modal-open');
     window.removeEventListener('resize', reposition);
+    window.removeEventListener('scroll', reposition, true);
     if (!store.getState().settings.onboarded) await store.setSetting('onboarded', true);
   };
   skip.addEventListener('click', finish);
@@ -110,14 +116,14 @@ function runTour() {
   // стрелка не выходила слишком короткой (тогда подсказку опускаем дальше).
   const GAP_R = 11, MIN_LEN = 62, EDGE = 6;
 
-  // Позиция подсказки: под целью, если она в верхней половине экрана, иначе над.
-  // Отодвигаем на GAP_R + MIN_LEN + EDGE, чтобы гарантировать длину стрелки.
+  // Позиция подсказки: со стороны цели, где больше свободного места. Отодвигаем
+  // на GAP_R + MIN_LEN + EDGE, чтобы гарантировать длину стрелки.
   const positionPop = (rect) => {
     const vw = window.innerWidth, vh = window.innerHeight, m = 12;
     const pw = pop.offsetWidth, ph = pop.offsetHeight;
     let left = Math.round(rect.left + rect.width / 2 - pw / 2);
     left = Math.max(m, Math.min(left, vw - pw - m));
-    const below = rect.top < vh * 0.5;
+    const below = (vh - rect.bottom) >= rect.top;
     let top = below
       ? rect.top + rect.height + GAP_R + EDGE + MIN_LEN
       : rect.top - GAP_R - EDGE - MIN_LEN - ph;
@@ -166,8 +172,9 @@ function runTour() {
     drawArrow(ringBox, popBox);
   };
   window.addEventListener('resize', reposition);
-
-  // Переход по шагам с пропуском невидимых целей. dir: +1 вперёд, -1 назад.
+  // Пересчёт при прокрутке (нижние цели могут быть за пределами экрана).
+  // Фаза перехвата — чтобы ловить прокрутку любого внутреннего контейнера.
+  window.addEventListener('scroll', reposition, true);
   const step = (dir) => {
     let i = idx + dir;
     while (i >= 0 && i < STEPS.length && !visibleRect(STEPS[i].target)) i += dir;
@@ -178,6 +185,9 @@ function runTour() {
   const show = (i) => {
     idx = i;
     curStep = STEPS[i];
+    // Прокручиваем цель в зону видимости (нижние элементы могут быть за краем).
+    const node = document.querySelector(curStep.target);
+    if (node && node.scrollIntoView) node.scrollIntoView({ block: 'center', behavior: 'auto' });
     title.textContent = t('ob_' + curStep.key + '_t');
     desc.textContent = t('ob_' + curStep.key + '_d');
     // «Далее» на всех, кроме последнего видимого шага впереди.
