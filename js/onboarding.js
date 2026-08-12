@@ -27,8 +27,9 @@ const STEPS = [
   // категорий) и показываем анимацию свайпа влево/вправо (Расходы⇄Доходы).
   { key: 'swipe',    region: 'topSwipe',               shape: 'rect',   zone: 'swipe', pad: 0, swipeDemo: true, moveSel: '.home-pager' },
   { key: 'cats',     target: '.cat-pager',             shape: 'rect',   zone: 'cats' },
-  // Пустая ячейка «+» — как добавить категорию.
-  { key: 'addcat',   target: '.cat-add',               shape: 'rect',   zone: 'cats' },
+  // Пустая ячейка «+» — как добавить категорию. Берём ту, что на видимой странице
+  // (по умолчанию это slot 8, правая-нижняя на 1-й странице), а не за краем экрана.
+  { key: 'addcat',   onScreenOf: '.cat-add',           shape: 'rect',   zone: 'cats' },
   // Свайп категорий: двигаем .cat-track — реально «выезжает» вторая страница.
   { key: 'swipecats', target: '.cat-pager',            shape: 'rect',   zone: 'cats', swipeDemo: true, moveSel: '.cat-track', demoDirs: [-1] },
   { key: 'history',  target: '.mini-hist .swipe-wrap', shape: 'rect',   zone: 'hist' },
@@ -73,6 +74,19 @@ function targetRect(step) {
       .filter(Boolean).map((e) => e.getBoundingClientRect().top).filter((y) => y > -50);
     const top = tops.length ? Math.min(...tops) : k.top;
     return { left: k.left, top, right: k.right, bottom: k.bottom, width: k.right - k.left, height: k.bottom - top };
+  }
+  // Первый элемент из onScreenOf, реально находящийся в пределах экрана (не за
+  // краем на соседней странице карусели).
+  if (step.onScreenOf) {
+    const vw = window.innerWidth;
+    for (const n of document.querySelectorAll(step.onScreenOf)) {
+      const r = n.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      if (r.width > 2 && r.height > 2 && cx > 4 && cx < vw - 4) {
+        return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
+      }
+    }
+    return null;
   }
   if (step.unionOf) {
     let L = Infinity, T = Infinity, R = -Infinity, B = -Infinity, any = false;
