@@ -1,6 +1,6 @@
 // models.js — фабрики сущностей и данные по умолчанию.
 
-export const APP_VERSION = '1.91';
+export const APP_VERSION = '1.92';
 
 export function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -31,23 +31,28 @@ export const DEFAULT_TILE_MAP = {
   other_income:  { color: '#726B65' },
 };
 
+// Позиции (order) заданы явно: у расходов на первой странице 7 категорий и одна
+// пустая ячейка «+» (slot 7 пропущен), ещё две категории — на второй странице
+// (slots 8–9). Так пользователь сразу видит, что категории можно добавлять и что
+// список продолжается на следующей странице.
 export const DEFAULT_CATEGORIES = [
   // Расходы (иконки-плитки)
-  { key: 'groceries',     name: 'Продукты',    type: 'expense', icon: '🛒', color: '#993229', iconKey: 'groceries' },
-  { key: 'cafe',          name: 'Кафе',        type: 'expense', icon: '☕️', color: '#993229', iconKey: 'cafe-restaurants' },
-  { key: 'transport',     name: 'Транспорт',   type: 'expense', icon: '🚕', color: '#305A88', iconKey: 'public-transport' },
-  { key: 'housing',       name: 'Жильё',       type: 'expense', icon: '🏠', color: '#84542A', iconKey: 'rent-mortgage' },
-  { key: 'health',        name: 'Здоровье',    type: 'expense', icon: '💊', color: '#2C775C', iconKey: 'doctors-diagnostics' },
-  { key: 'entertainment', name: 'Развлечения', type: 'expense', icon: '🎬', color: '#96782C', iconKey: 'cinema-theatre-concerts' },
-  { key: 'shopping',      name: 'Покупки',     type: 'expense', icon: '🛍', color: '#8A3865', iconKey: 'clothing-shoes' },
-  { key: 'communication', name: 'Связь',       type: 'expense', icon: '📱', color: '#84542A', iconKey: 'internet-tv' },
-  { key: 'other',         name: 'Прочее',      type: 'expense', icon: '🔖', color: '#726B65', iconKey: 'miscellaneous' },
+  { key: 'groceries',     name: 'Продукты',    type: 'expense', icon: '🛒', color: '#993229', iconKey: 'groceries',              order: 0 },
+  { key: 'cafe',          name: 'Кафе',        type: 'expense', icon: '☕️', color: '#993229', iconKey: 'cafe-restaurants',       order: 1 },
+  { key: 'transport',     name: 'Транспорт',   type: 'expense', icon: '🚕', color: '#305A88', iconKey: 'public-transport',       order: 2 },
+  { key: 'housing',       name: 'Жильё',       type: 'expense', icon: '🏠', color: '#84542A', iconKey: 'rent-mortgage',          order: 3 },
+  { key: 'health',        name: 'Здоровье',    type: 'expense', icon: '💊', color: '#2C775C', iconKey: 'doctors-diagnostics',    order: 4 },
+  { key: 'entertainment', name: 'Развлечения', type: 'expense', icon: '🎬', color: '#96782C', iconKey: 'cinema-theatre-concerts', order: 5 },
+  { key: 'shopping',      name: 'Покупки',     type: 'expense', icon: '🛍', color: '#8A3865', iconKey: 'clothing-shoes',         order: 6 },
+  // slot 7 — пустая ячейка «+»
+  { key: 'communication', name: 'Связь',       type: 'expense', icon: '📱', color: '#84542A', iconKey: 'internet-tv',            order: 8 },
+  { key: 'other',         name: 'Прочее',      type: 'expense', icon: '🔖', color: '#726B65', iconKey: 'miscellaneous',          order: 9 },
   // Доходы (эмодзи, цвета из палитры)
-  { key: 'salary',        name: 'Зарплата',    type: 'income',  icon: '💼', color: '#2E8A5F' },
-  { key: 'sidejob',       name: 'Подработка',  type: 'income',  icon: '🧾', color: '#2E8A5F' },
-  { key: 'gift',          name: 'Подарок',     type: 'income',  icon: '🎁', color: '#3F7836' },
-  { key: 'investments',   name: 'Инвестиции',  type: 'income',  icon: '📈', color: '#2A2F51' },
-  { key: 'other_income',  name: 'Прочее',      type: 'income',  icon: '💰', color: '#726B65' },
+  { key: 'salary',        name: 'Зарплата',    type: 'income',  icon: '💼', color: '#2E8A5F', order: 0 },
+  { key: 'sidejob',       name: 'Подработка',  type: 'income',  icon: '🧾', color: '#2E8A5F', order: 1 },
+  { key: 'gift',          name: 'Подарок',     type: 'income',  icon: '🎁', color: '#3F7836', order: 2 },
+  { key: 'investments',   name: 'Инвестиции',  type: 'income',  icon: '📈', color: '#2A2F51', order: 3 },
+  { key: 'other_income',  name: 'Прочее',      type: 'income',  icon: '💰', color: '#726B65', order: 4 },
 ];
 
 export function makeCategory({ name, type, icon, color, order, key, image, currency, iconKey, iconColor, noBg }) {

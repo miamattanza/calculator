@@ -47,12 +47,26 @@ export async function init() {
   for (const row of settingsRows) settings[row.key] = row.value;
   state.settings = settings;
 
-  // Первый запуск — создаём дефолтные категории (с ключами перевода).
+  // Первый запуск — создаём дефолтные категории (с ключами перевода и заданными
+  // позициями: у расходов есть пустая ячейка «+» и вторая страница).
   if (!settings.seeded || categories.length === 0) {
-    const seeded = DEFAULT_CATEGORIES.map((c, i) => makeCategory({ ...c, order: i }));
+    const seeded = DEFAULT_CATEGORIES.map((c) => makeCategory(c));
     await db.bulkPut('categories', seeded);
     state.categories = seeded;
     await setSetting('seeded', true);
+    // Позиции уже расставлены (с «дырой» под «+»), поэтому нормализацию слотов
+    // для нового пользователя пропускаем — иначе она бы «схлопнула» пустую ячейку.
+    await setSetting('slotsV1', true);
+    // Пример операции, чтобы история не была пустой (демо доходит до её шагов).
+    // Её легко удалить свайпом.
+    if (state.transactions.length === 0) {
+      const sample = seeded.find((c) => c.type === 'expense' && c.key === 'other');
+      if (sample) {
+        const trx = makeTransaction({ type: 'expense', amount: 8, currency: state.settings.baseCurrency || 'RUB', rate: 1, categoryId: sample.id, date: dateISO(), note: t('sample_note') });
+        await db.bulkPut('transactions', [trx]);
+        state.transactions.push(trx);
+      }
+    }
   }
 
   // Миграция: у ранее созданных установок дефолтные категории без ключа —

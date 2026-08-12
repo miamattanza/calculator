@@ -27,8 +27,10 @@ const STEPS = [
   // категорий) и показываем анимацию свайпа влево/вправо (Расходы⇄Доходы).
   { key: 'swipe',    region: 'topSwipe',               shape: 'rect',   zone: 'swipe', pad: 0, swipeDemo: true, moveSel: '.home-pager' },
   { key: 'cats',     target: '.cat-pager',             shape: 'rect',   zone: 'cats' },
-  // Тот же жест свайпа для категорий (листание страниц) — окно не двигается.
-  { key: 'swipecats', target: '.cat-pager',            shape: 'rect',   zone: 'cats', swipeDemo: true, moveSel: '.cat-viewport' },
+  // Пустая ячейка «+» — как добавить категорию.
+  { key: 'addcat',   target: '.cat-add',               shape: 'rect',   zone: 'cats' },
+  // Свайп категорий: двигаем .cat-track — реально «выезжает» вторая страница.
+  { key: 'swipecats', target: '.cat-pager',            shape: 'rect',   zone: 'cats', swipeDemo: true, moveSel: '.cat-track', demoDirs: [-1] },
   { key: 'history',  target: '.mini-hist .swipe-wrap', shape: 'rect',   zone: 'hist' },
   // И для строки истории — свайп влево (Удалить) и вправо (Комментарий).
   { key: 'swipehist', target: '.mini-hist .swipe-wrap', shape: 'rect',  zone: 'hist', swipeDemo: true, rowSwipe: true },
@@ -147,7 +149,7 @@ function runTour() {
   // сдвигается сам элемент (окно/страница/строка) — на ту же величину. Кадр-рамка
   // стоит на месте. Для истории двигаем плашку через её __swipeDemo (Удалить/Коммент.).
   const resetMoved = () => {
-    ['.home-pager', '.cat-viewport'].forEach((s) => { const n = document.querySelector(s); if (n && n.style.transform) { n.style.transition = ''; n.style.transform = ''; } });
+    ['.home-pager', '.cat-track'].forEach((s) => { const n = document.querySelector(s); if (n && n.style.transform) { n.style.transition = ''; n.style.transform = ''; } });
     const row = document.querySelector('.mini-hist .swipe-wrap');
     if (row && row.__swipeDemo) row.__swipeDemo.reset();
   };
@@ -165,7 +167,7 @@ function runTour() {
     const moveEl = !row ? document.querySelector(curStep.moveSel) : null;
     let dist;
     if (row && row.__swipeDemo) { row.__swipeDemo.measure(); const w = row.__swipeDemo.widths(); dist = dir < 0 ? w.del : Math.min(w.comment, rb.w * 0.7); }
-    else dist = Math.min(rb.w * 0.42, 130);
+    else dist = Math.min(rb.w * 0.5, 160);
     const margin = 26;
     const startX = dir < 0 ? rb.l + rb.w - margin : rb.l + margin;
     const endX = startX + dir * dist;
@@ -197,7 +199,7 @@ function runTour() {
   const startDemo = () => {
     stopDemo();
     if (!curStep || !curStep.swipeDemo) return;
-    const dirs = [-1, 1];   // влево, затем вправо
+    const dirs = curStep.demoDirs || [-1, 1];   // влево, затем вправо
     let i = 0;
     const loop = () => { if (!active || !curStep.swipeDemo) return; playSwipe(dirs[i++ % dirs.length], () => { demoTimer = setTimeout(loop, 480); }); };
     demoTimer = setTimeout(loop, 500);
