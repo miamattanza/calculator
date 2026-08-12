@@ -223,7 +223,11 @@ function runTour() {
     const py = pad && pad.y != null ? pad.y : (typeof pad === 'number' ? pad : 7);
     let w = rect.width + px * 2, h = rect.height + py * 2, l = rect.left - px, t2 = rect.top - py;
     if (shape === 'circle') { const d = Math.max(w, h); l -= (d - w) / 2; t2 -= (d - h) / 2; w = h = d; }
-    return { l, t: t2, w, h };
+    // Радиус скругления в px (а не 50%): интерполируется в tween, поэтому переход
+    // прямоугольник↔круг идёт гармонично — оба контура (белый и бирюзовый) скругляются
+    // одинаково, без «виньетки».
+    const r = shape === 'circle' ? Math.min(w, h) / 2 : Math.min(13, Math.min(w, h) / 2);
+    return { l, t: t2, w, h, r };
   };
 
   const zoneRect = (zone) => {
@@ -273,7 +277,7 @@ function runTour() {
     return { left, top, width: pw, height: ph };
   };
 
-  const applyRing = (b) => { ring.style.display = ''; ring.style.left = b.l + 'px'; ring.style.top = b.t + 'px'; ring.style.width = b.w + 'px'; ring.style.height = b.h + 'px'; };
+  const applyRing = (b) => { ring.style.display = ''; ring.style.left = b.l + 'px'; ring.style.top = b.t + 'px'; ring.style.width = b.w + 'px'; ring.style.height = b.h + 'px'; if (b.r != null) ring.style.borderRadius = b.r + 'px'; };
   const applyPop = (b) => { pop.style.left = b.l + 'px'; pop.style.top = b.t + 'px'; pop.style.height = b.h + 'px'; };
   const setCircle = (on) => ring.classList.toggle('circle', on);
 
@@ -323,7 +327,7 @@ function runTour() {
   };
 
   const lerp = (a, b, e) => a + (b - a) * e;
-  const lerpBox = (a, b, e) => ({ l: lerp(a.l, b.l, e), t: lerp(a.t, b.t, e), w: lerp(a.w, b.w, e), h: lerp(a.h, b.h, e) });
+  const lerpBox = (a, b, e) => ({ l: lerp(a.l, b.l, e), t: lerp(a.t, b.t, e), w: lerp(a.w, b.w, e), h: lerp(a.h, b.h, e), r: lerp(a.r != null ? a.r : 13, b.r != null ? b.r : 13, e) });
   const easeOut = (x) => 1 - Math.pow(1 - x, 3);
 
   // Единый tween: скролл + рамка + окно + стрелка синхронно.
@@ -382,7 +386,7 @@ function runTour() {
     const dotEls = [];
     for (let k = 0; k < STEPS.length; k++) { const d = el('.tour-dot', { class: k === i ? 'active' : '' }); dots.appendChild(d); dotEls.push(d); }
     activeDot = dotEls[i];
-    setCircle(curStep.shape === 'circle');
+    // Форма рамки задаётся радиусом в px (см. ringBoxFrom) и интерполируется.
 
     // Сторона окна и грань со шкалой (сверху/снизу — к цели).
     const side = ZONE_SIDE[curStep.zone] || 'below';
