@@ -3,7 +3,7 @@
 
 import * as store from '../store.js';
 import { t } from '../i18n.js';
-import { el, clear, segmented, field, rowCols } from '../dom.js';
+import { el, clear, segmented, field, rowCols, catIcon } from '../dom.js';
 import { money, dateISO, addDays } from '../format.js';
 import { donut, groupedBars } from '../charts.js';
 
@@ -62,9 +62,15 @@ export function renderAnalytics(root) {
     const legend = el('.legend');
     for (const b of breakdown) {
       const pct = total > 0 ? Math.round(b.amount / total * 100) : 0;
+      const color = b.category ? b.category.color : '#726B65';
+      // Иконка категории + горизонтальная «полоса-данные» позади названия: длина
+      // пропорциональна доле категории от всех трат (тот же %, что справа).
       legend.appendChild(el('.legend-row', {}, [
-        el('.legend-dot', { style: { background: b.category ? b.category.color : '#726B65' } }),
-        el('.legend-name', { text: b.category ? `${b.category.icon} ${store.categoryName(b.category)}` : '—' }),
+        b.category ? catIcon(b.category, 'legend-icon') : el('.legend-icon', { style: { '--chip': color } }),
+        el('.legend-bar-wrap', {}, [
+          el('.legend-bar', { style: { width: Math.max(pct, 3) + '%', background: color } }),
+          el('.legend-name', { text: b.category ? store.categoryName(b.category) : '—' }),
+        ]),
         el('.legend-pct', { text: pct + '%' }),
         el('.legend-amount', { text: money(b.amount, base) }),
       ]));

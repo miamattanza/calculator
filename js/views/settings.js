@@ -80,7 +80,7 @@ export function renderSettings(root, rerenderApp) {
     el('.setting-hint', { text: t('current_currency_hint') }),
     settingRow(t('convert_all'), convToggle),
     el('.setting-hint', { text: t('convert_all_hint') }),
-    navRow('💱', t('converter'), () => openConverter(), false, 'nav-icon-light'),
+    navRow(CONVERTER_SVG, t('converter'), () => openConverter()),
   ]);
   root.appendChild(curGroup);
 
@@ -165,9 +165,18 @@ function settingRow(label, control) {
 // видно, поэтому рисуем SVG и красим в --red — заметно в обеих темах.
 const TRASH_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9.5 7V5.6A1.6 1.6 0 0 1 11.1 4h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9l.8-12M10 11v6M14 11v6"/></svg>';
 
+// Иконка конвертера контуром (эмодзи 💱 в тёмной теме местами не видно) — две
+// встречные стрелки, красится currentColor и видна в обеих темах.
+const CONVERTER_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5h13M13 5l3.5 3.5L13 12M20.5 15.5h-13M11 12l-3.5 3.5L11 19"/></svg>';
+
 function navRow(icon, label, onClick, danger, iconClass) {
+  const iconNode = danger
+    ? el('.nav-icon.nav-icon-danger', { html: TRASH_SVG })
+    : (icon && icon[0] === '<'
+        ? el('.nav-icon', { class: iconClass || '', html: icon })
+        : el('.nav-icon', { class: iconClass || '', text: icon }));
   return el('.nav-row', { class: danger ? 'danger' : '', onClick }, [
-    danger ? el('.nav-icon.nav-icon-danger', { html: TRASH_SVG }) : el('.nav-icon', { class: iconClass || '', text: icon }),
+    iconNode,
     el('.nav-label', { text: label }),
     danger ? null : el('.nav-chevron', { text: '›' }),
   ]);

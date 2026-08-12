@@ -25,13 +25,13 @@ const STEPS = [
   { key: 'cancel',   target: '.key-del',               shape: 'rect',   zone: 'keys' },
   // Свайп-демо: подсвечиваем область «шапка + табло + клавиши» (кроме меню
   // категорий) и показываем анимацию свайпа влево/вправо (Расходы⇄Доходы).
-  { key: 'swipe',    region: 'topSwipe',               shape: 'rect',   zone: 'swipe', pad: 0, swipeDemo: true },
+  { key: 'swipe',    region: 'topSwipe',               shape: 'rect',   zone: 'swipe', pad: 0, swipeDemo: true, peekSel: '.home-pager', peekDx: -50 },
   { key: 'cats',     target: '.cat-viewport',          shape: 'rect',   zone: 'cats' },
   // Тот же жест свайпа для категорий (листание страниц) — окно не двигается.
-  { key: 'swipecats', target: '.cat-viewport',         shape: 'rect',   zone: 'cats', swipeDemo: true },
+  { key: 'swipecats', target: '.cat-viewport',         shape: 'rect',   zone: 'cats', swipeDemo: true, peekSel: '.cat-viewport', peekDx: -50 },
   { key: 'history',  target: '.mini-hist .swipe-wrap', shape: 'rect',   zone: 'hist' },
   // И для строки истории — свайп влево/вправо.
-  { key: 'swipehist', target: '.mini-hist .swipe-wrap', shape: 'rect',  zone: 'hist', swipeDemo: true },
+  { key: 'swipehist', target: '.mini-hist .swipe-wrap', shape: 'rect',  zone: 'hist', swipeDemo: true, peekSel: '.mini-hist .swipe-wrap .swipe-content', peekDx: -64 },
   { key: 'expand',   target: '.mini-more',             shape: 'rect',   zone: 'expand', tight: true, pad: { x: 16, y: 9 } },
 ];
 
@@ -131,10 +131,35 @@ function runTour() {
   // Текущее применённое состояние (для tween) и параметры зоны.
   let curStep = null, zonePop = null, zoneH = 0, activeDot = null;
   let ringApplied = null, popApplied = null;
-  let animId = 0, tweening = false, firstShow = true;
+  let animId = 0, tweening = false, firstShow = true, peekTimer = 0;
+
+  // «Живой» намёк: реально двигаем сам элемент (окно/страницу/строку) на секунду —
+  // видно, что он двигается и рядом есть ещё. Кадр-рамка при этом стоит на месте.
+  const stopPeek = () => { clearInterval(peekTimer); peekTimer = 0; };
+  const doPeek = (sel, dx) => {
+    const node = document.querySelector(sel);
+    if (!node) return;
+    node.style.transition = 'transform .34s cubic-bezier(.34,1.2,.5,1)';
+    const seq = [dx, Math.round(-dx * 0.55), 0];   // туда → чуть обратно → на место
+    let i = 0;
+    const nx = () => {
+      if (!active || i >= seq.length) { node.style.transition = ''; node.style.transform = ''; return; }
+      node.style.transform = `translateX(${seq[i++]}px)`;
+      setTimeout(nx, 360);
+    };
+    nx();
+  };
+  const startPeek = () => {
+    stopPeek();
+    if (!curStep || !curStep.swipeDemo || !curStep.peekSel) return;
+    const run = () => doPeek(curStep.peekSel, curStep.peekDx || -48);
+    setTimeout(run, 520);
+    peekTimer = setInterval(run, 2600);
+  };
 
   const finish = async () => {
     active = false;
+    stopPeek();
     cancelAnimationFrame(animId);
     overlay.remove();
     document.body.classList.remove('modal-open');
@@ -343,6 +368,7 @@ function runTour() {
       firstShow = false;
       if (doScroll) content.scrollTop = toScroll;
       settleNow();
+      startPeek();
       return;
     }
     tween({
@@ -351,6 +377,7 @@ function runTour() {
       fromPop: popApplied || finalPop, toPop: finalPop,
       dur: doScroll ? 540 : (zoneChanged ? 420 : 340),
     });
+    startPeek();
   };
 
   const first = STEPS.findIndex((s) => visible(s));

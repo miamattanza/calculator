@@ -435,6 +435,12 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .legend-dot.income { background: var(--green); }
 .legend-dot.expense { background: var(--red); }
 .legend-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Иконка категории в легенде (плитка/эмодзи). */
+.legend-icon { width: 28px; height: 28px; flex-shrink: 0; border-radius: 26%; display: flex; align-items: center; justify-content: center; font-size: 16px; overflow: hidden; background: color-mix(in srgb, var(--chip, #726B65) 30%, transparent); }
+/* Горизонтальная полоса-данные позади названия (длина = доля категории). */
+.legend-bar-wrap { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; height: 30px; }
+.legend-bar { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; opacity: 0.34; min-width: 4px; }
+.legend-bar-wrap .legend-name { position: relative; z-index: 1; flex: none; max-width: 100%; padding: 0 8px; }
 .legend-pct { color: var(--text-3); font-size: 13px; min-width: 34px; text-align: right; }
 .legend-amount { font-weight: 600; font-variant-numeric: tabular-nums; min-width: 70px; text-align: right; }
 
@@ -513,6 +519,7 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .nav-row.danger .nav-label { color: var(--red); }
 .nav-icon-danger { color: var(--red); display: flex; align-items: center; justify-content: center; }
 .nav-icon-danger svg { width: 19px; height: 19px; }
+.nav-icon svg { width: 21px; height: 21px; display: block; }
 .nav-chevron { color: var(--text-3); font-size: 20px; }
 .about-row { padding: 14px 16px; }
 .about-row p { font-size: 14px; color: var(--text-2); line-height: 1.5; }
