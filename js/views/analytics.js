@@ -60,15 +60,19 @@ export function renderAnalytics(root) {
     }));
 
     const legend = el('.legend');
+    // Длину полос считаем относительно САМОЙ крупной категории (у неё — вся ширина),
+    // иначе доли от общей суммы (обычно < 50%) короче названия и «диаграмма» не видна.
+    const maxAmount = breakdown.reduce((m, b) => Math.max(m, b.amount), 0) || 1;
     for (const b of breakdown) {
       const pct = total > 0 ? Math.round(b.amount / total * 100) : 0;
+      const barLen = Math.round(b.amount / maxAmount * 100);
       const color = b.category ? b.category.color : '#726B65';
-      // Сама «кнопка-плитка» с иконкой и названием удлиняется вправо на долю
-      // категории — сплошным цветом (тем же, что в круговой диаграмме). Иконка
-      // остаётся на месте, высота и радиус углов постоянны.
+      // Сама «кнопка-плитка» с иконкой и названием удлиняется вправо пропорционально
+      // сумме — сплошным цветом (тем же, что в круговой диаграмме). Иконка остаётся
+      // на месте, высота и радиус углов постоянны.
       legend.appendChild(el('.legend-row', {}, [
         el('.legend-track', {}, [
-          el('.legend-pill', { style: { '--chip': color, flexBasis: pct + '%' } }, [
+          el('.legend-pill', { style: { '--chip': color, flexBasis: barLen + '%' } }, [
             b.category ? catIcon(b.category, 'legend-icon') : el('.legend-icon', { style: { '--chip': color } }),
             el('.legend-name', { text: b.category ? store.categoryName(b.category) : '—' }),
           ]),

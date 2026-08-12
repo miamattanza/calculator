@@ -35,7 +35,9 @@ const STEPS = [
   { key: 'history',  target: '.mini-hist .swipe-wrap', shape: 'rect',   zone: 'hist' },
   // И для строки истории — свайп влево (Удалить) и вправо (Комментарий).
   { key: 'swipehist', target: '.mini-hist .swipe-wrap', shape: 'rect',  zone: 'hist', swipeDemo: true, rowSwipe: true },
-  { key: 'expand',   target: '.mini-more',             shape: 'rect',   zone: 'expand', tight: true, pad: { x: 16, y: 9 } },
+  // «Вся история» остаётся в зоне hist: окно объяснения не переезжает вниз —
+  // просто удлиняется стрелка к кнопке «Развернуть историю».
+  { key: 'expand',   target: '.mini-more',             shape: 'rect',   zone: 'hist', tight: true, pad: { x: 16, y: 9 } },
 ];
 
 // Сторона подсказки для каждой зоны: 'below' — окно под элементом (стрелка вверх,
@@ -333,9 +335,9 @@ function runTour() {
   // от активной точки шкалы (её x), с выходом из грани окна, обращённой к цели.
   const drawArrow = () => {
     if (!ringApplied || !popApplied) return;
-    // Шаги-демо свайпа: стрелку-указатель прячем — жест рисует аниматор (startDemo).
-    if (curStep && curStep.swipeDemo) { svg.style.display = 'none'; return; }
-    swipeHint.style.display = 'none';
+    // На шагах-демо свайпа стрелку-указатель ТОЖЕ рисуем (короткий заход к центру
+    // грани окна показа) — вместе с анимацией жеста; поэтому swipeHint не трогаем.
+    if (!(curStep && curStep.swipeDemo)) swipeHint.style.display = 'none';
     const rr = ringApplied, pr = popApplied;
     const rcx = rr.l + rr.w / 2, rcy = rr.t + rr.h / 2;
     const pcy = pr.t + pr.h / 2;

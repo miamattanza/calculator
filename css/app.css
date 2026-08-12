@@ -539,11 +539,31 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .field { display: flex; flex-direction: column; gap: 7px; }
 .field-label { font-size: 13px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.3px; padding-left: 2px; }
 .select { width: 100%; background: var(--fill); border: none; border-radius: 10px; padding: 12px 14px; font-size: 17px; }
-/* Дата + быстрая кнопка «Вчера» в одну строку. */
+/* Дата: слева — кнопка относительного дня, справа — сама дата (обе — явные кнопки). */
 .date-control { display: flex; gap: 8px; align-items: stretch; }
-.date-control .select { flex: 1; min-width: 0; }
-.btn-quick { flex: 0 0 auto; padding: 0 16px; border-radius: 10px; background: var(--fill); color: var(--accent); font-size: 15px; font-weight: 600; white-space: nowrap; }
-.btn-quick:active { background: var(--fill-2); }
+.date-rel { flex: 0 0 auto; padding: 0 16px; min-height: 46px; border-radius: 10px; white-space: nowrap;
+  background: color-mix(in srgb, var(--accent) 16%, var(--fill)); color: var(--accent);
+  font-size: 15px; font-weight: 700;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 34%, transparent); }
+.date-rel:active { background: color-mix(in srgb, var(--accent) 28%, var(--fill)); }
+.date-field { position: relative; flex: 1; min-width: 0; }
+.date-disp { width: 100%; min-height: 46px; box-sizing: border-box; display: flex; align-items: center; gap: 2px;
+  padding: 0 14px; border-radius: 10px; background: var(--fill); color: var(--text); font-size: 17px;
+  box-shadow: inset 0 0 0 1px var(--sep-strong); }
+.date-disp .date-day { font-weight: 700; display: inline-block; transform-origin: center; }
+.date-disp .date-rest { color: var(--text-2); }
+.date-disp .date-caret { margin-inline-start: auto; color: var(--text-3); font-size: 14px; }
+/* Нативный input поверх «дисплея» (прозрачный) — тап открывает системный календарь. */
+.date-native { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0;
+  opacity: 0; background: transparent; -webkit-appearance: none; appearance: none; }
+@keyframes dayBump {
+  0% { transform: scale(1) translateX(0); }
+  30% { transform: scale(1.28) translateX(-1.5px); }
+  55% { transform: scale(1.28) translateX(1.5px); }
+  100% { transform: scale(1) translateX(0); }
+}
+.date-disp .date-day.bump { animation: dayBump .3s ease; }
+@media (prefers-reduced-motion: reduce) { .date-disp .date-day.bump { animation: none; } }
 select.select { appearance: none; -webkit-appearance: none; }
 .amount-wrap { display: flex; align-items: center; gap: 8px; justify-content: center; padding: 8px 0; }
 .amount-input { width: auto; max-width: 70%; text-align: right; background: none; border: none; font-size: 44px; font-weight: 700; letter-spacing: -1px; }

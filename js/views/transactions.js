@@ -4,7 +4,7 @@
 import * as store from '../store.js';
 import { t } from '../i18n.js';
 import { el, clear, sheet, field, segmented, toast, confirmDialog, choiceDialog, catIcon } from '../dom.js';
-import { money, signedMoney, formatDate, dateISO, CURRENCIES, roundRate, locale } from '../format.js';
+import { money, signedMoney, formatDate, dateISO, addDays, CURRENCIES, roundRate, locale } from '../format.js';
 import { openSearch } from './search.js';
 import { openCategoryEditor, openConverter } from './settings.js';
 
@@ -86,19 +86,44 @@ export function openTransactionForm(existing) {
   }
   renderCategories();
 
-  // Дата (одно из самых частых действий) + быстрая кнопка «Вчера» — чтобы не
-  // открывать календарь.
-  const dateInput = el('input.select', { type: 'date', value: model.date });
-  dateInput.addEventListener('change', () => { model.date = dateInput.value; });
-  const yesterdayBtn = el('button.btn-quick', {
-    type: 'button', text: t('yesterday'),
-    onClick: () => {
-      const d = new Date(); d.setDate(d.getDate() - 1);
-      const iso = d.toISOString().slice(0, 10);
-      model.date = iso; dateInput.value = iso;
-    },
+  // Дата: слева — кнопка «относительного дня» (Вчера → Позавчера → 3 дня назад →
+  // … → Неделя назад, по кругу), справа — сама дата (тап открывает календарь).
+  // Обе явно выглядят как нажимаемые. При смене относительного дня число дня в
+  // дате слегка «подпрыгивает».
+  const relState = { n: 0 };
+  const relDayLabel = (n) => {
+    if (n === 1) return t('yesterday');
+    if (n === 2) return t('day_before_yesterday');
+    if (n >= 7) return t('week_ago');
+    const L = store.getState().settings.language;
+    if (L === 'ru') return n + (n <= 4 ? ' дня' : ' дней') + ' назад';
+    return t('days_ago').replace('%n', String(n));
+  };
+  const dayText = el('span.date-day');
+  const restText = el('span.date-rest');
+  const dateCaret = el('span.date-caret', { 'aria-hidden': 'true', text: '▾' });
+  const nativeDate = el('input.date-native', { type: 'date', value: model.date, 'aria-label': t('date') });
+  const dateDisp = el('.date-disp', {}, [dayText, restText, dateCaret]);
+  const relBtn = el('button.date-rel', { type: 'button', text: t('yesterday') });
+  const renderDate = (bump) => {
+    const d = new Date(model.date + 'T00:00:00');
+    dayText.textContent = String(d.getDate());
+    restText.textContent = ' ' + formatDate(model.date, { month: 'short', year: 'numeric' });
+    if (bump) { dayText.classList.remove('bump'); void dayText.offsetWidth; dayText.classList.add('bump'); }
+  };
+  nativeDate.addEventListener('change', () => {
+    if (!nativeDate.value) return;
+    model.date = nativeDate.value; relState.n = 0; relBtn.textContent = t('yesterday'); renderDate(true);
   });
-  const dateControl = el('.date-control', {}, [dateInput, yesterdayBtn]);
+  relBtn.addEventListener('click', () => {
+    relState.n = relState.n >= 7 ? 1 : relState.n + 1;
+    const iso = addDays(dateISO(), -relState.n);
+    model.date = iso; nativeDate.value = iso;
+    relBtn.textContent = relDayLabel(relState.n);
+    renderDate(true);
+  });
+  renderDate(false);
+  const dateControl = el('.date-control', {}, [relBtn, el('.date-field', {}, [dateDisp, nativeDate])]);
 
   // Заметка
   const noteInput = el('input.select', { type: 'text', placeholder: t('note_ph'), value: model.note });
