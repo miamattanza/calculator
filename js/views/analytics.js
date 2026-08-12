@@ -63,13 +63,15 @@ export function renderAnalytics(root) {
     for (const b of breakdown) {
       const pct = total > 0 ? Math.round(b.amount / total * 100) : 0;
       const color = b.category ? b.category.color : '#726B65';
-      // Иконка категории + горизонтальная «полоса-данные» позади названия: длина
-      // пропорциональна доле категории от всех трат (тот же %, что справа).
+      // Сама «кнопка-плитка» с иконкой и названием удлиняется вправо на долю
+      // категории — сплошным цветом (тем же, что в круговой диаграмме). Иконка
+      // остаётся на месте, высота и радиус углов постоянны.
       legend.appendChild(el('.legend-row', {}, [
-        b.category ? catIcon(b.category, 'legend-icon') : el('.legend-icon', { style: { '--chip': color } }),
-        el('.legend-bar-wrap', {}, [
-          el('.legend-bar', { style: { width: Math.max(pct, 3) + '%', background: color } }),
-          el('.legend-name', { text: b.category ? store.categoryName(b.category) : '—' }),
+        el('.legend-track', {}, [
+          el('.legend-pill', { style: { '--chip': color, flexBasis: pct + '%' } }, [
+            b.category ? catIcon(b.category, 'legend-icon') : el('.legend-icon', { style: { '--chip': color } }),
+            el('.legend-name', { text: b.category ? store.categoryName(b.category) : '—' }),
+          ]),
         ]),
         el('.legend-pct', { text: pct + '%' }),
         el('.legend-amount', { text: money(b.amount, base) }),

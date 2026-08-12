@@ -158,6 +158,9 @@ function runTour() {
   let ringApplied = null, popApplied = null;
   let animId = 0, tweening = false, firstShow = true;
   let demoRaf = 0, demoTimer = 0;
+  // Текущий «живой» сдвиг демо-свайпа (для плавного завершения при нажатии «Далее»
+  // в момент анимации): какой элемент/строку двигаем и на сколько пикселей сейчас.
+  let swipeMoveEl = null, swipeRow = null, swipeOff = 0;
 
   // Синхронный жест: «палец»-точка едет вдоль стрелки, и ОДНОВРЕМЕННО реально
   // сдвигается сам элемент (окно/страница/строка) — на ту же величину. Кадр-рамка
@@ -170,7 +173,34 @@ function runTour() {
   const stopDemo = () => {
     cancelAnimationFrame(demoRaf); clearTimeout(demoTimer); demoRaf = 0; demoTimer = 0;
     swipeHint.style.display = 'none'; swipeDot.classList.remove('fade');
+    swipeMoveEl = null; swipeRow = null; swipeOff = 0;
     resetMoved();
+  };
+  // Если «Далее»/«Назад» нажали, пока свайп «в разгаре» (элемент сдвинут) — сперва
+  // быстро, но плавно возвращаем его на место и только затем переключаем шаг, иначе
+  // следующий шаг измерялся бы по сдвинутой позиции и «доигрывал» бы чужое движение.
+  const quickSettle = (done) => {
+    if (Math.abs(swipeOff) < 2) { done(); return; }
+    cancelAnimationFrame(demoRaf); clearTimeout(demoTimer); demoRaf = 0; demoTimer = 0;
+    const mel = swipeMoveEl, row = swipeRow;
+    swipeMoveEl = null; swipeRow = null; swipeOff = 0;
+    let finished = false;
+    const fin = () => {
+      if (finished) return; finished = true;
+      if (mel) { mel.style.transition = ''; mel.style.transform = ''; }
+      if (row && row.__swipeDemo) row.__swipeDemo.reset();
+      swipeDot.classList.remove('fade'); swipeHint.style.display = 'none';
+      done();
+    };
+    swipeDot.classList.add('fade');
+    if (mel) {
+      mel.style.transition = 'transform .16s ease'; mel.style.transform = 'translateX(0)';
+      mel.addEventListener('transitionend', fin, { once: true });
+      setTimeout(fin, 210);
+    } else if (row && row.__swipeDemo) {
+      row.__swipeDemo.reset();
+      setTimeout(fin, 200);
+    } else { fin(); }
   };
   const easeIO = (x) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
 
@@ -199,10 +229,12 @@ function runTour() {
       const p = Math.min(1, (now - t0) / DUR), e = easeIO(p);
       const x = startX + (endX - startX) * e;
       setDot(x); applyMove(x - startX);
+      swipeMoveEl = moveEl; swipeRow = row; swipeOff = x - startX;
       if (p < 1) { demoRaf = requestAnimationFrame(frame); return; }
       demoTimer = setTimeout(() => {
         if (row && row.__swipeDemo) row.__swipeDemo.reset();
         else if (moveEl) { moveEl.style.transition = 'transform .32s ease'; moveEl.style.transform = 'translateX(0)'; }
+        swipeMoveEl = null; swipeRow = null; swipeOff = 0;
         swipeDot.classList.add('fade');
         demoTimer = setTimeout(() => { swipeDot.classList.remove('fade'); done && done(); }, 380);
       }, HOLD);
@@ -230,8 +262,8 @@ function runTour() {
     if (!store.getState().settings.onboarded) await store.setSetting('onboarded', true);
   };
   skip.addEventListener('click', finish);
-  next.addEventListener('click', () => step(1));
-  back.addEventListener('click', () => step(-1));
+  next.addEventListener('click', () => quickSettle(() => step(1)));
+  back.addEventListener('click', () => quickSettle(() => step(-1)));
 
   // ── Геометрия ──────────────────────────────────────────────────────────────
   const ringBoxFrom = (rect, shape, pad) => {
@@ -389,6 +421,9 @@ function runTour() {
     const prev = curStep;
     idx = i; curStep = STEPS[i];
     const zoneChanged = !prev || prev.zone !== curStep.zone;
+    // Гарантируем измерение цели из «покоя»: сбрасываем возможный остаточный сдвиг
+    // (в т.ч. на предке цели), иначе рамка/окно встанут по сдвинутой позиции.
+    resetMoved();
 
     title.textContent = t('ob_' + curStep.key + '_t');
     desc.textContent = t('ob_' + curStep.key + '_d');

@@ -197,32 +197,35 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 /* Шкала-точки — на грани окна, обращённой к цели (сверху по умолчанию, снизу для
    окна над элементом), растянута по ширине: начало стрелки привязано к точке. */
 .tour-dots { display: flex; gap: 4px; justify-content: space-between; margin: 0 2px 12px; order: 0; }
-.tour-pop.dots-bottom .tour-dots { order: 5; margin: 12px 2px 0; }
+.tour-pop.dots-bottom .tour-dots { order: 5; margin: 12px 2px 0; margin-top: auto; }
 .tour-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sep-strong); flex: 0 0 auto; }
 .tour-dot.active { background: var(--tour-accent); transform: scale(1.25); }
-.tour-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.tour-nav { display: flex; align-items: center; gap: 8px; margin-inline-end: 4px; }
-.tour-back { color: var(--text-2); font-size: 15px; font-weight: 600; padding: 10px 16px; border-radius: 12px; background: var(--fill); }
+.tour-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tour-nav { display: flex; align-items: center; gap: 6px; margin-inline-end: 6px; }
+.tour-back { color: var(--text-2); font-size: 15px; font-weight: 600; padding: 10px 13px; border-radius: 12px; background: var(--fill); }
 .tour-back:active { background: var(--fill-2); }
-.tour-skip { color: var(--text-3); font-size: 15px; padding: 8px 4px; }
-.tour-next { background: var(--tour-accent); color: #fff; font-weight: 600; font-size: 15px; padding: 10px 22px; border-radius: 12px; }
+.tour-skip { color: var(--text-3); font-size: 15px; padding: 8px 2px; }
+.tour-next { background: var(--tour-accent); color: #fff; font-weight: 600; font-size: 15px; padding: 10px 17px; border-radius: 12px; }
 .tour-next:active { filter: brightness(0.92); }
 @media (prefers-reduced-motion: reduce) { .tour-arrow-line { animation: none !important; } }
 
 .pager { min-height: 60vh; will-change: transform; }
-/* Галочка-подтверждение записи операции (пульс на нажатой плитке). */
+/* Подтверждение записи операции: сама кнопка на долю секунды подсвечивается
+   полупрозрачным белым той же формы, с галочкой ровно по центру; чуть более
+   долгое плавное затухание. */
 .save-flash { position: fixed; z-index: 200; display: flex; align-items: center; justify-content: center;
-  border-radius: 50%; background: var(--green); box-shadow: 0 6px 20px rgba(0,0,0,0.28);
-  opacity: 0; transform: scale(0.4); pointer-events: none; }
-.save-flash svg { width: 58%; height: 58%; }
-.save-flash.on { animation: save-pop .64s cubic-bezier(.2,.9,.3,1) forwards; }
+  border-radius: 14px; background: rgba(255,255,255,0.5); color: var(--green);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.16); -webkit-backdrop-filter: blur(1px); backdrop-filter: blur(1px);
+  opacity: 0; transform: scale(0.96); pointer-events: none; }
+.save-flash svg { width: 40px; height: 40px; }
+.save-flash.on { animation: save-pop .95s ease forwards; }
 @keyframes save-pop {
-  0% { opacity: 0; transform: scale(0.4); }
-  22% { opacity: 1; transform: scale(1.08); }
-  68% { opacity: 1; transform: scale(1); }
+  0% { opacity: 0; transform: scale(0.96); }
+  16% { opacity: 1; transform: scale(1); }
+  42% { opacity: 1; transform: scale(1); }
   100% { opacity: 0; transform: scale(1); }
 }
-@media (prefers-reduced-motion: reduce) { .save-flash.on { animation-duration: .3s; } }
+@media (prefers-reduced-motion: reduce) { .save-flash.on { animation-duration: .4s; } }
 /* Лента кросс-слайда между окнами Расходы/Доходы: две страницы бок о бок,
    двигается как одно целое — размеры страниц не меняются. */
 /* Просвет между окнами при свайпе задаётся инлайн из JS (доля ширины окна). */
@@ -438,11 +441,15 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .legend-dot.expense { background: var(--red); }
 .legend-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Иконка категории в легенде (плитка/эмодзи). */
-.legend-icon { width: 28px; height: 28px; flex-shrink: 0; border-radius: 26%; display: flex; align-items: center; justify-content: center; font-size: 16px; overflow: hidden; background: color-mix(in srgb, var(--chip, #726B65) 30%, transparent); }
-/* Горизонтальная полоса-данные позади названия (длина = доля категории). */
-.legend-bar-wrap { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; height: 30px; }
-.legend-bar { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; opacity: 0.34; min-width: 4px; }
-.legend-bar-wrap .legend-name { position: relative; z-index: 1; flex: none; max-width: 100%; padding: 0 8px; }
+.legend-icon { width: 26px; height: 26px; flex-shrink: 0; border-radius: 26%; display: flex; align-items: center; justify-content: center; font-size: 15px; overflow: hidden; background: color-mix(in srgb, var(--chip, #726B65) 30%, transparent); }
+/* «Кнопка-плитка» удлиняется вправо: сплошной цвет категории (как в круге),
+   иконка слева, название белым. Длина = flex-basis (доля категории). */
+.legend-track { flex: 1; min-width: 0; display: flex; align-items: center; }
+.legend-pill { flex: 0 1 auto; min-width: min-content; max-width: 100%; box-sizing: border-box;
+  display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px 0 3px;
+  border-radius: 9px; background: var(--chip, #726B65); overflow: hidden; }
+.legend-pill .legend-name { flex: none; max-width: 100%; color: #fff; font-weight: 600; }
+.legend-pill .legend-icon:not(.cat-tile) { background: transparent; }
 .legend-pct { color: var(--text-3); font-size: 13px; min-width: 34px; text-align: right; }
 .legend-amount { font-weight: 600; font-variant-numeric: tabular-nums; min-width: 70px; text-align: right; }
 

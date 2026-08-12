@@ -441,15 +441,17 @@ function playRejectSound() {
 // Визуальное подтверждение записи: зелёная галочка-пульс в центре нажатой
 // плитки (живёт на body, поэтому переживает перерисовку главного экрана).
 function flashSaved(rect) {
-  const size = 46;
+  // Накрываем саму кнопку той же формы (скруглённый квадрат) полупрозрачным белым
+  // с галочкой по центру; плавно проявляется и чуть дольше затухает.
   const node = el('.save-flash', { 'aria-hidden': 'true', html:
-    '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 L9 17 L4 12"/></svg>' });
-  node.style.left = Math.round(rect.left + rect.width / 2 - size / 2) + 'px';
-  node.style.top = Math.round(rect.top + rect.height / 2 - size / 2) + 'px';
-  node.style.width = size + 'px'; node.style.height = size + 'px';
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 L9 17 L4 12"/></svg>' });
+  node.style.left = Math.round(rect.left) + 'px';
+  node.style.top = Math.round(rect.top) + 'px';
+  node.style.width = Math.round(rect.width) + 'px';
+  node.style.height = Math.round(rect.height) + 'px';
   document.body.appendChild(node);
   requestAnimationFrame(() => node.classList.add('on'));
-  setTimeout(() => node.remove(), 700);
+  setTimeout(() => node.remove(), 950);
   if (navigator.vibrate) { try { navigator.vibrate(15); } catch (e) {} }
   if (store.getState().settings.soundFeedback) playSaveSound();
 }
