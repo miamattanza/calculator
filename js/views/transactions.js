@@ -1092,6 +1092,15 @@ export function wrapSwipeRow(content, trx) {
   del.addEventListener('click', async (e) => { e.stopPropagation(); if (await confirmDialog(t('confirm_delete'))) await store.deleteTransaction(trx.id); });
   noteInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { noteInput.blur(); closeFn(); } });
 
+  // Демо-хук для онбординга: двигать плашку и читать ширины «Удалить»/«Комментарий»
+  // синхронно с анимацией жеста (без изменения обычного поведения).
+  wrap.__swipeDemo = {
+    measure,
+    move: (x) => { anim(false); place(x); },
+    reset: () => { anim(EASE); place(0); },
+    widths: () => ({ del: DEL_W, comment: COMMENT_W }),
+  };
+
   // Резинка за пределами открытого положения (сопротивление у краёв).
   const clamp = (nx) => {
     if (nx > COMMENT_W) return COMMENT_W + (nx - COMMENT_W) * 0.25;

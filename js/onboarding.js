@@ -25,13 +25,13 @@ const STEPS = [
   { key: 'cancel',   target: '.key-del',               shape: 'rect',   zone: 'keys' },
   // Свайп-демо: подсвечиваем область «шапка + табло + клавиши» (кроме меню
   // категорий) и показываем анимацию свайпа влево/вправо (Расходы⇄Доходы).
-  { key: 'swipe',    region: 'topSwipe',               shape: 'rect',   zone: 'swipe', pad: 0, swipeDemo: true, peekSel: '.home-pager', peekDx: -50 },
-  { key: 'cats',     target: '.cat-viewport',          shape: 'rect',   zone: 'cats' },
+  { key: 'swipe',    region: 'topSwipe',               shape: 'rect',   zone: 'swipe', pad: 0, swipeDemo: true, moveSel: '.home-pager' },
+  { key: 'cats',     target: '.cat-pager',             shape: 'rect',   zone: 'cats' },
   // Тот же жест свайпа для категорий (листание страниц) — окно не двигается.
-  { key: 'swipecats', target: '.cat-viewport',         shape: 'rect',   zone: 'cats', swipeDemo: true, peekSel: '.cat-viewport', peekDx: -50 },
+  { key: 'swipecats', target: '.cat-pager',            shape: 'rect',   zone: 'cats', swipeDemo: true, moveSel: '.cat-viewport' },
   { key: 'history',  target: '.mini-hist .swipe-wrap', shape: 'rect',   zone: 'hist' },
-  // И для строки истории — свайп влево/вправо.
-  { key: 'swipehist', target: '.mini-hist .swipe-wrap', shape: 'rect',  zone: 'hist', swipeDemo: true, peekSel: '.mini-hist .swipe-wrap .swipe-content', peekDx: -64 },
+  // И для строки истории — свайп влево (Удалить) и вправо (Комментарий).
+  { key: 'swipehist', target: '.mini-hist .swipe-wrap', shape: 'rect',  zone: 'hist', swipeDemo: true, rowSwipe: true },
   { key: 'expand',   target: '.mini-more',             shape: 'rect',   zone: 'expand', tight: true, pad: { x: 16, y: 9 } },
 ];
 
@@ -107,9 +107,18 @@ function runTour() {
     '<path class="tour-arrow-line" fill="none" marker-end="url(#tour-ah)"></path>';
   const arrowLine = svg.querySelector('.tour-arrow-line');
 
-  // Индикатор жеста «свайп влево/вправо» (для шага swipe): палец-точка скользит
-  // по двойной стрелке внутри подсвеченной области.
-  const swipeHint = el('.tour-swipe', {}, [el('.tour-swipe-dot')]);
+  // Индикатор жеста «свайп»: широкая стрелка направления + «палец»-точка, которая
+  // едет вдоль стрелки СИНХРОННО с реальным сдвигом элемента (окно/страница/строка).
+  const swipeHint = el('.tour-swipe');
+  const swipeArrow = document.createElementNS(NS, 'svg');
+  swipeArrow.setAttribute('class', 'tour-swipe-arrow');
+  swipeArrow.innerHTML =
+    '<defs><marker id="tsw-head" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto">' +
+    '<path d="M0 0 L10 5 L0 10 Z"></path></marker></defs>' +
+    '<path class="tsw-line" fill="none" marker-end="url(#tsw-head)"></path>';
+  const swipeArrowLine = swipeArrow.querySelector('.tsw-line');
+  const swipeDot = el('.tour-swipe-dot');
+  swipeHint.append(swipeArrow, swipeDot);
 
   const pop = el('.tour-pop');
   const dots = el('.tour-dots');                 // шкала-точки вверху окна
@@ -131,35 +140,72 @@ function runTour() {
   // Текущее применённое состояние (для tween) и параметры зоны.
   let curStep = null, zonePop = null, zoneH = 0, activeDot = null;
   let ringApplied = null, popApplied = null;
-  let animId = 0, tweening = false, firstShow = true, peekTimer = 0;
+  let animId = 0, tweening = false, firstShow = true;
+  let demoRaf = 0, demoTimer = 0;
 
-  // «Живой» намёк: реально двигаем сам элемент (окно/страницу/строку) на секунду —
-  // видно, что он двигается и рядом есть ещё. Кадр-рамка при этом стоит на месте.
-  const stopPeek = () => { clearInterval(peekTimer); peekTimer = 0; };
-  const doPeek = (sel, dx) => {
-    const node = document.querySelector(sel);
-    if (!node) return;
-    node.style.transition = 'transform .34s cubic-bezier(.34,1.2,.5,1)';
-    const seq = [dx, Math.round(-dx * 0.55), 0];   // туда → чуть обратно → на место
-    let i = 0;
-    const nx = () => {
-      if (!active || i >= seq.length) { node.style.transition = ''; node.style.transform = ''; return; }
-      node.style.transform = `translateX(${seq[i++]}px)`;
-      setTimeout(nx, 360);
-    };
-    nx();
+  // Синхронный жест: «палец»-точка едет вдоль стрелки, и ОДНОВРЕМЕННО реально
+  // сдвигается сам элемент (окно/страница/строка) — на ту же величину. Кадр-рамка
+  // стоит на месте. Для истории двигаем плашку через её __swipeDemo (Удалить/Коммент.).
+  const resetMoved = () => {
+    ['.home-pager', '.cat-viewport'].forEach((s) => { const n = document.querySelector(s); if (n && n.style.transform) { n.style.transition = ''; n.style.transform = ''; } });
+    const row = document.querySelector('.mini-hist .swipe-wrap');
+    if (row && row.__swipeDemo) row.__swipeDemo.reset();
   };
-  const startPeek = () => {
-    stopPeek();
-    if (!curStep || !curStep.swipeDemo || !curStep.peekSel) return;
-    const run = () => doPeek(curStep.peekSel, curStep.peekDx || -48);
-    setTimeout(run, 520);
-    peekTimer = setInterval(run, 2600);
+  const stopDemo = () => {
+    cancelAnimationFrame(demoRaf); clearTimeout(demoTimer); demoRaf = 0; demoTimer = 0;
+    swipeHint.style.display = 'none'; swipeDot.classList.remove('fade');
+    resetMoved();
+  };
+  const easeIO = (x) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
+
+  const playSwipe = (dir, done) => {
+    if (!active || !curStep || !curStep.swipeDemo || !ringApplied) { done && done(); return; }
+    const rb = ringApplied, cy = rb.t + rb.h / 2;
+    const row = curStep.rowSwipe ? document.querySelector(curStep.target) : null;
+    const moveEl = !row ? document.querySelector(curStep.moveSel) : null;
+    let dist;
+    if (row && row.__swipeDemo) { row.__swipeDemo.measure(); const w = row.__swipeDemo.widths(); dist = dir < 0 ? w.del : Math.min(w.comment, rb.w * 0.7); }
+    else dist = Math.min(rb.w * 0.42, 130);
+    const margin = 26;
+    const startX = dir < 0 ? rb.l + rb.w - margin : rb.l + margin;
+    const endX = startX + dir * dist;
+    swipeHint.style.display = ''; swipeDot.classList.remove('fade');
+    swipeArrowLine.setAttribute('d', `M ${startX} ${cy} L ${endX} ${cy}`);
+    const applyMove = (off) => {
+      if (row && row.__swipeDemo) row.__swipeDemo.move(off);
+      else if (moveEl) { moveEl.style.transition = 'none'; moveEl.style.transform = `translateX(${off}px)`; }
+    };
+    const setDot = (x) => { swipeDot.style.left = x + 'px'; swipeDot.style.top = cy + 'px'; };
+    setDot(startX);
+    const DUR = 720, HOLD = 500, t0 = performance.now();
+    const frame = (now) => {
+      if (!active) return;
+      const p = Math.min(1, (now - t0) / DUR), e = easeIO(p);
+      const x = startX + (endX - startX) * e;
+      setDot(x); applyMove(x - startX);
+      if (p < 1) { demoRaf = requestAnimationFrame(frame); return; }
+      demoTimer = setTimeout(() => {
+        if (row && row.__swipeDemo) row.__swipeDemo.reset();
+        else if (moveEl) { moveEl.style.transition = 'transform .32s ease'; moveEl.style.transform = 'translateX(0)'; }
+        swipeDot.classList.add('fade');
+        demoTimer = setTimeout(() => { swipeDot.classList.remove('fade'); done && done(); }, 380);
+      }, HOLD);
+    };
+    demoRaf = requestAnimationFrame(frame);
+  };
+
+  const startDemo = () => {
+    stopDemo();
+    if (!curStep || !curStep.swipeDemo) return;
+    const dirs = [-1, 1];   // влево, затем вправо
+    let i = 0;
+    const loop = () => { if (!active || !curStep.swipeDemo) return; playSwipe(dirs[i++ % dirs.length], () => { demoTimer = setTimeout(loop, 480); }); };
+    demoTimer = setTimeout(loop, 500);
   };
 
   const finish = async () => {
     active = false;
-    stopPeek();
+    stopDemo();
     cancelAnimationFrame(animId);
     overlay.remove();
     document.body.classList.remove('modal-open');
@@ -235,14 +281,8 @@ function runTour() {
   // от активной точки шкалы (её x), с выходом из грани окна, обращённой к цели.
   const drawArrow = () => {
     if (!ringApplied || !popApplied) return;
-    // Шаги-демо свайпа: вместо стрелки — анимированный жест по центру области.
-    if (curStep && curStep.swipeDemo) {
-      svg.style.display = 'none';
-      swipeHint.style.display = '';
-      swipeHint.style.left = (ringApplied.l + ringApplied.w / 2) + 'px';
-      swipeHint.style.top = (ringApplied.t + ringApplied.h / 2) + 'px';
-      return;
-    }
+    // Шаги-демо свайпа: стрелку-указатель прячем — жест рисует аниматор (startDemo).
+    if (curStep && curStep.swipeDemo) { svg.style.display = 'none'; return; }
     swipeHint.style.display = 'none';
     const rr = ringApplied, pr = popApplied;
     const rcx = rr.l + rr.w / 2, rcy = rr.t + rr.h / 2;
@@ -368,7 +408,7 @@ function runTour() {
       firstShow = false;
       if (doScroll) content.scrollTop = toScroll;
       settleNow();
-      startPeek();
+      startDemo();
       return;
     }
     tween({
@@ -377,7 +417,7 @@ function runTour() {
       fromPop: popApplied || finalPop, toPop: finalPop,
       dur: doScroll ? 540 : (zoneChanged ? 420 : 340),
     });
-    startPeek();
+    startDemo();
   };
 
   const first = STEPS.findIndex((s) => visible(s));

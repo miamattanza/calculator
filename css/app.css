@@ -181,12 +181,14 @@ input, select { font-family: inherit; font-size: 17px; color: var(--text); }
 .tour-arrow-line { stroke: var(--tour-accent); stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: 7 6; animation: tour-flow .8s linear infinite; }
 .tour-arrow #tour-ah path { fill: var(--tour-accent); }
 @keyframes tour-flow { to { stroke-dashoffset: -26; } }
-/* Жест «свайп влево/вправо» для демо переключения окон. */
-.tour-swipe { position: fixed; transform: translate(-50%,-50%); width: 150px; height: 64px; pointer-events: none; display: flex; align-items: center; justify-content: center; }
-.tour-swipe::before { content: '⇄'; position: absolute; font-size: 52px; line-height: 1; color: var(--tour-accent); opacity: .45; }
-.tour-swipe-dot { width: 30px; height: 30px; border-radius: 50%; background: var(--tour-accent); box-shadow: 0 0 0 4px rgba(255,255,255,.9), 0 2px 7px rgba(0,0,0,.4); animation: tour-swipe-move 1.5s ease-in-out infinite; }
-@keyframes tour-swipe-move { 0%,100% { transform: translateX(-44px) scale(.92); } 50% { transform: translateX(44px) scale(1); } }
-@media (prefers-reduced-motion: reduce) { .tour-swipe-dot { animation: none; } }
+/* Жест «свайп»: широкая стрелка направления + «палец»-точка, которая едет вдоль
+   стрелки синхронно с реальным сдвигом элемента. */
+.tour-swipe { position: fixed; inset: 0; pointer-events: none; }
+.tour-swipe-arrow { position: fixed; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.tsw-line { stroke: var(--tour-accent); stroke-width: 7; stroke-linecap: round; opacity: .5; }
+.tour-swipe-arrow #tsw-head path { fill: var(--tour-accent); opacity: .5; }
+.tour-swipe-dot { position: absolute; width: 34px; height: 34px; border-radius: 50%; background: var(--tour-accent); box-shadow: 0 0 0 5px rgba(255,255,255,.85), 0 3px 8px rgba(0,0,0,.4); transform: translate(-50%,-50%); transition: opacity .3s; }
+.tour-swipe-dot.fade { opacity: 0; }
 /* Окно подсказки: ширина/высота фиксируются из JS (одинаковы в пределах зоны),
    позиция и размер меняются только при переезде между зонами (JS-tween). */
 .tour-pop { position: fixed; display: flex; flex-direction: column; background: var(--bg-elev); border-radius: 16px; padding: 14px 18px 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.35); box-sizing: border-box; overflow: hidden; }
